@@ -21,8 +21,7 @@ library(ggplot2)
 Now, upload the file "Class_Motivation.csv" from the Assignment 3 Repository as a data frame called "K1""
 ```{r}
 
-K1 <- read.table(...)
-
+K1 <- read.table("~/Desktop/HUDK class/Assignment 3/Class_Motivation.csv", sep = ",", header = TRUE)
 ```
 
 This file contains the self-reported motivation scores for a class over five weeks. We are going to look for patterns in motivation over this time and sort people into clusters based on those patterns.
@@ -39,6 +38,7 @@ K2 <- dplyr::select(K1, 2:6)
 
 It is important to think about the meaning of missing values when clustering. We could treat them as having meaning or we could remove those people who have them. Neither option is ideal. What problems do you foresee if we recode or remove these values? Write your answers below:
 
+Removing answer can delete meaningful practicipants, make the general pool smaller. Additonally, missing perhaps is not random i.e., certain people/groups tend to skip certain questions. I think if missing value <10% then we are allowed to remove it.
 
 
 We will remove people with missing values for this assignment, but keep in mind the issues that you have identified.
@@ -73,7 +73,7 @@ Also, we need to choose the number of clusters we think are in the data. We will
 
 ```{r}
 
-fit <- kmeans(K3, 2) 
+fit <- kmeans(K3, 3) 
 
 #We have created an object called "fit" that contains all the details of our clustering including which observations belong to each cluster.
 
@@ -144,6 +144,7 @@ ggplot(K6, aes(week, avg, colour = cluster)) + geom_line() + xlab("Week") + ylab
 ```
 
 What patterns do you see in the plot?
+one group those motivations go down after week3. The other group have motivation go up after week3.
 
 It would be useful to determine how many people are in each cluster. We can do this easily with dplyr.
 
@@ -153,6 +154,7 @@ K7 <- dplyr::count(K4, cluster)
 
 Look at the number of people in each cluster, now repeat this process for 3 rather than 2 clusters. Which cluster grouping do you think is more informative? Write your answer below:
 
+I think the other options is more informative. Just because the three groups have similiar amounts of people. we have low, middle and high-low group.
 
 
 Once you have done this, save both of your plots to the Assignment 5 file. Create a Zotero item to index your new computer program (Assignment 5.rmd) in Zotero. Then commit your assignment, push it to your Github account and then Pull request your version to the original assignment version so I can see it.
