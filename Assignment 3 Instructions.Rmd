@@ -186,7 +186,7 @@ names(Class_data) <- c("Duration","FName","LName","OwnCat","gif","Mon_in_NY","si
 Class_data
 Class_data_choose <- dplyr::select(Class_data, 10:13,6)
 Class_data_choose <- scale(Class_data_choose)
-fit3 <- kmeans(Class_data_choose, 2) #create cluster
+fit3 <- kmeans(Class_data_choose, 4) #create cluster
 fit3$cluster #checkout clusters
 K4_3 <- data.frame(Class_data_choose, fit3$cluster) #merge clusters into the table
 K4_3
