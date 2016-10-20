@@ -153,6 +153,9 @@ K7 <- dplyr::count(K4, cluster)
 
 Look at the number of people in each cluster, now repeat this process for 3 rather than 2 clusters. Which cluster grouping do you think is more informative? Write your answer below:
 
+#I think the 2-cluster graph have more information than the 3-cluster one, because we can see the trend of 2 clusters representing 2 types of student with opposite motivations toward class activities. I guess cluster2 students like the assignments in week2 and week5 while the other cluster of students dont like the assignments. 
+#The 3-cluster graph does not show a clear behavior pattern. Bigger sample size is needed.
+
 
 image: ![](demo.jpeg)
 
@@ -187,7 +190,7 @@ Q15 - What country did you grow up in?
 ```{r}
 
 #Assignment3
-#mannually input latitude and longitude, mannually change title of column
+#manually input latitude and longitude, manually change title of column
 T1 <- read.table("cluster-class-data.csv", sep = ",", header = TRUE)
 T2 <- dplyr::select(T1, latitude,longitude.)
 T3 <- na.omit(T2)
@@ -220,7 +223,7 @@ T6 <- summarise(T6, avg = mean(classes))
 T6$cluster <- as.factor(T6$cluster)
 ggplot(T6, aes(sibling, avg, colour = cluster)) + geom_line() + xlab("sibling number") + ylab("Average taking class number")
 #it seems both cluster patterns (1 and 3) are similar: the students with more sibling tends to take more classes 
-#(possible hypothesis: The kids grow up in bigger family tend to handel stress better? and this is cross cultural.)
+#(possible hypothesis: The kids grow up in bigger family tend to handle stress better? and this is cross cultural.)
 ```
 image: ![](sibling_classes.jpeg)
 ```{r}
@@ -236,5 +239,139 @@ ggplot(T7, aes(classes, avg, colour = cluster)) + geom_line() + xlab("class numb
 
 image: ![](class and travel states.jpeg)
 
+```{r}
+#construct a new cluster based on sibling and classes info
+T8 <- dplyr::select(T1, sibling,classes)
+fit2 <- kmeans(T8, 2) 
+fit2$cluster
+T9 <- data.frame(T8, fit2$cluster)
+names(T9) <- c("sibling", "classes", "cluster") 
+T10 <- T9 %>% group_by(sibling, cluster)
+T11 <- summarise(T10, avg = mean(classes))
+T11$sibling <- as.numeric(T11$sibling)
+T11$cluster <- as.factor(T11$cluster)
+ggplot(T11, aes(sibling, avg, colour = cluster)) + geom_line() + xlab("sibling") + ylab("average classes taking")
 
+```
 
+image: ![](sibling_classes_cluster.jpeg)
+
+```{r}
+#in order to compare clusters, we have to construct distance matrix, using Ward Hierarchical Clustering method
+d <- dist(T1, method = "euclidean")
+fit <- hclust(d, method="ward.D") 
+# comparing 2 cluster solutions
+cluster.stats(d, fit1$cluster, fit2$cluster)
+
+#reference from http://www.statmethods.net/advstats/cluster.html
+#"where d is a distance matrix among objects, and fit1$cluster and fit2$cluster are integer vectors #containing classification results from two different clusterings of the same data."
+```
+#comparison result 
+$n
+[1] 22
+
+$cluster.number
+[1] 3
+
+$cluster.size
+[1] 11 10  1
+
+$min.cluster.size
+[1] 1
+
+$noisen
+[1] 0
+
+$diameter
+[1] 11517.7276   676.4012         NA
+
+$average.distance
+[1] 2244.0555  309.3208       NaN
+
+$median.distance
+[1] 181.0370 323.2554       NA
+
+$separation
+[1] 209.3163 105.0712 105.0712
+
+$average.toother
+[1] 1378.9647 1290.7323  797.2453
+
+$separation.matrix
+         [,1]     [,2]     [,3]
+[1,]   0.0000 210.7891 209.3163
+[2,] 210.7891   0.0000 105.0712
+[3,] 209.3163 105.0712   0.0000
+
+$ave.between.matrix
+         [,1]      [,2]      [,3]
+[1,]    0.000 1386.3657 1304.9551
+[2,] 1386.366    0.0000  238.7646
+[3,] 1304.955  238.7646    0.0000
+
+$average.between
+[1] 1291.927
+
+$average.within
+[1] 1373.425
+
+$n.between
+[1] 131
+
+$n.within
+[1] 100
+
+$max.diameter
+[1] 11517.73
+
+$min.separation
+[1] 105.0712
+
+$within.cluster.ss
+[1] 121346968
+
+$clus.avg.silwidths
+         1          2          3 
+-0.7141152 -0.2604136  0.0000000 
+
+$avg.silwidth
+[1] -0.4754274
+
+$g2
+NULL
+
+$g3
+NULL
+
+$pearsongamma
+[1] -0.01252379
+
+$dunn
+[1] 0.009122563
+
+$dunn2
+[1] 0.1063987
+
+$entropy
+[1] 0.8454652
+
+$wb.ratio
+[1] 1.063083
+
+$ch
+[1] 0.4938726
+
+$cwidegap
+[1] 11498.8403   435.5254     0.0000
+
+$widestgap
+[1] 11498.84
+
+$sindex
+[1] 105.0712
+
+$corrected.rand
+[1] 0.3670295
+
+$vi
+[1] 0.8318027

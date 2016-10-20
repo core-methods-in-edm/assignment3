@@ -1,6 +1,8 @@
 library(dplyr)
 library(tidyr)
 library(ggplot2)
+library(fpc)
+library(cluster) 
 
 #demo from prof.Lang
 K1 <- read.table("Class_Motivation.csv", sep = ",", header = TRUE)
@@ -57,3 +59,23 @@ ggplot(T7, aes(classes, avg, colour = cluster)) + geom_line() + xlab("class numb
 # the student who take less classes (=1&2) would travel least (most of them are not full time students, maybe they are working?)
 #the student who take the most classes (=4) would travel less than those taking 3 classes (maybe full time students do not have time to travel?)
  
+#construct a new cluster based on sibling and classes info
+T8 <- dplyr::select(T1, sibling,classes)
+fit2 <- kmeans(T8, 2) 
+fit2$cluster
+T9 <- data.frame(T8, fit2$cluster)
+names(T9) <- c("sibling", "classes", "cluster") 
+T10 <- T9 %>% group_by(sibling, cluster)
+T11 <- summarise(T10, avg = mean(classes))
+T11$sibling <- as.numeric(T11$sibling)
+T11$cluster <- as.factor(T11$cluster)
+ggplot(T11, aes(sibling, avg, colour = cluster)) + geom_line() + xlab("sibling") + ylab("average classes number taking")
+
+#in order to compare clusters, we have to construct distance matrix, using Ward Hierarchical Clustering method
+d <- dist(T1, method = "euclidean")
+fit <- hclust(d, method="ward.D") 
+# comparing 2 cluster solutions
+cluster.stats(d, fit1$cluster, fit2$cluster)
+
+
+
