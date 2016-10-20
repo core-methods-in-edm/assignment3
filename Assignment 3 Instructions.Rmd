@@ -22,7 +22,7 @@ library(ggplot2)
 Now, upload the file "Class_Motivation.csv" from the Assignment 3 Repository as a data frame called "K1""
 ```{r}
 
-K1 <- read.table("Class_Motivation.csv",  sep = ",", header = F)
+K1 <- read.csv("Class_Motivation.csv",  sep = ",")
 
 ```
 
@@ -89,7 +89,8 @@ K4 <- data.frame(K3, fit$cluster)
 
 #Have a look at the K4 dataframe. Lets change the names of the variables to make it more convenient with the names() command.
 
-names(K4) <- c("1", "2", "3", "4", "5", "cluster") #c() stands for concatonate and it creates a vector of anything, in this case a vector of names.
+names(K4) <- c("1", "2", "3", "4", "5", "cluster")
+#c() stands for concatonate and it creates a vector of anything, in this case a vector of names.
 
 
 ```
@@ -161,4 +162,8 @@ Once you have done this, save both of your plots to the Assignment 5 file. Creat
 
 ##Extension Exercise
 
-Now, try to do the same... 
+Now, try to do the same Now, try to do the same for the data collected in class. Create two groups of clusters, the answers to the questions and regions where people grew up. Then create a visualization that shows the overlap between the two groups of clusters.
+
+Code Book:
+
+Duration (in seconds) Q1 - First Name Q2 - Last Name Q3 - Have you ever owned a cat? Q4 - Do you pronounce "gif", with a J (j-iff) or a G (g-iff)? Q5 - How many months have you lived in New York City? Q6 - How many siblings (brothers/sisters) do you have? Q7 - How many times do you play sport each week? Q8 - How many miles do you travel from home to TC? Q9 - Estimate how many of your friends own Android phones Q10 - How many movies have you seen in the cinema this year? Q11 - How many classes are you taking this semester? Q12 - How many states have you visited in the US? Q13 - What city/town did you grow up in? Q14 - What state/province did you grow up in? Q15 - What country did you grow up in?
