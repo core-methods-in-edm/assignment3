@@ -21,7 +21,7 @@ library(ggplot2)
 Now, upload the file "Class_Motivation.csv" from the Assignment 3 Repository as a data frame called "K1""
 ```{r}
 
-K1 <- read.table(...)
+K1 <- read.csv(file="Class_Motivation.csv")
 
 ```
 
@@ -39,7 +39,10 @@ K2 <- dplyr::select(K1, 2:6)
 
 It is important to think about the meaning of missing values when clustering. We could treat them as having meaning or we could remove those people who have them. Neither option is ideal. What problems do you foresee if we recode or remove these values? Write your answers below:
 
-
+/*********ANSWER***********/
+If we remove them, then it might affect none "NA" variables summary and the calculation of those variable might be unaccurate.
+If we treat them as having meaning, then this "NA" values might affect the summary of the variable they are in. For example the mean could be different, the variance could be difference and so on.
+/**************************/
 
 We will remove people with missing values for this assignment, but keep in mind the issues that you have identified.
 
@@ -152,6 +155,23 @@ K7 <- dplyr::count(K4, cluster)
 ```
 
 Look at the number of people in each cluster, now repeat this process for 3 rather than 2 clusters. Which cluster grouping do you think is more informative? Write your answer below:
+
+```{r}
+fit3 <- kmeans(K3, 3) #create cluster
+fit3$cluster #checkout clusters
+K4_3 <- data.frame(K3, fit3$cluster) #merge clusters into the table
+names(K4_3) <- c("1", "2", "3", "4", "5", "cluster")  #changing names
+K5_3 <- tidyr::gather(K4_3, "week", "motivation", 1:5) 
+  #combine all motivations into one colume and add a "week" colume to mark motivations
+K6_3 <- K5_3 %>% group_by(week, cluster) #group data by Week and Clusters
+K6_3 <- summarise(K6_3, avg = mean(motivation)) #average motivations based on week and clusters
+K6_3$week <- as.numeric(K6_3$week) #change week from factor to numeric
+K6_3$cluster <- as.factor(K6_3$cluster) #change cluster into factor
+ggplot(K6_3, aes(week, avg, colour = cluster)) + geom_line() + xlab("Week") + ylab("Average Motivation")
+  #Run ggplot to graph
+K7_3 <- dplyr::count(K4_3, cluster) #count members in each cluster
+K7_3 #show up the result
+```
 
 
 
