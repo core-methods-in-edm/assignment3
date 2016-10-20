@@ -10,7 +10,7 @@ You will need three packages to complete this assignment: "dplyr", "tidyr" and a
 
 ```{r}
 
-install.packages("ggplot2") #If this doesn't work, use the "Packages" tab to install the package.
+#install.packages("ggplot2") #If this doesn't work, use the "Packages" tab to install the package.
 
 library(dplyr)
 library(tidyr)
@@ -20,8 +20,9 @@ library(ggplot2)
 
 Now, upload the file "Class_Motivation.csv" from the Assignment 3 Repository as a data frame called "K1""
 ```{r}
+setwd("C:/Users/Magdalena Bennett/Dropbox/PhD Columbia/Fall 2016/Core Methods in EDM/assignment3")
 
-K1 <- read.table(...)
+K1 <- read.csv("Class_Motivation.csv")
 
 ```
 
@@ -39,6 +40,7 @@ K2 <- dplyr::select(K1, 2:6)
 
 It is important to think about the meaning of missing values when clustering. We could treat them as having meaning or we could remove those people who have them. Neither option is ideal. What problems do you foresee if we recode or remove these values? Write your answers below:
 
++ We could be losing information. If we eliminate people who have missing values (probably if they are not attending class, they have low motivation) could skew our data and we could think that there are more motivated people, and that would affect our clustering. The same if we assign a value for the missing outcomes (e.g. mean/median of the motivation that week), because they are probably not in that value. Additionally, probably all people with missing outcomes could potentially be clustered together, even if they have different reasons for missing outcomes.
 
 
 We will remove people with missing values for this assignment, but keep in mind the issues that you have identified.
@@ -145,18 +147,112 @@ ggplot(K6, aes(week, avg, colour = cluster)) + geom_line() + xlab("Week") + ylab
 
 What patterns do you see in the plot?
 
++ During the first week, cluster 1 and cluster 2 had very different motivations, where cluster 1 had high motivation and cluster 2 had very low motivation. The average motivation for the two clusters got closer in weeek two (cluster 2 increased their average motivation and cluster 1 decreased theirs). In week three we observe a very similar pattern to week 1. Finally, in the last two weeks we observe a sharp decline in the average motivation on cluster 1 and an increase in the motivation of cluter 2, and, in fact, in the last week, cluster 2 has a greater average motivation than cluster 1.
+
 It would be useful to determine how many people are in each cluster. We can do this easily with dplyr.
 
 ```{r}
 K7 <- dplyr::count(K4, cluster)
+K7
 ```
 
-Look at the number of people in each cluster, now repeat this process for 3 rather than 2 clusters. Which cluster grouping do you think is more informative? Write your answer below:
+Look at the number of people in each cluster, now repeat this process for 3 rather than 2 clusters.
 
+```{r}
 
+fit <- kmeans(K3, 3) 
+
+K8 <- data.frame(K3, fit$cluster)
+
+names(K8) <- c("1", "2", "3", "4", "5", "cluster")
+
+K9 <- tidyr::gather(K8, "week", "motivation", 1:5)
+
+K9 <- K9 %>% group_by(week, cluster)
+K9 <- summarise(K9, avg = mean(motivation))
+
+K9$week <- as.numeric(K9$week)
+K9$cluster <- as.factor(K9$cluster)
+
+ggplot(K9, aes(week, avg, colour = cluster)) + geom_line() + xlab("Week") + ylab("Average Motivation")
+
+K10 <- dplyr::count(K8, cluster)
+K10
+
+table(K4$cluster,K8$cluster)
+```
+
+Which cluster grouping do you think is more informative? Write your answer below:
+
++ I think three clusters is more informative. As it can be seen before, adding one more cluster (from the original two clusters), pretty much separates a group of individuals from the original cluster 2 into two groups (cluster 1 and 2 in the second clustering exercise) who behave radically different, and actually show totally distinct patterns, so it is interesting to observe this third group that we could not identify with just two clusters.
 
 Once you have done this, save both of your plots to the Assignment 5 file. Create a Zotero item to index your new computer program (Assignment 5.rmd) in Zotero. Then commit your assignment, push it to your Github account and then Pull request your version to the original assignment version so I can see it.
 
 ##Extension Exercise
 
 Now, try to do the same for the data [collected in class](https://tccolumbia.qualtrics.com/SE/?SID=SV_6RRqlSAM6lZWYQt). Create two groups of clusters, the answers to the questions and regions where people grew up. Then create a visualization that shows the overlap between the two groups of clusters.
+
++ We adapted the data so to include the longitude and latitude of the cities where the students grew up.
+```{r}
+D1 <- read.csv("cluster-class-data_mod.csv")
+
+names(D1)
+```
+
++ We will change the names of the variables to understand what they are:
+```{r}
+names(D1)<- c("duration","name","surname","owncat","giff","monthsNY","siblings",
+              "sports","miles","android","movies","classes","states","city",
+              "province","country", "lat", "long")
+```
+
++ Their geographical distribution looks like this...
+```{r}
+ggplot(D1, aes(lat,long, label = surname)) + geom_point()
+```
+
++ There are clear clusters here... And they look like 4
+```{r}
+
+set.seed(199)
+
+k1 <- kmeans(D1[,c("lat","long")], 4, nstart=20)
+
+#We can actually identify to which regions each cluster belongs to by observing the countries:
+D1$country[k1$cluster==1]
+D1$country[k1$cluster==2]
+D1$country[k1$cluster==3]
+D1$country[k1$cluster==4]
+
+#The one person that is from Vietnam but is in the cluster of US is because they put a US city and state as the place where they grew up.
+
+cluster1 = factor(k1$cluster, labels = c("Asia", "Chile","US","Hawaii"))
+
+ggplot(D1, aes(long, lat, label = surname, color = cluster1)) + geom_point()
+```
+
++ No, we select the "non-sense" answers, and generate 4 clusters according to them using k-means algorithm (we scale the answers first).
+
+```{r}
+Dns <- dplyr::select(D1,owncat,giff,monthsNY,siblings,sports,miles,android,movies,classes,states)
+
+Dns$owncat <- as.numeric(Dns$owncat)
+Dns$giff <- as.numeric(Dns$giff)
+
+Dns2 <- scale (Dns)
+
+kmns <- kmeans(Dns2,4,nstart=20)
+
+cluster2 <- factor(kmns$cluster)
+
+cluster2
+```
+
++ Now, we will plot both set of clusters, using a polygon for the "non-sense" clusters, and colors and shapes for the regional cluster:
+```{r}
+g1 <- ggplot(D1, aes(long, lat, col = cluster1, shape = cluster2)) + geom_point(size=2)
+
+g1
+```
+
++ The Asia cluster seems to be the more diverse, while there's seem to be more correlation between the people in the US according to the non-sense cluster. We cannot make much inference about the cluster of Chile and Hawaii, because we only have one person in them :()
