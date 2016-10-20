@@ -23,6 +23,8 @@ Now, upload the file "Class_Motivation.csv" from the Assignment 3 Repository as 
 
 K1 <- read.table(...)
 
+K1<-read.table("Class_Motivation.csv",header=TRUE,sep=",")
+
 ```
 
 This file contains the self-reported motivation scores for a class over five weeks. We are going to look for patterns in motivation over this time and sort people into clusters based on those patterns.
@@ -39,6 +41,7 @@ K2 <- dplyr::select(K1, 2:6)
 
 It is important to think about the meaning of missing values when clustering. We could treat them as having meaning or we could remove those people who have them. Neither option is ideal. What problems do you foresee if we recode or remove these values? Write your answers below:
 
+If we remove values individually the program will not be able to run the data, causing an error.  If the program can run I can imagine there being an issue where the algorithm doesn't know how to account for no values, causing issues in the analysis.  If we recode the data that could cause issues.  For example if we take an N/A and replace it with a 0 it could significantly skew the data analysis.  
 
 
 We will remove people with missing values for this assignment, but keep in mind the issues that you have identified.
@@ -145,6 +148,8 @@ ggplot(K6, aes(week, avg, colour = cluster)) + geom_line() + xlab("Week") + ylab
 
 What patterns do you see in the plot?
 
+They are reverse.  One groups' motivation increases over time and the other decreases over time. 
+
 It would be useful to determine how many people are in each cluster. We can do this easily with dplyr.
 
 ```{r}
@@ -153,6 +158,7 @@ K7 <- dplyr::count(K4, cluster)
 
 Look at the number of people in each cluster, now repeat this process for 3 rather than 2 clusters. Which cluster grouping do you think is more informative? Write your answer below:
 
+I think the three is more informative.  
 
 
 Once you have done this, save both of your plots to the Assignment 5 file. Create a Zotero item to index your new computer program (Assignment 5.rmd) in Zotero. Then commit your assignment, push it to your Github account and then Pull request your version to the original assignment version so I can see it.
