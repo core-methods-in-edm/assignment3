@@ -21,7 +21,7 @@ library(ggplot2)
 Now, upload the file "Class_Motivation.csv" from the Assignment 3 Repository as a data frame called "K1""
 ```{r}
 
-K1 <- read.table(...)
+K1 <- read.table("Class_Motivation.csv", header = TRUE, sep = ",")
 
 ```
 
@@ -39,6 +39,8 @@ K2 <- dplyr::select(K1, 2:6)
 
 It is important to think about the meaning of missing values when clustering. We could treat them as having meaning or we could remove those people who have them. Neither option is ideal. What problems do you foresee if we recode or remove these values? Write your answers below:
 
+1. If we remove them, then we may lose the information for those students from the dates when they were present
+2. If there's a particular reason why people were missing on some days but not others (e.g. the very advanced students were at a job fair) then it may create a systematic bias in our data
 
 
 We will remove people with missing values for this assignment, but keep in mind the issues that you have identified.
@@ -145,6 +147,9 @@ ggplot(K6, aes(week, avg, colour = cluster)) + geom_line() + xlab("Week") + ylab
 
 What patterns do you see in the plot?
 
+-At week 1, Cluster 1 was the most motivated and Cluster 2 was the least motivated. By Week 5, they had flipped, with Cluster 2 more motivated than Cluster 1.
+-The trend partially reversed itself in Week 3, when Cluster 1 again became more motivated and Cluster 2 again became less motivated.
+
 It would be useful to determine how many people are in each cluster. We can do this easily with dplyr.
 
 ```{r}
@@ -153,9 +158,36 @@ K7 <- dplyr::count(K4, cluster)
 
 Look at the number of people in each cluster, now repeat this process for 3 rather than 2 clusters. Which cluster grouping do you think is more informative? Write your answer below:
 
+```{r}
+#This creates 3 clusters
+fit3 <- kmeans(K3, 3) 
 
+#Let's look at our clusters
+fit3$cluster
 
-Once you have done this, save both of your plots to the Assignment 5 file. Create a Zotero item to index your new computer program (Assignment 5.rmd) in Zotero. Then commit your assignment, push it to your Github account and then Pull request your version to the original assignment version so I can see it.
+#Creating a new dataframe that includes the new clusters
+K4b <- data.frame(K3, fit3$cluster)
+
+#Changing the names of the variables in K4b to make it more convenient with the names() command.
+
+names(K4b) <- c("1", "2", "3", "4", "5", "cluster") 
+
+#Converting from wide to long format
+K5b <- tidyr::gather(K4b, "week", "motivation", 1:5)
+
+#Averaging by week and cluster
+K6b <- K5b %>% group_by(week, cluster)
+K6b <- summarise(K6b, avg = mean(motivation))
+
+#Changing the format of the data into something that can be plotted
+K6b$week <- as.numeric(K6b$week)
+K6b$cluster <- as.factor(K6b$cluster)
+
+#Plotting!
+ggplot(K6b, aes(week, avg, colour = cluster)) + geom_line() + xlab("Week") + ylab("Average Motivation")
+```
+
+Once you have done this, save both of your plots to the Assignment 3 file. Create a Zotero item to index your new computer program (Assignment 3.rmd) in Zotero. Then commit your assignment, push it to your Github account and then Pull request your version to the original assignment version so I can see it.
 
 ##Extension Exercise
 
