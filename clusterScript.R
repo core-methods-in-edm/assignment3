@@ -64,18 +64,28 @@ T8 <- dplyr::select(T1, sibling,classes)
 fit2 <- kmeans(T8, 2) 
 fit2$cluster
 T9 <- data.frame(T8, fit2$cluster)
-names(T9) <- c("sibling", "classes", "cluster") 
-T10 <- T9 %>% group_by(sibling, cluster)
+names(T9) <- c("sibling", "classes", "cluster2") 
+T10 <- T9 %>% group_by(sibling, cluster2)
 T11 <- summarise(T10, avg = mean(classes))
 T11$sibling <- as.numeric(T11$sibling)
-T11$cluster <- as.factor(T11$cluster)
-ggplot(T11, aes(sibling, avg, colour = cluster)) + geom_line() + xlab("sibling") + ylab("average classes number taking")
+T11$cluster2 <- as.factor(T11$cluster2)
+ggplot(T11, aes(sibling, avg, colour = cluster2)) + geom_line() + xlab("sibling") + ylab("average classes number taking")
 
 #in order to compare clusters, we have to construct distance matrix, using Ward Hierarchical Clustering method
 d <- dist(T1, method = "euclidean")
 fit <- hclust(d, method="ward.D") 
 # comparing 2 cluster solutions
 cluster.stats(d, fit1$cluster, fit2$cluster)
+
+#plot 2 clusters together
+T9$ID<-seq.int(nrow(T9))
+T12 <- dplyr::full_join(T5, T9,by="ID")
+T12$cluster2 <- as.factor(T12$cluster2)
+p <- ggplot(T12,aes(longitude., latitude.x))
+p + geom_point(size=5,aes(colour=cluster,shape=cluster2))+theme(legend.position='top')
+
+#try cat
+p + geom_point(size=5,aes(colour=cluster,shape=cat))+theme(legend.position='top')
 
 
 

@@ -375,3 +375,18 @@ $corrected.rand
 
 $vi
 [1] 0.8318027
+
+```{r}
+#plot 2 clusters together
+T9$ID<-seq.int(nrow(T9))
+T12 <- dplyr::full_join(T5, T9,by="ID")
+T12$cluster2 <- as.factor(T12$cluster2)
+p <- ggplot(T12,aes(longitude., latitude.x))
+p + geom_point(size=5,aes(colour=cluster,shape=cluster2))+theme(legend.position='top')
+
+#try cat
+p + geom_point(size=5,aes(colour=cluster,shape=cat))+theme(legend.position='top')
+```
+
+image: ![](2ways-clustering.jpeg)
+image: ![](cat_region.jpeg)
