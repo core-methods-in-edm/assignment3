@@ -180,6 +180,28 @@ Once you have done this, save both of your plots to the Assignment 5 file. Creat
 ##Extension Exercise
 
 Now, try to do the same for the data [collected in class](https://tccolumbia.qualtrics.com/SE/?SID=SV_6RRqlSAM6lZWYQt). Create two groups of clusters, the answers to the questions and regions where people grew up. Then create a visualization that shows the overlap between the two groups of clusters.
+```{r}
+Class_data <- read.csv("cluster-class-data.csv")
+names(Class_data) <- c("Duration","FName","LName","OwnCat","gif","Mon_in_NY","siblings","t_sport","miles","Android","movies","classes","state_v","city_g","state_g","country_g")
+Class_data
+Class_data_choose <- dplyr::select(Class_data, 10:13,6)
+Class_data_choose <- scale(Class_data_choose)
+fit3 <- kmeans(Class_data_choose, 2) #create cluster
+fit3$cluster #checkout clusters
+K4_3 <- data.frame(Class_data_choose, fit3$cluster) #merge clusters into the table
+K4_3
+names(K4_3) <- c("1", "2", "3", "4", "5", "cluster")  #changing names
+K5_3 <- tidyr::gather(K4_3, "Question", "Answers", 1:5) 
+  #combine all motivations into one colume and add a "week" colume to mark motivations
+K6_3 <- K5_3 %>% group_by(Question, cluster) #group data by Week and Clusters
+K6_3 <- summarise(K6_3, avg = mean(Answers)) #average motivations based on week and clusters
+K6_3$Question <- as.numeric(K6_3$Question) #change week from factor to numeric
+K6_3$cluster <- as.factor(K6_3$cluster) #change cluster into factor
+ggplot(K6_3, aes(Question, avg, colour = cluster)) + geom_line() + xlab("Question") + ylab("Average Answers")
+  #Run ggplot to graph
+K7_3 <- dplyr::count(K4_3, cluster) #count members in each cluster
+K7_3 #show up the result
+```
 
 Code Book:
 
