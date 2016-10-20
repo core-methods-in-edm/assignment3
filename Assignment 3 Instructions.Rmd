@@ -10,7 +10,8 @@ You will need three packages to complete this assignment: "dplyr", "tidyr" and a
 
 ```{r}
 
-install.packages("ggplot2") #If this doesn't work, use the "Packages" tab to install the package.
+install.packages("ggplot2") 
+#If this doesn't work, use the "Packages" tab to install the package.
 
 library(dplyr)
 library(tidyr)
@@ -21,7 +22,7 @@ library(ggplot2)
 Now, upload the file "Class_Motivation.csv" from the Assignment 3 Repository as a data frame called "K1""
 ```{r}
 
-K1 <- read.table(...)
+K1 <- read.table("Class_Motivation.csv",  sep = ",", header = F)
 
 ```
 
