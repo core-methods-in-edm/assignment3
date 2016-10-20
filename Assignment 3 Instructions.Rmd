@@ -183,14 +183,65 @@ Now, try to do the same for the data [collected in class](https://tccolumbia.qua
 ```{r}
 CD <- read.table("cluster-class-data.csv", header = TRUE, sep = ",")
 
-#rename columns so I don't drive myself crazy
-names(CD) <- c("time", "First", "Last", "Cat", "Gif", "NYC Months", "Siblings", "Sports", "Miles", "Android", "Movies", "Classes", "States", "City", "State", "Country") 
-
 #change cat y/n and gif jif to binary (create B versions of the column with numbers)
 CD$CatB <- 0
-CD$CatB[CD$Cat == "Yes"] <- 1
+CD$CatB[CD$QID3 == "Yes"] <- 1
 CD$GifB <- 0
-CD$GifB[CD$Gif == "g-iff"] <- 1
+CD$GifB[CD$QID4 == "g-iff"] <- 1
 
-#make a numeric column for locations. distance in miles from NYC (obvi). use Wellesley MA not Vietnam...because had to make a choice. 
+#make a numeric column for locations. distance in miles from NYC (obvi). use Wellesley MA not Vietnam in row 3...because had to make a choice (and because other distances are based on NYC to "CITY" distance, so country wouldn't work as well). 
+CD$MilesFromNYC <- c(8166, 6863, 203, 7364, 8031, 7041, 5094, 275, 1254, 7861, 1099, 7455, 8031, 7291, 0, 8000, 4957, 6824, 56, 533, 36, 65)
+
+#rename columns so I don't drive myself crazy *and so that it can be converted to numeric later, for the ones that I need
+names(CD) <- c("time", "First", "Last", "Cat", "Gif", "1", "2", "3", "4", "5", "6", "7", "8", "City", "State", "Country", "9", "10", "11") 
+
+#create new table with number responses to all random questions (- names, time, city, state, country, original cat and gif)
+CDR <- dplyr::select(CD, 6:13, 17:18)
+
+#create separate table for just MilesFromNYC
+CDL <- dplyr::select(CD, 19)
+
+#standarize values in the CDR random questions table
+CDR2 <- scale(CDR)
+
+#create an object with the clusters, tried 2 and had one outlier, so let's try 5
+random <- kmeans(CDR2, 5)
+
+#add cluster numbers to the data frame
+CDR3 <- data.frame(CDR2, random$cluster)
+
+#take the Xs out from the column header numbers (unlabel cluster)
+names(CDR3) <- c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
+
+#switch data from wide to long by making table with 3 new columns "random5cluster", "question", "value" (so that all questions in one long list and all answers, scaled, in one long column)
+CDR4 <- tidyr::gather(CDR3, "question", "value", 1:10)
+
+#change column names
+names(CDR4) <- c("cluster", "question", "value")
+
+#average by question value (not sure why? just to have less data points?)
+CDR5 <- CDR4 %>% group_by(question, cluster)
+CDR5 <- summarise(CDR5, avg = mean(value))
+
+#change "question" to numeric, make cluster a factor (to plot question but not cluster number)
+CDR5$question <- as.numeric(CDR5$question)
+CDR5$cluster <- as.factor(CDR5$cluster)
+
+#rename the cluster in CDR3 so that we can count how many points in each cluster
+names(CDR3) <- c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, "cluster")
+CDR6 <- dplyr::count(CDR3, cluster)
+# 8, 4, 1, 2, 7 (count from the five clusters above)
+
+#standarize values in the regions table "CDL"
+CDL2 <- scale(CDL)
+
+#create object for the regions ("region") with three clusters (because here, near, far? why not.)
+region <- kmeans(CDL2, 3)
+
+#make a data frame that includes the cluster number
+CDL3 <- data.frame(CDL2, region$cluster)
+
+#not enough columns for the region to plot anything. taking a break before figuring out what to add to it, and then how to view "random" and "region" together. 
 ```
+
+
