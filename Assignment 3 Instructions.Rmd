@@ -105,7 +105,7 @@ Now lets use dplyr to average our motivation values by week and by cluster.
 
 ```{r}
 
-K6 <- K5 %>% group_by(week, cluster)
+K6 <- K5 %>% group_by(travel, cluster)
 K6 <- summarise(K6, avg = mean(motivation))
 
 ```
