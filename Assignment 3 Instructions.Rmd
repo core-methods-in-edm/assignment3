@@ -179,3 +179,18 @@ Once you have done this, save both of your plots to the Assignment 3 file. Creat
 ##Extension Exercise
 
 Now, try to do the same for the data [collected in class](https://tccolumbia.qualtrics.com/SE/?SID=SV_6RRqlSAM6lZWYQt). Create two groups of clusters, the answers to the questions and regions where people grew up. Then create a visualization that shows the overlap between the two groups of clusters.
+
+```{r}
+CD <- read.table("cluster-class-data.csv", header = TRUE, sep = ",")
+
+#rename columns so I don't drive myself crazy
+names(CD) <- c("time", "First", "Last", "Cat", "Gif", "NYC Months", "Siblings", "Sports", "Miles", "Android", "Movies", "Classes", "States", "City", "State", "Country") 
+
+#change cat y/n and gif jif to binary (create B versions of the column with numbers)
+CD$CatB <- 0
+CD$CatB[CD$Cat == "Yes"] <- 1
+CD$GifB <- 0
+CD$GifB[CD$Gif == "g-iff"] <- 1
+
+#make a numeric column for locations. distance in miles from NYC (obvi). use Wellesley MA not Vietnam...because had to make a choice. 
+```
