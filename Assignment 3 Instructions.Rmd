@@ -21,8 +21,7 @@ library(ggplot2)
 Now, upload the file "Class_Motivation.csv" from the Assignment 3 Repository as a data frame called "K1""
 ```{r}
 
-K1 <- read.table(...)
-
+K1 <- read.csv("C:/Users/Josh/Documents/R/Assignment 3/Class_Motivation.csv")
 ```
 
 This file contains the self-reported motivation scores for a class over five weeks. We are going to look for patterns in motivation over this time and sort people into clusters based on those patterns.
@@ -39,7 +38,7 @@ K2 <- dplyr::select(K1, 2:6)
 
 It is important to think about the meaning of missing values when clustering. We could treat them as having meaning or we could remove those people who have them. Neither option is ideal. What problems do you foresee if we recode or remove these values? Write your answers below:
 
-
+Removing values may skew the results by excluding important data points. Recoding the values may change the scale and cluster formations. 
 
 We will remove people with missing values for this assignment, but keep in mind the issues that you have identified.
 
@@ -81,7 +80,7 @@ fit <- kmeans(K3, 2)
 
 fit$cluster
 
-#We can also attach these clusters to te original dataframe by using the "data.frame" command to create a new data frame called K4.
+#We can also attach these clusters to the original dataframe by using the "data.frame" command to create a new data frame called K4.
 
 K4 <- data.frame(K3, fit$cluster)
 
@@ -151,31 +150,53 @@ It would be useful to determine how many people are in each cluster. We can do t
 K7 <- dplyr::count(K4, cluster)
 ```
 
+
 Look at the number of people in each cluster, now repeat this process for 3 rather than 2 clusters. Which cluster grouping do you think is more informative? Write your answer below:
 
+I'm guessing the one with three clusters because the range between the two clusters is extreme. 
 
+---
+title: "Assignment 3: K Means Clustering with 3 groups"
+---
+```{r}
+fit <- kmeans(K3, 3) 
+fit$cluster
+K4 <- data.frame(K3, fit$cluster)
+names(K4) <- c("1", "2", "3", "4", "5", "cluster")
+K5 <- tidyr::gather(K4, "week", "motivation", 1:5)
+K6 <- K5 %>% group_by(week, cluster)
+K6 <- summarise(K6, avg = mean(motivation))
+K6$week <- as.numeric(K6$week)
+K6$cluster <- as.factor(K6$cluster)
+ggplot(K6, aes(week, avg, colour = cluster)) + geom_line() + xlab("Week") + ylab("Average Motivation")
+K7 <- dplyr::count(K4, cluster)
+```
 
-Once you have done this, save both of your plots to the Assignment 5 file. Create a Zotero item to index your new computer program (Assignment 5.rmd) in Zotero. Then commit your assignment, push it to your Github account and then Pull request your version to the original assignment version so I can see it.
+Once you have done this, save both of your plots to the Assignment 3 file. Create a Zotero item to index your new computer program (Assignment 3.rmd) in Zotero. Then commit your assignment, push it to your Github account and then Pull request your version to the original assignment version so I can see it.
 
 ##Extension Exercise
 
-Now, try to do the same for the data [collected in class](https://tccolumbia.qualtrics.com/SE/?SID=SV_6RRqlSAM6lZWYQt). Create two groups of clusters, the answers to the questions and regions where people grew up. Then create a visualization that shows the overlap between the two groups of clusters.
+# I played around with trying to clean the data for clustering. I would definitely like to review this to learn how to do this with R scripting instead of excel... 
 
-Code Book:
+```{r}
+library(dplyr)
+library(tidyr)
+library(ggplot2)
 
-Duration (in seconds)
-Q1 - First Name
-Q2 - Last Name
-Q3 - Have you ever owned a cat?
-Q4 - Do you pronounce "gif", with a J (j-iff) or a G (g-iff)?
-Q5 - How many months have you lived in New York City?
-Q6 - How many siblings (brothers/sisters) do you have?
-Q7 - How many times do you play sport each week?
-Q8 - How many miles do you travel from home to TC?
-Q9 - Estimate how many of your friends own Android phones
-Q10 - How many movies have you seen in the cinema this year?
-Q11 - How many classes are you taking this semester?
-Q12 - How many states have you visited in the US?
-Q13 - What city/town did you grow up in?
-Q14 - What state/province did you grow up in?
-Q15 - What country did you grow up in?
+C1 <- read.csv("C:/Users/Josh/Documents/R/Assignment 3/cluster-class-data.csv")
+C2 <- dplyr::select(C1, 2:16)
+
+names(C2)
+names(C2)<- c("First", "Last","catlife","gif","monthsNY","siblings","sports","miles","Friend_Android","movies","classes","Vstates","city","State_Province","country")
+C3 <- na.omit(C2) 
+#Plot by location and lastname 
+ggplot(C3, aes(State_Province, country, label = Last)) + geom_point()
+RegC3 <- dplyr::select(C3, 13:15)
+
+set.seed(10992)
+C4 <- kmeans(C3[,c("monthsNY","classes")], 3, nstart=10)
+c4cluster = factor(C4$cluster, labels = c("monthsNY"))
+
+```
+
+
