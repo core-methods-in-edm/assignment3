@@ -180,4 +180,101 @@ Once you have done this, save both of your plots to the Assignment 5 file. Creat
 ##Extension Exercise
 
 Now, try to do the same for the data [collected in class](https://tccolumbia.qualtrics.com/SE/?SID=SV_6RRqlSAM6lZWYQt). Create two groups of clusters, the answers to the questions and regions where people grew up. Then create a visualization that shows the overlap between the two groups of clusters.
-#longtitudelatitude to transform the location
+
+#upload the file 
+```{r}
+C1 <- read.table("cluster-class-data.csv",header=TRUE, sep=",")
+```
+#C2 is the table of the area lists
+```{r}
+C2<- dplyr::select(C1, 14:16)
+
+```
+#C2 is the table of the other questions
+```{r}
+C3<- dplyr::select(C1, 2:13)
+
+```
+#i looked up the longitude and latitude on the internet and I’m going to build two vectors containing these infos.
+```{r}
+latitude<-c(21.027764,37.566535,42.296797,31.230416,22.543096,36.651216,-33.015348,39.136772,35.088696,26.100780, 30.438256,29.868336,22.543096,28.704059,40.712784,23.020673,21.306944,39.904211,41.141472,39.961176,40.892321,50.266047)
+longitude<-c(105.834160,126.977969,-71.292388,121.473701,114.057865,117.120000,-71.550028,-77.714715,-92.442101,119.295144,-84.280733,121.543990,114.057865,77.102490,-74.005941,113.751800,-157.858333,116.407395,-73.357905,-82.998794,-74.477377,-5.052712)
+
+```
+
+#build new columns in the address file as latitude and longitude
+
+```{r}
+C2["new.col"] <- latitude
+names(C2)<-c("city","province","country","latitude")
+C2["new.col"] <- longitude
+names(C2)<-c("city","province","country","latitude","longitude")
+C2<-dplyr::select(C2, 4:5)
+```
+
+#then we will standardize the values
+```{r}
+C2 <- scale(C2)
+
+```
+
+# now created an object called “cluster1” that contains all the details of our clustering including which observations belong to each cluster.
+```{r}
+cluster1<-kmeans(C2,3)
+
+```
+
+# then add the cluster result to the location table
+ 
+```{r}
+C4<-data.frame(C2,cluster1$cluster)
+names(C4)<-c("latitude","longitude","cluster")
+```
+
+#summarize the latitude and longitude in each group
+```{r}
+C5<-C4 %>% group_by(cluster)
+
+```
+
+#now plot
+```{r}
+ggplot(C5, aes(latitude, longitude, colour = cluster)) + geom_point() + xlab("Latitude") + ylab("Longitude")
+
+```
+I've finished the cluster for areas, now i will start to cluster for the other questions
+# remove the name column
+```{r}
+C3<-dplyr::select(C1, 4:13)
+
+```
+#make the yes/no question became 1/0, g-iff/j-iff become 1/0
+```{r}
+C3$QID3<- ifelse(C3$QID3=="No","0","1")
+C3$QID3<-as.numeric(C3$QID3)
+C3$QID4<- ifelse(C3$QID4=="j-iff","0","1")
+C3$QID4<-as.numeric(C3$QID4)
+```
+#SCALE C3 THEN CLUSTER
+```{r}
+D0<-scale(C3)
+fit2 <- kmeans(D0, 5) 
+D0 <- data.frame(D0, fit2$cluster)
+names(D0) <- c("1", "2", "3", "4", "5","6","7","8","9","10", "cluster")
+```
+#TRANSFORM TO LONG TABLE
+
+```{r}
+D1 <- tidyr::gather(D0, "QUESTION", "ANSWER", 1:10)
+
+```
+#COMPUTE THE AVG OF ANSWER WITH REGARD TO QUESTION NUMBER AND CLUSTER
+```{r}
+D2 <- D1 %>% group_by(QUESTION, cluster)
+D2 <- summarise(D2, avg = mean(ANSWER))
+```
+#plot
+```{r}
+ggplot(D2, aes(QUESTION, avg, colour = cluster)) + geom_line() + xlab("question") + ylab("Average result")
+```
+
