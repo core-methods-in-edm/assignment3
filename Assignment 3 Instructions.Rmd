@@ -21,8 +21,7 @@ library(ggplot2)
 Now, upload the file "Class_Motivation.csv" from the Assignment 3 Repository as a data frame called "K1""
 ```{r}
 
-K1 <- read.table(...)
-
+K1 <- read.table("~/Desktop/FALL_2016/Assignment3/Class_Motivation.csv", sep = ",", header = TRUE)
 
 ```
 
@@ -160,4 +159,69 @@ Once you have done this, save both of your plots to the Assignment 5 file. Creat
 
 ##Extension Exercise
 
-Now, try to do the same... 
+```{r}
+#Extension Exercise
+Now, try to do the same for the data collected in class. Create two groups of clusters, the answers to the questions and regions where people grew up. Then create a visualization that shows the overlap between the two groups of clusters.
+
+#Code Book:
+Duration (in seconds) Q1 - First Name Q2 - Last Name Q3 - Have you ever owned a cat? Q4 - Do you pronounce "gif", with a J (j-iff) or a G (g-iff)? Q5 - How many months have you lived in New York City? Q6 - How many siblings (brothers/sisters) do you have? Q7 - How many times do you play sport each week? Q8 - How many miles do you travel from home to TC? Q9 - Estimate how many of your friends own Android phones Q10 - How many movies have you seen in the cinema this year? Q11 - How many classes are you taking this semester? Q12 - How many states have you visited in the US? Q13 - What city/town did you grow up in? Q14 - What state/province did you grow up in? Q15 - What country did you grow up in?
+```
+
+```{r}
+#opened our class survey file done today
+K26 <- read.table("~/Desktop/FALL_2016/Assignment3/cluster-class-data.csv", sep = ",", header = TRUE)
+
+#put two first name and last name rows into one row
+K27 <- tidyr::unite(K26, "studentname", QID1_TEXT, QID2_TEXT)
+
+#named the rows into words of my choice
+names(K27) <- c("duration", "studentname", "cat", "gif", "howlong", "sibling","sport","mile","friends","movies","classes","state_province","city","state","country")
+
+#removed duration and student names
+K28 <- dplyr::select(K27, 3:15)
+
+#removed N/A data and it removed Linh Doan's data since she did not write her province
+K29 <- na.omit(K28)
+View(K29)
+
+#tried out to scaled the data but since there are variables that are not numeric data so it turned out error
+K29 <- scale(K29)
+
+#tried to fix this issues
+K29$cat <- ifelse(K29$cat == "No",0,1)
+K29$gif <- ifelse(K29$gif == "g-iff",0,1)
+
+#I changed the country variable into be read as numeric and regrouped them by U.S.=0 and non U.S =1 to compare, but could not change other state and city varaibles...
+K29$country <- as.numeric(K29$country)
+K29$country <- ifelse(K29$country >= 7 ,0,1)
+
+#Deleted city and state variables...
+K30 <- dplyr::select(K29, -11,-12)
+K30 <- scale(K30)
+
+#and followed the procedure mentioned above...
+
+fit4 <- kmeans(K30, 2)
+fit4$cluster
+K31 <- data.frame(K30, fit4$cluster)
+names(K31) <- c("cat", "gif", "howlong", "sibling","sport","mile","friends","movies","classes","state_province","country","cluster")
+K32 <- tidyr::gather(K31, "nonsense", "country", 1:10)
+names(K32) <- c("country", "cluster", "nonsenseword", "nonsense")
+K33 <- dplyr::select(K32, -3)
+K34 <- K33 %>% group_by(country, cluster)
+K34 <- summarise(K34, avg = mean(nonsense))
+K34$cluster <- as.factor(K34$cluster)
+K34$country <- as.numeric(K34$country)
+ggplot(K34, aes(country, avg, colour = cluster)) + geom_line() + xlab("U.S. vs. non U.S.")+ ylab("nonsense")
+K35 <- dplyr::count(K34, cluster)
+
+#it is very interesting to see since this try was not my first try and got exactly reversed result; still not much interesting... for the previous trial, I was tring to write:the graph did not look sucessful and after using count fuction, I could see why... there were only one person in one cluster and others were all in the other cluster...
+ggplot(K21, aes(country, avg, colour = fit.cluster)) + geom_line() + xlab("U.S.vs.Non_U.S.") + ylab("cat_experience")
+K22 <- dplyr::count(K18, fit.cluster)
+
+#maybe dividing into only two different area was the problem?
+
+```
+
+
+
