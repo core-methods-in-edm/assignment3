@@ -1,5 +1,6 @@
 ---
 title: "Assignment 3: K Means Clustering"
+Sam Pepe
 ---
 
 In this assignment we will be applying the K-means clustering algorithm we looked at in class. At the following link you can find a description of K-means, create a webpage index in Zotero and add some notes about the use and limitations of K-means clustering:
@@ -39,6 +40,7 @@ K2 <- dplyr::select(K1, 2:6)
 
 It is important to think about the meaning of missing values when clustering. We could treat them as having meaning or we could remove those people who have them. Neither option is ideal. What problems do you foresee if we recode or remove these values? Write your answers below:
 
+ANSWER: If we recode these variables we are creating a potential bias by grouping these variables separately when they have no other relationship to one another. On the other hand, you are also creating a bias if you leave them out because they are part of your sample and there could be a reason why these certain people did not fully respond to all of your questions. For example, if there is a question on a survey asking level of education and those who did not finish high school do not answer, that it an important piece of information you are missing.
 
 
 We will remove people with missing values for this assignment, but keep in mind the issues that you have identified.
@@ -145,6 +147,8 @@ ggplot(K6, aes(week, avg, colour = cluster)) + geom_line() + xlab("Week") + ylab
 
 What patterns do you see in the plot?
 
+ANSWER: Cluster 1 (red) consistently has lower motivation than cluster 2 (blue), but both clusters variate in motivation from week to week. They have opposite trends: cluster 1 decreases in motivation week one to two, increases week two to three, decreases week three to four, then increases again. Cluster 2 increases in motivation week one to two, decreases week two to three, increases week three to four, then decreases. 
+
 It would be useful to determine how many people are in each cluster. We can do this easily with dplyr.
 
 ```{r}
@@ -153,10 +157,83 @@ K7 <- dplyr::count(K4, cluster)
 
 Look at the number of people in each cluster, now repeat this process for 3 rather than 2 clusters. Which cluster grouping do you think is more informative? Write your answer below:
 
+ANSWER: I think in this case it is better to have three groups. There are 3 distint groups in this case with unique trends that we can identify through this more granular clustering method. 
+
 
 
 Once you have done this, save both of your plots to the Assignment 5 file. Create a Zotero item to index your new computer program (Assignment 5.rmd) in Zotero. Then commit your assignment, push it to your Github account and then Pull request your version to the original assignment version so I can see it.
 
+CODE: 
+```{r}
+ motivation<-read.csv("Class_Motivation.csv")
+ motivation2 <- dplyr::select(motivation, 2:6)
+motivation3 <- na.omit(motivation2) 
+motivation3<-scale(motivation3)
+fit <- kmeans(motivation3, 2) 
+motivation4 <- data.frame(motivation3, fit$cluster)
+View(motivation4)
+names(motivation4) <- c("1", "2", "3", "4", "5", "cluster")
+motivation5 <- tidyr::gather(motivation4, "week", "motivation", 1:5)
+View(motivation5)
+View(motivation3)
+motivation6 <- motivation5 %>% group_by(week, cluster)
+motivation6 <- summarise(motivation6, avg = mean(motivation))
+motivation6$week <- as.numeric(motivation6$week)
+motivation6$cluster <- as.factor(motivation6$cluster)
+ggplot(motivation6, aes(week, avg, colour = cluster)) + geom_line() + xlab("Week") + ylab("Average Motivation")
+motivation7 <- dplyr::count(motivation4, cluster)
+View(motivation7)
+fit <- kmeans(motivation3, 3)
+motivation4 <- data.frame(motivation3, fit$cluster)
+motivation5 <- tidyr::gather(motivation4, "week", "motivation", 1:5)
+names(motivation4) <- c("1", "2", "3", "4", "5", "cluster")
+motivation6 <- motivation5 %>% group_by(week, cluster)
+motivation6$week <- as.numeric(motivation6$week)
+motivation6$cluster <- as.factor(motivation6$cluster)
+ggplot(motivation6, aes(week, avg, colour = cluster)) + geom_line() + xlab("Week") + ylab("Average Motivation")
+
+```
+
+
+
 ##Extension Exercise
 
-Now, try to do the same... 
+Now, try to do the same...
+CODE:
+```{r}
+cluster<-read.csv("cluster-class-data.csv")
+View(cluster)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+K2 <- dplyr::select(cluster, 4:16)
+View(K2)
+names(K2) <- c("YesCat", "YesGiff","monthsnyc","numsiblings","sporttimesweek","mileshome","friendsandroid","nummoviescinemayr","numclasssemester","numstatesus","hometown","homestate","homecountry")
+View(K2)
+K3 <- na.omit(K2)
+View(K3)
+K3$YesCat <- ifelse(K3$YesCat=="Yes", 1, 0)
+K3$YesGiff<-ifelse(K3$YesGiff=="g-iff",1,0)
+lat<-as.data.frame(lat)
+long<-as.data.frame(long)
+K3$lat<-lat
+K3$long<-long
+View(K3)
+K4 <- subset(K3, select = -c(hometown,homestate,homecountry))
+View(K4)
+K4$lat<- c("37.57","42.29","31.23","22.54","36.65","-33.02","39.14","35.09","24.47","30.44","29.87","22.54","28.70","40.71","23.02","21.31","39.90","41.14","39.96","40.89","41.43")
+K4$long<-c("126.98","-71.29","121.47","114.06","117.12","-77.55","-77.72","-92.44","118.09","-84.28","121.54","114.06","77.10","-74.01","113.75","-157.86","116.41","-73.36","-82.99","-74.48","-74.04")
+View(K4)
+K4$lat<-as.numeric(K4$lat)
+K4$long<-as.numeric(K4$long)
+K4<-scale(K4)
+cluster1 <- kmeans(K4, 2)
+K5 <- data.frame(K4, cluster1$cluster)
+wss <- (nrow(K5)-1)*sum(apply(K5,2,var))
+for (i in 1:12) wss[i] <- sum(kmeans(K5, centers=i)$withinss)
+plot(1:12, wss, type="b", xlab="Number of Clusters", ylab="Within groups sum of squares")
+fit <- kmeans(K5, 4) 
+aggregate(K5,by=list(fit$cluster),FUN=mean)
+plot(K5$nummoviescinemayr,K5$numclasssemester,main="num movies per year vs num classes taken", xlab="num movies", ylab="num classes", col=fit$cluster)
+
+```
