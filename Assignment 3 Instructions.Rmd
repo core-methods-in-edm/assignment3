@@ -275,3 +275,53 @@ d6 <- summarise(d6, avg = mean(sportsweekly))
 * I'm totally stuck at this point. I'm not sure if I should be taking the average of all of the students of each group (cat owners and non cat owners), or if there is some other way to represent the cluster information.
 
 * I understood the first example (student motivation), since the plot represented a change of motivation over time. It's not clear to me what any continuum along the horizontal axis represents. It's also not clear to me how to represent categorical data (e.g. cat ownership) using ggplot. :-/
+
+
+-------------
+## 10/22 Changes:
+* Create new data frame for location data:
+```{r}
+
+loc <- dplyr::select(d2, 11:13)
+loc[] <- lapply(loc, as.character)
+
+```
+* Install package for converting names of location data to coordinates:
+```{r}
+
+install.packages("ggmap")
+library(ggmap) 
+
+```
+
+* Prepare data for reading into google maps:
+```{r}
+
+loc2[] <- lapply(loc, as.character)
+loc3 <- tidyr::unite(loc2, location, city, stateprovince, country, sep = ", ")
+
+```
+
+* Add coordinate data
+```{r}
+
+loc3 <- mutate_geocode(loc3, location) # did confirm that "Hanoi, NA, Vietnam" returned the correct coordinates, even with its missing state/province data
+
+```
+
+* Create new data frame, with only numeric location data
+```{r}
+
+loc4 <- dplyr::select(loc3, 2:3)
+
+```
+
+* Cluster location data using k-means, then create new data frame with appended cluster data
+```{r}
+
+fitloc <- kmeans(loc4, 4)
+loc5 <- data.frame(loc4, fitloc$cluster)
+names(loc5) <- c("lon", "lat", "cluster")
+
+```
+
