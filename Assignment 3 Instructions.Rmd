@@ -167,31 +167,35 @@ CODE:
 ```{r}
  motivation<-read.csv("Class_Motivation.csv")
  motivation2 <- dplyr::select(motivation, 2:6)
+ #take out id variable
 motivation3 <- na.omit(motivation2) 
 motivation3<-scale(motivation3)
 fit <- kmeans(motivation3, 2) 
+#kmeans clustering with 2 clusters
 motivation4 <- data.frame(motivation3, fit$cluster)
 View(motivation4)
 names(motivation4) <- c("1", "2", "3", "4", "5", "cluster")
 motivation5 <- tidyr::gather(motivation4, "week", "motivation", 1:5)
-View(motivation5)
-View(motivation3)
 motivation6 <- motivation5 %>% group_by(week, cluster)
 motivation6 <- summarise(motivation6, avg = mean(motivation))
 motivation6$week <- as.numeric(motivation6$week)
 motivation6$cluster <- as.factor(motivation6$cluster)
 ggplot(motivation6, aes(week, avg, colour = cluster)) + geom_line() + xlab("Week") + ylab("Average Motivation")
+#visual showing motivation by week.. dif clusters dif colors (2 clusters)
 motivation7 <- dplyr::count(motivation4, cluster)
-View(motivation7)
 fit <- kmeans(motivation3, 3)
+#repeating for 3 clusters
 motivation4 <- data.frame(motivation3, fit$cluster)
 motivation5 <- tidyr::gather(motivation4, "week", "motivation", 1:5)
 names(motivation4) <- c("1", "2", "3", "4", "5", "cluster")
+motivation5 <- tidyr::gather(motivation4, "week", "motivation", 1:5)
 motivation6 <- motivation5 %>% group_by(week, cluster)
 motivation6$week <- as.numeric(motivation6$week)
 motivation6$cluster <- as.factor(motivation6$cluster)
+motivation6$week <- as.numeric(motivation6$week)
+motivation6$cluster <- as.factor(motivation6$cluster)
 ggplot(motivation6, aes(week, avg, colour = cluster)) + geom_line() + xlab("Week") + ylab("Average Motivation")
-
+#visual showing motivation by week.. dif clusters dif colors (3 clusters)
 ```
 
 
@@ -207,33 +211,38 @@ library(dplyr)
 library(tidyr)
 library(ggplot2)
 K2 <- dplyr::select(cluster, 4:16)
+#taking away survey time, first and last name
 View(K2)
 names(K2) <- c("YesCat", "YesGiff","monthsnyc","numsiblings","sporttimesweek","mileshome","friendsandroid","nummoviescinemayr","numclasssemester","numstatesus","hometown","homestate","homecountry")
+#renamed headers
 View(K2)
 K3 <- na.omit(K2)
 View(K3)
 K3$YesCat <- ifelse(K3$YesCat=="Yes", 1, 0)
+#yes no to binary
 K3$YesGiff<-ifelse(K3$YesGiff=="g-iff",1,0)
-lat<-as.data.frame(lat)
-long<-as.data.frame(long)
-K3$lat<-lat
-K3$long<-long
-View(K3)
+# giff binary
 K4 <- subset(K3, select = -c(hometown,homestate,homecountry))
-View(K4)
 K4$lat<- c("37.57","42.29","31.23","22.54","36.65","-33.02","39.14","35.09","24.47","30.44","29.87","22.54","28.70","40.71","23.02","21.31","39.90","41.14","39.96","40.89","41.43")
 K4$long<-c("126.98","-71.29","121.47","114.06","117.12","-77.55","-77.72","-92.44","118.09","-84.28","121.54","114.06","77.10","-74.01","113.75","-157.86","116.41","-73.36","-82.99","-74.48","-74.04")
+#added lat and long by given location.. found coordinates on google maps
+K4 <- subset(K3, select = -c(hometown,homestate,homecountry))
+#now that we have coordinates we can delete location names
 View(K4)
 K4$lat<-as.numeric(K4$lat)
 K4$long<-as.numeric(K4$long)
 K4<-scale(K4)
 cluster1 <- kmeans(K4, 2)
+#2 clusters
 K5 <- data.frame(K4, cluster1$cluster)
 wss <- (nrow(K5)-1)*sum(apply(K5,2,var))
 for (i in 1:12) wss[i] <- sum(kmeans(K5, centers=i)$withinss)
 plot(1:12, wss, type="b", xlab="Number of Clusters", ylab="Within groups sum of squares")
+#curious to see within sum of squares as num clusters change
 fit <- kmeans(K5, 4) 
+#4 clusters..wanted to experiment with both 4 and 2
 aggregate(K5,by=list(fit$cluster),FUN=mean)
 plot(K5$nummoviescinemayr,K5$numclasssemester,main="num movies per year vs num classes taken", xlab="num movies", ylab="num classes", col=fit$cluster)
+plot(K5$numstatesus,K5$monthsnyc,main="states visited vs months nyc", xlab="num states us", ylab="months spent in nyc", col=K5$cluster1.cluster)
 
 ```
