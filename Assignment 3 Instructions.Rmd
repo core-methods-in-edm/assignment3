@@ -1,5 +1,6 @@
 ---
-title: "Assignment 3: K Means Clustering"
+title: 'Assignment 3: K Means Clustering'
+output: html_document
 ---
 
 In this assignment we will be applying the K-means clustering algorithm we looked at in class. At the following link you can find a description of K-means, create a webpage index in Zotero and add some notes about the use and limitations of K-means clustering:
@@ -7,6 +8,18 @@ In this assignment we will be applying the K-means clustering algorithm we looke
 https://www.cs.uic.edu/~wilkinson/Applets/cluster.html
 
 You will need three packages to complete this assignment: "dplyr", "tidyr" and a new package called "ggplot2". Install ggplot2 and then load all three packages.
+
+*Need to install "colorspace" package before calling ggplot2 package*
+
+```{r}
+
+install.packages("colorspace")
+install.packages("ggplot2")
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+
+```
 
 ```{r}
 
@@ -18,10 +31,13 @@ library(ggplot2)
 
 ```
 
+
+
+
 Now, upload the file "Class_Motivation.csv" from the Assignment 3 Repository as a data frame called "K1""
 ```{r}
 
-K1 <- read.table(...)
+K1 <- read.table("Class_Motivation.csv", header = TRUE, sep = ",")
 
 ```
 
@@ -39,7 +55,7 @@ K2 <- dplyr::select(K1, 2:6)
 
 It is important to think about the meaning of missing values when clustering. We could treat them as having meaning or we could remove those people who have them. Neither option is ideal. What problems do you foresee if we recode or remove these values? Write your answers below:
 
-
+* Missing values for student motivation may indicate meaningful patterns. For example, it may be interesting to see how student absenses (a likely cause for missing values) affect motivation.
 
 We will remove people with missing values for this assignment, but keep in mind the issues that you have identified.
 
@@ -73,7 +89,7 @@ Also, we need to choose the number of clusters we think are in the data. We will
 
 ```{r}
 
-fit <- kmeans(K3, 2) 
+fit <- kmeans(K3, 2)
 
 #We have created an object called "fit" that contains all the details of our clustering including which observations belong to each cluster.
 
@@ -145,6 +161,9 @@ ggplot(K6, aes(week, avg, colour = cluster)) + geom_line() + xlab("Week") + ylab
 
 What patterns do you see in the plot?
 
+* The motivation of the two groups are inversely related. When the more motivated group reports greater motivation, the less motivated group reports much less motivation.
+* The motivation of each group doesn't experience noticable changes longitudinally.
+
 It would be useful to determine how many people are in each cluster. We can do this easily with dplyr.
 
 ```{r}
@@ -153,6 +172,22 @@ K7 <- dplyr::count(K4, cluster)
 
 Look at the number of people in each cluster, now repeat this process for 3 rather than 2 clusters. Which cluster grouping do you think is more informative? Write your answer below:
 
+```{r}
+
+fit2 <- kmeans(K3, 3) # new fit using kmeans algorithm, using 3 clusters
+K8 <- data.frame(K3, fit2$cluster) # attaches cluster data from kmeans operation to an new data frame, "K8"
+names(K8) <- c("1", "2", "3", "4", "5", "cluster") # rename columns
+K9 <- tidyr::gather(K8, "week", "motivation", 1:5) # convert data to long format, create new columns "week" and "motivation"
+K10 <- K9 %>% group_by(week, cluster) # creates new dataframe, then groups it by "week"
+K10 <- summarise(K10, avg = mean(motivation)) # summarizes by taking the mean motivation for each week
+K10$week <- as.numeric(K10$week) # change data types
+K10$cluster <- as.factor(K10$cluster) # change data types
+ggplot(K10, aes(week, avg, colour = cluster)) + geom_line() + xlab("Week") + ylab("Average Motivation") # plot cluster data
+
+# Taking 2 clusters, one group is over twice the size as the other (16 vs. 7). Taking 3 clusters, the group sizes are more balanced (7, 7, 9). Plotting the mean motivation of each of the three clusters reveals that students did not consistently have high motivation, but rather that students who started with high motivation saw a significant decline of their motivation over weeks 4 to 5, while students who started with medium motivation saw an increase over weeks 3 to 5. This pattern may reveal actionable information, and was not visible using only 2 clusters.
+
+```
+
 
 
 Once you have done this, save both of your plots to the Assignment 5 file. Create a Zotero item to index your new computer program (Assignment 5.rmd) in Zotero. Then commit your assignment, push it to your Github account and then Pull request your version to the original assignment version so I can see it.
@@ -160,3 +195,83 @@ Once you have done this, save both of your plots to the Assignment 5 file. Creat
 ##Extension Exercise
 
 Now, try to do the same for the data [collected in class](https://tccolumbia.qualtrics.com/SE/?SID=SV_6RRqlSAM6lZWYQt). Create two groups of clusters, the answers to the questions and regions where people grew up. Then create a visualization that shows the overlap between the two groups of clusters.
+
+
+* Import class data, and structure:
+```{r}
+d1 <- read.table("cluster-class-data.csv", header = TRUE, sep = ",")
+d2 <- select(d1, 4:16)
+names(d2) <- c("cat","gif","timeinnymonths","siblings","sportsweekly","commutetoschoolmiles","androidfriends","moviesthisyear","classesthisterm","statesvisited","city","stateprovince","country")
+d2$cat <- ifelse(d2$cat == "No",0,1) # codes 0 for no cat, 1 for cat
+d2$gif <- ifelse(d2$gif == "j-iff",0,1) #codes 0 for "j-iff" (wrong pronunciation, 1 for "g-iff" (right pronunciation)
+levels(d2$country)
+
+levels(d2$country)[levels(d2$country)=="United States of America "] <- "United States"
+levels(d2$country)[levels(d2$country)=="United States "] <- "United States"
+levels(d2$country)[levels(d2$country)=="The United States of America"] <- "United States"
+levels(d2$country)[levels(d2$country)=="The United States of America "] <- "United States"
+levels(d2$country)[levels(d2$country)=="USA"] <- "United States"
+levels(d2$country)[levels(d2$country)=="china"] <- "China"
+levels(d2$country)[levels(d2$country)=="Viet Nam "] <- "Vietnam"
+levels(d2$country)[levels(d2$country)=="chile"] <- "Chile"
+
+levels(d2$stateprovince)[levels(d2$stateprovince)=="BEIJING"] <- "Beijing"
+levels(d2$stateprovince)[levels(d2$stateprovince)=="guangdong"] <- "Guangdong"
+levels(d2$stateprovince)[levels(d2$stateprovince)=="MA "] <- "Massachusetts"
+levels(d2$stateprovince)[levels(d2$stateprovince)=="valparaiso"] <- "Valparaiso"
+levels(d2$stateprovince)[levels(d2$stateprovince)=="NJ"] <- "New Jersey"
+
+levels(d2$city)[levels(d2$city)=="BEIJING"] <- "Beijing"
+levels(d2$city)[levels(d2$city)=="shenzhen"] <- "Shenzhen"
+levels(d2$city)[levels(d2$city)=="vina del mar"] <- "Vina Del Mar"
+levels(d2$city)[levels(d2$city)=="Conway "] <- "Conway"
+levels(d2$city)[levels(d2$city)=="Wellesley "] <- "Wellesley"
+
+d2$commutetoschoolmiles[d2$commutetoschoolmiles == 9000] <- NA
+
+d2$androidfriends[d2$androidfriends == 200] <- NA  # Bad data
+d2$moviesthisyear[d2$moviesthisyear == 200] <- NA  # Bad data
+
+```
+
+* Scale data along all int, numeric, non-binary values:
+```{r}
+
+d3 <- dplyr::select(d2, c(1:10))
+d3$timeinnymonths <- scale(d3$timeinnymonths)
+d3$sportsweekly <- scale(d3$sportsweekly)
+d3$commutetoschoolmiles <- scale(d3$commutetoschoolmiles)
+d3$androidfriends <- scale(d3$androidfriends)
+d3$moviesthisyear <- scale(d3$moviesthisyear)
+d3$classesthisterm <- scale(d3$classesthisterm)
+d3$statesvisited <- scale(d3$statesvisited)
+
+```
+
+* Omit NA: 
+```{r}
+d4 <- na.omit(d3)
+```
+
+* Use kmeans to generate clusters:
+```{r}
+
+fit3 <- kmeans(d4, 4)
+fit3$cluster
+d5 <- data.frame(d4, fit3$cluster)
+names(d5)[names(d5) == "fit3.cluster"] <- "cluster"
+d5$cluster <- as.factor(d5$cluster)
+
+```
+
+* Want to examine how cat ownership relates to the number of times a student plays a sport each week
+```{r}
+d6 <- select(d5, cat, sportsweekly, cluster)
+d6 %>% group_by(cat, cluster)
+d6 <- summarise(d6, avg = mean(sportsweekly))
+# Error: Each variable must be a 1d atomic vector or list.
+# Problem variables: 'sportsweekly'
+```
+* I'm totally stuck at this point. I'm not sure if I should be taking the average of all of the students of each group (cat owners and non cat owners), or if there is some other way to represent the cluster information.
+
+* I understood the first example (student motivation), since the plot represented a change of motivation over time. It's not clear to me what any continuum along the horizontal axis represents. It's also not clear to me how to represent categorical data (e.g. cat ownership) using ggplot. :-/
