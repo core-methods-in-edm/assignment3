@@ -1,0 +1,164 @@
+---
+title: "class data"
+author: "jiaxili"
+date: "October 20, 2016"
+---
+
+```{r}
+###install.packages("ggplot2") 
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+```
+
+```{r}
+### upload the file "cluster-class-data.csv" Repository as a data frame called "K1"
+K1 <- read.table("cluster-class-data.csv",header = TRUE, sep = ",")
+```
+
+### First part: cluster with regions (K group of sets)
+
+```{r}
+### Since algorithm will treat each row as a value belonging to a person, so remove the name column and leave the "regions" columns
+K2 <- dplyr::select(K1, 14:16)
+```
+
+```{r}
+### omit NA values
+K3 <- na.omit(K2)
+```
+
+### Convert all regions into two new columns"Longtitude" and "Latitute"
+
+```{r}
+###create new varible/vector called "Lo" 
+Lo <-c(37.5665,14.0583,31.1343,22.5431,36.6512,33.0245,39.1368,35.0887,24.4798,30.4383,29.8683,22.5431,22.5431,28.6139,40.7128,23.0207,21.3069,39.9042,41.1415,39.9612,40.8923,41.4343)
+
+La <- c(126.9780,108.2772,121.2829,114.0579,117.1200,71.5523,77.7147,92.4421,18.0894,84.2807,121.5440,114.0579,114.0579,77.2090,74.0059,113.7518,157.8583,116.4074,73.3579,82.9988,74.4774,74.0354)
+
+### Create new table containg longtitude and latitude
+K4 <- data.frame(Lo,La)
+```
+
+```{r}
+### standardize the values so that they have the same range
+K4 <- scale(K4)
+```
+
+```{r}
+### kmeans with k3 dataset, and automatically have 2 cluster groups
+fit <- kmeans(K4, 2) 
+```
+
+```{r}
+### See how each observations are divided into 2 clusters
+fit$cluster
+```
+
+```{r}
+#Attach new column"cluster" to te original dataframe 
+K4 <- data.frame(K4, fit$cluster)
+```
+
+```{r}
+#Change the names of the variables
+names(K4) <- c("x", "Y", "cluster")
+```
+
+### Second part: cluster with questions other than regions (T group of sets)
+```{r}
+###### Since algorithm will treat each row as a value belonging to a person, so remove the name column and remoce the "regions" columns
+T2 <- dplyr::select(K1, 6:13)
+###going to add on "cat" and "gif" columns later 
+```
+
+```{r}
+###rename T2
+names(T2) <- c("months"," siblings","times_sports","miles","friends_Andorid","movies","classes","states_visited")
+```
+
+```{r}
+###select question3 and transfer into numeric answers
+T3<- dplyr::select(K1, QID3)
+T3$QID3<-ifelse(T3$QID3 == 'No', 0, 1)
+names(T3) <- "cat"
+```
+
+```{r}
+###select question4 and transfer into numeric answers
+T4<- dplyr::select(K1, QID4)
+T4$QID4<-ifelse(T4$QID4 == 'g-iff', 0, 1)
+names(T4) <- "gif"
+```
+
+```{r}
+###combine question3 and question4 into T2 original table
+T2 <- data.frame(T2, T3,T4)
+```
+
+```{r}
+### standardized for kmeans
+T2 <- scale(T2)
+```
+
+```{r}
+### compute kmeans with 2 clusters
+fit2 <- kmeans(T2, 2) 
+```
+
+```{r}
+### see what is in cluster
+fit2$cluster
+```
+
+```{r}
+### Add cluster to original table
+T2 <- data.frame(T2, fit2$cluster)
+```
+
+```{r}
+### rename T2 with new cluster column
+names(T2) <- c("months"," siblings","times_sports","miles","friends_Andorid","movies","classes","states_visited","cat","git","cluster")
+```
+
+###Third part : now there are two groups of data: one group is  the "regions" data (K4), and the other is the "questions" (T2), the followings are trying to create visualization for those two groups of data
+
+```{r}
+###convert cluster from an "integer" format to a "factor"
+K4$x <- as.numeric(K4$x)
+K4$Y <- as.numeric(K4$Y)
+K4$cluster <- as.factor(K4$cluster)
+
+T2$months <- as.numeric(T2$months)
+T2$times_sports <- as.numeric(T2$times_sports)
+T2$miles <- as.numeric(T2$miles)
+T2$friends_Andorid <- as.numeric(T2$friends_Andorid)
+T2$movies <- as.numeric(T2$movies)
+T2$classes <- as.numeric(T2$classes)
+T2$states_visited <- as.numeric(T2$states_visited)
+T2$cat <- as.numeric(T2$cat)
+T2$git <- as.numeric(T2$git )
+T2$` siblings` <- as.numeric (T2$` siblings`)
+T2$cluster <- as.factor(T2$cluster)
+```
+
+```{r}
+###some interesting plots for T2 & K4
+ ggplot(T2, aes(months,times_sports, colour = cluster)) +geom_dotplot(stackgroups = TRUE, dotsize=0.5, stackdir = "up", stackratio = 1,binwidth = 0.5, binpositions="all")
+
+ggplot(K4, aes(x, Y, colour = cluster)) + geom_line() + xlab("Longtitude") + ylab("Latitude")
+```
+
+```{r}
+### Visualization with two groups of clusters
+table1 <- table(K4$cluster,T2$cluster)
+plot(table1, col = "dark blue", main = " Clusters Analysis",xlab = "Regions.Cluster", ylab= "Questions.Cluster")
+
+###Better visualization with ggplot
+###geom_raster
+df1 <- data.frame(table1)
+ggplot(df1, aes(df1$Var1,df1$Var2, colour = Freq)) +geom_raster(aes(fill = Freq)) +xlab ( "Regions.Cluster") + ylab ( "Questions.Cluster")
+
+###geom_tile
+ggplot(df1, aes(df1$Var1,df1$Var2, colour = Freq)) +  geom_tile(aes(fill = Freq)) +xlab ( "Regions.Cluster") + ylab ( "Questions.Cluster")
+```
