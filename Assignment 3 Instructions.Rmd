@@ -184,7 +184,7 @@ K7.1 <- dplyr::count(K4.1, cluster)
 
 ```
 
-I think the three is more informative.  
+I think the three is more informative.  With more information comes more analysis, and this is what the extra cluster provides.  It gives us more context into the variables being tested.
 
 
 Once you have done this, save both of your plots to the Assignment 5 file. Create a Zotero item to index your new computer program (Assignment 5.rmd) in Zotero. Then commit your assignment, push it to your Github account and then Pull request your version to the original assignment version so I can see it.
@@ -211,3 +211,151 @@ Q12 - How many states have you visited in the US?
 Q13 - What city/town did you grow up in?
 Q14 - What state/province did you grow up in?
 Q15 - What country did you grow up in?
+
+
+Install packages and libraries
+
+```{r}
+
+install.packages("ggplot2") #If this doesn't work, use the "Packages" tab to install the package.
+
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+
+```
+
+Create a data frame
+
+```{r}
+
+ccd1<-read.table("cluster-class-data.csv",header=TRUE,sep=",")
+```
+
+Combine Names
+
+```{r}
+
+ccd2<-tidyr::unite(ccd1, "full.name", QID1_TEXT, QID2_TEXT)
+
+
+```
+
+Label the column names, so we can understand the data. 
+
+```{r}
+
+names(ccd2)<-c("duration","full.name","cat?","giff.or.jiff","nyc.duration","siblings","sports.per.week","miles.to.tc","friends.android","movies.this.year","classes.this.semester","states visited","home.city","home.state","home.country")
+
+```
+
+
+Create a dataframe with longitude and latitude data.  
+
+```{r}
+
+Latitude<-c(21.0278,37.5665,42.2968,31.230416,22.543096,36.651216,-33.0153481,39.1367717,35.0886963,24.479834,30.4382559,29.868336,22.543096,28.6618976,40.7127837,23.020673,21.3069444,39.904211,41.1414717,39.9611755,40.8923212,41.4343383)
+
+Longitude<-c(105.8341598,126.9779692,-71.2923877,121.473701,114.05786499999999,117.12,-71.5500276,-77.71471529999997,-92.4421011,118.089425,-84.28073289999998,121.54399000000001,114.05786499999999,77.2273958,-74.00594130000002,113.7518,-157.8583333,116.40739499999995,-73.3579049,-82.99879420000002,-74.4773775,-74.0353681)
+
+lalodata<-data.frame(Latitude,Longitude)
+
+lalodata<-scale(lalodata)
+
+classfit<-kmeans(lalodata,2)
+
+classfit$cluster
+
+lalodata2<-data.frame(lalodata,classfit$cluster)
+
+
+```
+
+Update first dataframe and make the columns numeric. Also, remove name and location columns (as they are not numeric).  We will be inputting numeric location data in the next step.
+
+```{r}
+
+ccd3<-ccd2
+
+#Eliminating all non-numeric columns.
+
+ccd3$full.name<-NULL
+ccd3$home.city<-NULL
+ccd3$home.state<-NULL
+ccd3$home.country<-NULL
+ccd3$`cat?`<-NULL
+ccd3$giff.or.jiff<-NULL
+
+#Making the cat and giff/jiff variables numeric.  Create seperate dataframes for each them combine.
+
+#Cat. 0 is for no cat and 1 is for cat.
+
+cat4<-dplyr::select(ccd1,QID3)
+cat4$QID3<-ifelse(cat4$QID3 == "No",0,1)
+names(cat4)<-"cat?"
+
+#giff/jiff.  0 is for giff and 1 is for jiff.
+
+giffjiff<-dplyr::select(ccd1,QID4)
+giffjiff$QID4<-ifelse(giffjiff$QID4 == "g-iff",0,1)
+names(giffjiff)<-"giff.or.jiff"
+
+#Combine 3 dataframes into one.
+
+ccd3<-data.frame(ccd3,cat4,giffjiff)
+
+```
+
+Create a combined dataframe with only numeric columns, combine longitude/latitude dataframe with other dataframe. 
+
+```{r}
+
+ccd4<-ccd3
+ccd4<-data.frame(ccd4,lalodata2)
+
+```
+
+Time for some visualization.
+
+```{r}
+
+#first change classfit.cluster column into factor.
+
+ccd5<-ccd4
+ccd5$classfit.cluster<-as.factor(ccd5$classfit.cluster)
+
+#Changing the classfit.cluster column to International and USA.  1 = International and 2 = USA.  I am changing it into USA and International to have more detailed graphs.
+
+ccd5$classfit.cluster<-ifelse(ccd5$classfit.cluster == 1,"International","USA")
+
+#lineplot
+
+ggplot(ccd5,aes(Longitude,Latitude,colour = classfit.cluster)) +geom_line()+xlab("Longitude") +ylab("Latitude")
+
+```
+
+Let's do this whole thing again, but instead focusing on number of classes and sports per week.
+
+```{r}
+
+sportsclasses<-dplyr::select(ccd5,sports.per.week,classes.this.semester)
+
+#I ran the kmeans test a bunch of times, until I found one that made sense.  I chose arbitrary cluster amounts until I found the one that made the most sense.  3 clusters was my chosen number: active, semi-active, inactive.
+
+sportsclassfit<-kmeans(sportsclasses,3)
+
+sportsclassfit$cluster
+
+sportsclasses2<-data.frame(sportsclasses,sportsclassfit$cluster)
+
+sportsclasses2$sportsclassfit.cluster<-as.factor(sportsclasses2$sportsclassfit.cluster)
+
+sportsclasses3<-sportsclasses2
+
+#rename clusters "1,2,3"
+
+sportsclassclusters = factor(sportsclasses3$sportsclassfit.cluster, labels = c("inactive", "active","semi-active"))
+
+ggplot(sportsclasses3,aes(classes.this.semester,sports.per.week,colour=sportsclassclusters))+geom_line()+ylab("sports.per.week")+xlab("classes.this.semester")
+
+```
