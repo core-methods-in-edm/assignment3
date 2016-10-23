@@ -1,0 +1,59 @@
+---
+title: "Assiment 3 Homework"
+author: "Zhuqian (Karen) Zhou"
+date: "October 22, 2016"
+output: html_document
+---
+##Extension Exercise
+
+Now, try to do the same for the data [collected in class](https://tccolumbia.qualtrics.com/SE/?SID=SV_6RRqlSAM6lZWYQt). Create two groups of clusters, the answers to the questions and regions where people grew up. Then create a visualization that shows the overlap between the two groups of clusters.
+
+##Raw Data
+
+Firstly, I upload the data file “claster-class-data.csv” as a data frame called “A1” which shows all the students' answers to the questionnaire except the first column that indicates how long the questionnaire takes a student to finish.
+```{r}
+A1 <- read.table("~/Career/TC/Courses/Core Methods in EDM/assignment3/cluster-class-data.csv", sep = ",", header = TRUE)
+```
+
+## Data Wrangling
+
+Secondly, I do serveral things as follows to tidy up the orginal data. Basically, I would like to convert all nonnumeric values to numeric ones.
+```{r}
+library(tidyr)
+library(dplyr)
+A2 <- dplyr::select(A1, -duration, -QID4)
+#Remove nonsense columns.
+A3 <- tidyr::unite(A2, QID1.2, QID2_TEXT, QID1_TEXT, sep = ", ", remove = TRUE)
+#Merge last name and first name
+names(A3) <- c("fullName", "Cat", "NY", "siblings", "sport", "homeToTC", "Android", "movies", "classes", "states", "town", "province", "country")
+#Rename each column.
+A3$Cat <- ifelse(A3$Cat == "Yes", 1, 0)
+#Change the value of "Cat" from Yes/No to 1/0.
+Ref <- read.table("~/Career/TC/Courses/Core Methods in EDM/assignment3/LatLong_Countries.csv", sep = ",", header = TRUE)
+#Upload a file “LatLong_Countries.csv” of all countries' longitude and latitude as a data frame called "Ref" which is downloaded from Google DSPL (https://developers.google.com/public-data/docs/canonical/countries_csv).
+names(Ref) <- c("initial", "latitude", "longitude", "country")
+#Rename the table.
+A3$country <- gsub(" ", "", A3$country, fixed = TRUE)
+#It seems that strings with space will make it hard for R to recognize (according to my former failure...), so I delete the space by this step to prepare the column for future operation.
+A3$country <- as.character(ifelse(A3$country == "VietNam", "Vietnam", ifelse(A3$country == "chile", "Chile", ifelse(A3$country == "UnitedStatesofAmerica", "United States", ifelse(A3$country == "china", "China", ifelse(A3$country == "USA", "United States", ifelse(A3$country == "CHINA", "China", ifelse(A3$country == "TheUnitedStatesofAmerica", "United States", ifelse(A3$country == "UnitedStates", "United States", ifelse(A3$country == "SouthKorea", "South Korea", as.character(A3$country)))))))))))
+#Due to different inputs of a country's name from the standard ones in "Ref", I replace all nonstandard names of country to with standard ones.
+A4 <- dplyr::left_join(A3, Ref, by = "country")
+#Join "Ref" to "A3" so that each row is attached with a certain longitude and latitude refering to the student's home country.
+row.names(A4) <- A4$fullName
+#Rename each row the respective student's name.
+A4 <- dplyr::select(A4, -fullName, -town, -province, -country, -initial)
+#Remove text-based columns.
+```
+
+## K-means Clustering
+
+Thirdly, I run the K-means clustering algorithm and make a clusplot according to the requirement of our homework.
+```{r}
+A4 <- scale(A4)
+#Standardize all the values to avoid the overemphasis on greater values.
+fit <- kmeans(A4, 2)
+#K-means clustering, k=2.
+A5 <- data.frame(A4, fit$cluster)
+library(cluster)
+clusplot(A5, A5$fit.cluster, labels=2, color = TRUE)
+```
