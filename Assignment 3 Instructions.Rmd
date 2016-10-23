@@ -278,6 +278,8 @@ ifit2$cluster
 
 G6 <- data.frame(G5, ifit1$cluster)
 G7 <- data.frame(G5A, ifit2$cluster)
+G7A <- data.frame(G5A, ifit2$cluster)
+
 
 
 names(G6) <- c("3", "4", "5", "7", "8", "9", "10", "11", "12","13","cluster1")
@@ -321,4 +323,13 @@ clusplot(G5, ifit1$cluster, color= TRUE, shade= TRUE, labels = 2, lines = 0, mai
 plotcluster(G5A, ifit2$cluster)
 clusplot(G5A, ifit2$cluster, color= TRUE, shade= TRUE, labels = 2, lines = 0, main = "LOCATION")
 
+##I generated new Scatterplots  between Lat and Long with different colour for cluster: 
+
+plot(G7A$Lat, G7A$Long, pch=21, bg=c("red", "green"), col =G7A$ifit2.cluster, main = "ScatterPlot between Lat and Long")
+### we can also try with ggplot2
+ggplot(G7A, aes(x = Lat, y = Long, colour = ifit2.cluster)) + geom_point()
+ggplot(G7A, aes(x = Lat, y = Long)) + geom_point() + facet_grid(~ifit2.cluster)
+
+library(ggfortify)
+autoplot(prcomp(G7A), colour ="ifit2.cluster")
 
