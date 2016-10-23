@@ -1,5 +1,7 @@
 ---
 title: "Assignment 3: K Means Clustering"
+
+Gemy Pham 
 ---
 
 In this assignment we will be applying the K-means clustering algorithm we looked at in class. At the following link you can find a description of K-means, create a webpage index in Zotero and add some notes about the use and limitations of K-means clustering:
@@ -10,7 +12,7 @@ You will need three packages to complete this assignment: "dplyr", "tidyr" and a
 
 ```{r}
 
-install.packages("ggplot2") #If this doesn't work, use the "Packages" tab to install the package.
+##install.packages("ggplot2") #If this doesn't work, use the "Packages" tab to install the package.
 
 library(dplyr)
 library(tidyr)
@@ -21,7 +23,12 @@ library(ggplot2)
 Now, upload the file "Class_Motivation.csv" from the Assignment 3 Repository as a data frame called "K1""
 ```{r}
 
-K1 <- read.table(...)
+K1 <- read.table("/Users/Gemy/Documents/Intro DS/Tutorials/Dm-Class/assignment3/Class_Motivation.csv")
+
+K1 <- read.csv("/Users/Gemy/Documents/Intro DS/Tutorials/Dm-Class/assignment3/Class_Motivation.csv")
+
+K1 <- as.data.frame(K1)
+
 
 ```
 
@@ -39,7 +46,8 @@ K2 <- dplyr::select(K1, 2:6)
 
 It is important to think about the meaning of missing values when clustering. We could treat them as having meaning or we could remove those people who have them. Neither option is ideal. What problems do you foresee if we recode or remove these values? Write your answers below:
 
-
+1. If we recode these missing values, we could potentially create artificial similarities. That is because we assign missing values the same values (missing values)
+2. If we remove these values and if there are large number of ids with missing values in the data set, we could possibly delete a whole big chunk of the data set 
 
 We will remove people with missing values for this assignment, but keep in mind the issues that you have identified.
 
@@ -153,11 +161,39 @@ K7 <- dplyr::count(K4, cluster)
 
 Look at the number of people in each cluster, now repeat this process for 3 rather than 2 clusters. Which cluster grouping do you think is more informative? Write your answer below:
 
+```{r}
+##Create new fit1 with 3 clusters
+fit1 <- kmeans(K3,3)
+
+fit1$cluster
+
+A1 <- data.frame(K3, fit1$cluster)
+head(A1)
+names(A1) <- c("1", "2", "3", "4", "5", "cluster")
+A2 <- gather(A1,"week", "motivation", 1:5)
+
+A3 <- A2 %>% group_by(week, cluster)
+A3 <- summarise(A3, avg = mean(motivation))
+A3$week <- as.numeric(A3$week)
+A3$cluster <- as.factor(A3$cluster)
+
+### Visualize the cluster: 
+ggplot(A3, aes(week, avg, colour = cluster)) + geom_line() + xlab("Week") + ylab("Average Motivation")
 
 
-Once you have done this, save both of your plots to the Assignment 5 file. Create a Zotero item to index your new computer program (Assignment 5.rmd) in Zotero. Then commit your assignment, push it to your Github account and then Pull request your version to the original assignment version so I can see it.
+A4 <- dplyr::count(A1, cluster)
+
+
+
+```
+
+
+
+
+Once you have done this, save both of your plots to the Assignment 3 file. Create a Zotero item to index your new computer program (Assignment 3.rmd) in Zotero. Then commit your assignment, push it to your Github account and then Pull request your version to the original assignment version so I can see it.
 
 ##Extension Exercise
+
 
 Now, try to do the same for the data [collected in class](https://tccolumbia.qualtrics.com/SE/?SID=SV_6RRqlSAM6lZWYQt). Create two groups of clusters, the answers to the questions and regions where people grew up. Then create a visualization that shows the overlap between the two groups of clusters.
 
@@ -179,3 +215,110 @@ Q12 - How many states have you visited in the US?
 Q13 - What city/town did you grow up in?
 Q14 - What state/province did you grow up in?
 Q15 - What country did you grow up in?
+
+```{r}
+
+### Turn data into table/data frame G1 
+
+G1 <- read.csv("/Users/Gemy/Documents/Intro DS/Tutorials/Dm-Class/assignment3/cluster-class-data.csv")
+
+G1 <- as.data.frame(G1)
+
+
+
+### Turn answers to question 3 and 4 QID3, QID4 into binary variables: 
+
+
+
+G1$QID3 <- ifelse(G1$QID3 == "No", 0,1)
+G1$QID4 <- ifelse(G1$QID4 == "g-iff", 0,1)
+
+G1$Lat <- NA
+G1$Long <- NA
+
+##write.csv(G1, "G2.csv")
+
+### Enter manually the Latidue and Longitude of The location 
+
+G4 <- read.csv("~/Documents/Intro DS/Tutorials/DM-Class/assignment3/G3.csv")
+
+G4$ID<-seq.int(nrow(G4))
+
+
+## Remove text data and duration column and make G5 only consists of answer to questions. 
+
+G5 <- select(G4, -1, -2, -3, -14, -15,-16, -17, -18, -19 )
+
+### Create separate dataset for location: 
+
+G5A <- select(G4, 17, 18)
+
+
+
+## Rename columns name according to question number 
+
+names(G5) <- c("3", "4", "5", "7", "8", "9", "10", "11", "12","13")
+
+## 
+
+G5 <- scale(G5)
+G5A <- scale(G5A)
+
+###CREATE 2 GROUPS OF CLUSTERING 
+### K-means clustering for Answer to questions and location
+
+ifit1 <- kmeans(G5, 2)
+ifit2 <- kmeans(G5A, 2)
+
+###We have just created "ifit" that contains all details of our clustering
+ifit1$cluster
+ifit2$cluster
+
+### Attach clusters to original data frame
+
+G6 <- data.frame(G5, ifit1$cluster)
+G7 <- data.frame(G5A, ifit2$cluster)
+
+
+names(G6) <- c("3", "4", "5", "7", "8", "9", "10", "11", "12","13","cluster1")
+names(G7) <- c("1","2","cluster2")
+
+### Convert from wide to long format
+
+G8 <- gather(G6, "question", "answer", 1:10)
+G8A <- gather(G7,"latlong", "location", 1:2)
+
+### Average the answer values by question and by cluster
+G9 <- G8 %>% group_by(question, cluster1)
+G9 <- summarise(G9, avg = mean(answer))
+
+G9A <- G8A %>% group_by(latlong, cluster2)
+G9A <- summarise(G9A, avg = mean(location))
+
+
+### Now we are going to visualize using GGplot2
+G9$question <- as.numeric(G9$question)
+G9$cluster1 <- as.factor(G9$cluster1)
+
+G9A$latlong <- as.numeric(G9A$latlong)
+G9A$cluster2 <- as.factor(G9A$cluster2)
+
+### Plot our graph
+ggplot(G9, aes(question, avg, colour = cluster1)) + geom_line()+ xlab("Question") + ylab("Average Answer")
+
+ggplot(G9A, aes(latlong, avg, colour = cluster2)) + geom_line()+ xlab("Latitude & Longitude") + ylab("Average Location")
+
+
+
+### Count cluster 
+G10 <- count(G9, cluster1)
+G10A <- count(G9A, cluster2)
+
+### More visualizations: 
+
+plotcluster(G5, ifit1$cluster)
+clusplot(G5, ifit1$cluster, color= TRUE, shade= TRUE, labels = 2, lines = 0, main ="ANSWER QUESTIONS")
+plotcluster(G5A, ifit2$cluster)
+clusplot(G5A, ifit2$cluster, color= TRUE, shade= TRUE, labels = 2, lines = 0, main = "LOCATION")
+
+
