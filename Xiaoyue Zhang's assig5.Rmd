@@ -1,0 +1,242 @@
+---
+title: "assig5"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+In this assignment we will be applying the K-means clustering algorithm we looked at in class. At the following link you can find a description of K-means, create a webpage index in Zotero and add some notes about the use and limitations of K-means clustering:
+
+https://www.cs.uic.edu/~wilkinson/Applets/cluster.html
+
+You will need three packages to complete this assignment: "dplyr", "tidyr" and a new package called "ggplot2". Install ggplot2 and then load all three packages.
+
+```{r}
+
+install.packages("ggplot2") #If this doesn't work, use the "Packages" tab to install the package.
+
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+
+```
+
+Now, upload the file "Class_Motivation.csv" from the Assignment 3 Repository as a data frame called "K1""
+```{r}
+
+K1 <- read.table("C:/Users/Nino Zhang/Documents/Nino Zhang/study at TC/fall 2016/EDM/assig5/assignment on 10/20/Class_Motivation.csv", header=TRUE, 
+  	sep=",")
+
+```
+
+This file contains the self-reported motivation scores for a class over five weeks. We are going to look for patterns in motivation over this time and sort people into clusters based on those patterns.
+
+But before we do that, we will need to manipulate the data frame into a structure that can be analyzed by our clustering algorithm.
+
+The algorithm will treat each row as a value belonging to a person, so we need to remove the id variable.
+
+```{r}
+
+K2 <- dplyr::select(K1, 2:6)
+
+```
+
+It is important to think about the meaning of missing values when clustering. We could treat them as having meaning or we could remove those people who have them. Neither option is ideal. What problems do you foresee if we recode or remove these values? Write your answers below:
+
+A: Missing values might heavily effect the whole data set. They might contain crucial meaning when come to clustering. Say, if we want to group the data based on the absense of response, then if the value is missing will become an essential condition for clustering
+
+
+We will remove people with missing values for this assignment, but keep in mind the issues that you have identified.
+
+
+```{r}
+
+K3 <- na.omit(K2) #This command create a data frame with only those people with no missing values. It "omits" all rows with missing values, also known as a "listwise deletion". EG - It runs down the list deleting rows as it goes.
+
+```
+
+Another pre-processing step used in K-means is to standardize the values so that they have the same range. We do this because we want to treat each week as equally important - if we do not standardise then the week with the largest range will have the greatest impact on which clusters are formed. We standardise the values by using the "scales()" command.
+
+```{r}
+
+K3 <- scale(K3)
+
+```
+
+
+Now we will run the K-means clustering algorithm we talked about in class. 
+1) The algorithm starts by randomly choosing some starting values 
+2) Associates all observations near to those values with them
+3) Calculates the mean of those clusters of values
+4) Selects the observation closest to the mean of the cluster
+5) Re-associates all observations closest to this observation
+6) Continues this process until the clusters are no longer changing
+
+Notice that in this case we have 5 variables and in class we only had 2. It is impossible to vizualise this process with 5 variables.
+
+Also, we need to choose the number of clusters we think are in the data. We will start with 2.
+
+```{r}
+
+fit <- kmeans(K3, 2) 
+
+#We have created an object called "fit" that contains all the details of our clustering including which observations belong to each cluster.
+
+#We can access the list of clusters by typing "fit$cluster", the top row corresponds to the original order the rows were in. Notice we have deleted some rows.
+
+fit$cluster
+
+#We can also attach these clusters to te original dataframe by using the "data.frame" command to create a new data frame called K4.
+
+K4 <- data.frame(K3, fit$cluster)
+
+#Have a look at the K4 dataframe. Lets change the names of the variables to make it more convenient with the names() command.
+
+names(K4) <- c("1", "2", "3", "4", "5", "cluster") #c() stands for concatonate and it creates a vector of anything, in this case a vector of names.
+
+
+```
+
+Now we need to visualize the clusters we have created. To do so we want to play with the structure of our data. What would be most useful would be if we could visualize average motivation by cluster, by week. To do this we will need to convert our data from wide to long format. Remember your old friends tidyr and dplyr!
+
+First lets use tidyr to convert from wide to long format.
+```{r}
+
+K5 <- tidyr::gather(K4, "week", "motivation", 1:5)
+
+```
+
+Now lets use dplyr to average our motivation values by week and by cluster.
+
+```{r}
+
+K6 <- K5 %>% group_by(week, cluster)
+K6 <- summarise(K6, avg = mean(motivation))
+
+```
+
+Now it's time to do some visualization! We are going to start using the ggplot2 package, a very popular visualization package in R. It is based on the "Grammar of Graphics" a theory of how visualizations work best. If you are interested, you can read more about it here: 
+
+https://www.cs.uic.edu/~wilkinson/TheGrammarOfGraphics/GOG.html
+
+And you can see the range of available graphics in ggplot here:
+
+http://docs.ggplot2.org/current/
+
+We are going to create a line plot similar to the one created in the school dropout paper we looked at in class (Bowers, 2010). It will have motivation on the Y-axis and weeks on the X-axis. To do this we will want our weeks variables to be treated as a number, but because it was created from a variable name it is currently being treated as a character variable. You can see this if you click on the arrow on the left of K6 in the Data pane. Week is designated by "chr". To convert it to numeric, we use the as.numeric command. 
+
+Likewise, since "cluster" is not numeric but rather a categorical label we want to convert it from an "integer" format to a "factor" format so that ggplot does not treat it as a number. We can do this with the as.factor() command.
+
+```{r}
+
+K6$week <- as.numeric(K6$week)
+
+K6$cluster <- as.factor(K6$cluster)
+
+```
+
+Now we can plot our line plot using the ggplot command, "ggplot()".
+
+- The first argument in a ggplot is the dataframe we are using: K6
+- Next is what is called an aesthetic (aes), the aesthetic tells ggplot which variables to use and how to use them. Here we are using the variables "week" and "avg" on the x and y axes and we are going color these variables using the "cluster" variable
+- Then we are going to tell ggplot which type of plot we want to use by specifiying a "geom()", in this case a line plot: geom_line()
+- Finally we are going to clean up our axes labels: xlab("Week") & ylab("Average Motivation")
+
+```{r}
+
+ggplot(K6, aes(week, avg, colour = cluster)) + geom_line() + xlab("Week") + ylab("Average Motivation")
+
+```
+
+What patterns do you see in the plot?
+
+It would be useful to determine how many people are in each cluster. We can do this easily with dplyr.
+
+```{r}
+K7 <- dplyr::count(K4, cluster)
+K7
+```
+
+Look at the number of people in each cluster, now repeat this process for 3 rather than 2 clusters. Which cluster grouping do you think is more informative? Write your answer below:
+```{r}
+# we can change the number of clusters into 3
+fit2 <- kmeans(K3, 3)
+B4 = data.frame(K3, fit2$cluster)
+names(B4) <- c("1", "2", "3", "4", "5", "cluster")
+B5 <- tidyr::gather(B4, "week", "motivation", 1:5)
+B6 <- B5 %>% group_by(week, cluster)
+B6 <- summarise(B6, avg = mean(motivation))
+B6$week <- as.numeric(B6$week)
+B6$cluster <- as.factor(B6$cluster)
+ggplot(B6, aes(week, avg, colour = cluster)) + geom_line() + xlab("Week") + ylab("Average Motivation")
+```
+
+
+
+Once you have done this, save both of your plots to the Assignment 5 file. Create a Zotero item to index your new computer program (Assignment 5.rmd) in Zotero. Then commit your assignment, push it to your Github account and then Pull request your version to the original assignment version so I can see it.
+
+
+---
+title: "Assignment 3: K Means Clustering"
+---
+##Extension Exercise
+
+Now, try to do the same for the data [collected in class](https://tccolumbia.qualtrics.com/SE/?SID=SV_6RRqlSAM6lZWYQt). Create two groups of clusters, the answers to the questions and regions where people grew up. Then create a visualization that shows the overlap between the two groups of clusters.
+
+```{r}
+
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+
+```
+
+Now, upload the file "Class_Motivation.csv" from the Assignment 3 Repository as a data frame called "K1""
+```{r}
+
+D1 <- read.table("C:/Users/Nino Zhang/Documents/Nino Zhang/study at TC/fall 2016/EDM/assig5/assignment on 10/20/cluster-class-data.csv", header=TRUE, 
+  	sep=",")
+
+```
+
+
+
+```{r}
+#D2 <- dplyr::select(D1, 4:16)
+# merge columns the assign names to each of them
+D2 <- tidyr::unite(D1, QID1.2, QID2_TEXT, QID1_TEXT, sep = ", ", remove = TRUE)
+names(D2) <- c("duration", "name", "cat_or_not?", "j_or_g?", "time_in_NY", "siblings", "sports", "dist_to_TC", "phone", "movie", "classes", "state", "town", "prov", "country") 
+
+```
+
+
+
+
+```{r}
+# then we have to convert responses in yes/no into binary numbers.
+D2$`cats or not?` <- ifelse(D2$`cat_or_not?`=="Yes", 1, 0)
+
+```
+
+Another pre-processing step used in K-means is to standardize the values so that they have the same range. We do this because we want to treat each week as equally important - if we do not standardise then the week with the largest range will have the greatest impact on which clusters are formed. We standardise the values by using the "scales()" command.
+
+```{r}
+D3 = dplyr::select(D2, 9:12, 5)
+D3 = scale(D3)
+fit <- kmeans(D3, 4)
+# we combine the clusters into a table
+D4 = data.frame(D3, fit$cluster)
+# then we assign names
+names(D4) = c("1", "2", "3", "4", "5", "cluster")
+D5 <- tidyr::gather(D4, "questions", "responses", 1:5)
+D6 <- D5 %>% group_by(questions, cluster)
+D6 <- summarise(D6, avg = mean(responses))
+D6$questions = as.numeric(D6$questions)
+D6$cluster = as.factor(D6$cluster)
+ggplot(D6, aes(questions, avg, colour = cluster)) + geom_line() + xlab("Week") + ylab("Average Motivation")
+D7 = dplyr::count(D4, cluster)
+D7
+```
