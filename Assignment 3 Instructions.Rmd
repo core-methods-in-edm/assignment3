@@ -183,7 +183,7 @@ library(dplyr)
 library(tidyr)
 library(ggplot2)
 
-C1 <- read.csv("C:/Users/Josh/Documents/R/Assignment 3/cluster-class-data.csv")
+C1 <- read.csv("cluster-class-data.csv", header = TRUE)
 C2 <- dplyr::select(C1, 2:16)
 
 names(C2)
@@ -200,3 +200,20 @@ c4cluster = factor(C4$cluster, labels = c("monthsNY"))
 ```
 
 
+```{r}
+#Clustering by class answers to questions 
+
+CQonly <- dplyr::select(C3, 5:11)
+View(CQonly)
+CQResults <- kmeans(CQonly, 3)
+CQResults
+CQResults$size
+ table(C3$country, CQResults$cluster)
+ 
+plot(CQonly[c("monthsNY","classes")], col = CQResults$cluster)
+ 
+plot(CQonly[c("monthsNY","Friend_Android")], col = CQResults$cluster)
+
+plot(CQonly[c("classes","movies")], col = CQResults$cluster)
+
+ggplot(CQonly, aes(monthsNY, classes, colour = cluster)) + geom_line() + xlab("months") + ylab("classes")
