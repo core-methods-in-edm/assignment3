@@ -162,3 +162,78 @@ Once you have done this, save both of your plots to the Assignment 5 file. Creat
 ##Extension Exercise
 
 Now, try to do the same for the data [collected in class](https://tccolumbia.qualtrics.com/SE/?SID=SV_6RRqlSAM6lZWYQt). Create two groups of clusters, the answers to the questions and regions where people grew up. Then create a visualization that shows the overlap between the two groups of clusters.
+
+Now, upload the file "cluster-class-data.csv" from the Assignment 3 Repository as a data frame called "A1"". I am sorry that I "cheat" a bit but I do take my time to enter all the location on excel before input it's in here... T.T
+
+```{r}
+
+A1 <- read.table("~/Desktop/HUDK class/Assignment 3/cluster-class-data.csv", sep = ",", header = TRUE)
+```
+
+This file contains many random data, that I do not know what do with... It is taken from the survey that the instructor asked in class.
+
+Now we have to change variables into binary variable
+```{r}
+A1$QID3 <-as.numeric(A1$QID3 == "No")
+A1$QID4 <-as.numeric(A1$QID4 == "g-iff")
+```
+
+There is no missing value!!! YAY
+
+Another pre-processing step used in K-means is to standardize the values so that they have the same range. We do this because we want to treat each week as equally important - if we do not standardise then the week with the largest range will have the greatest impact on which clusters are formed. We standardise the values by using the "scales()" command.
+
+```{r}
+A2<- dplyr::select(A1, 17:18) # Thís is the location dataset
+A3<- scale(A2)
+A3<- dplyr::select(A1, 7:8) #thís is an example of a dataset random variables and not related
+A3<- scale(A3)
+
+```
+
+Now we will run the K-means clustering algorithm we talked about in class. 
+1) The algorithm starts by randomly choosing some starting values 
+2) Associates all observations near to those values with them
+3) Calculates the mean of those clusters of values
+4) Selects the observation closest to the mean of the cluster
+5) Re-associates all observations closest to this observation
+6) Continues this process until the clusters are no longer changing
+
+
+```{r}
+
+fit2 <- kmeans(A2, 3) 
+
+#We have created an object called "fit2" that contains all the details of our clustering including which observations belong to each cluster.
+#We can access the list of clusters by typing "fit$cluster", the top row corresponds to the original order the rows were in. Notice we have deleted some rows.
+
+fit2$cluster
+fit2$centers
+fit2$size
+fit2$withinss
+
+
+A2$cluster=factor(fit2$cluster)
+centers=as.data.frame(fit2$centers)
+```
+
+- The first argument in a ggplot is the dataframe we are using: A4
+- Next is what is called an aesthetic (aes), the aesthetic tells ggplot which variables to use and how to use them. Here we are using the variables "Location.lat" and "Location.long" on the x and y axes and we are going color these variables using the "fit2.cluster" variable
+- Here, I
+
+```{r}
+
+ggplot(data=A2, aes(x=Location.lat, y= Location.long, color=cluster)) +
+  geom_point() +
+      geom_point(data=centers, aes (x=Location.lat, y= Location.long, color='Center')) +
+      geom_point(data=centers,aes(x=Location.lat,y=Location.long, color='Center'), size=30, alpha=.2)
+
+```
+
+Also, we need to choose the number of clusters we think are in the data.
+I have tried 2,3,4,5. I figure that 3 is actually the way to go because there is no dot (region) that got left-out and the graph isn't too crazy...
+
+We can repeat the same process for A3, but the pattern wouldn't be meaningful.
+
+``` {r}
+A7 <- dplyr::count(A2, fit2$cluster) #It would be useful to determine how many people are in each cluster.
+```
