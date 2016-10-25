@@ -160,3 +160,49 @@ Once you have done this, save both of your plots to the Assignment 5 file. Creat
 ##Extension Exercise
 
 Now, try to do the same for the data [collected in class](https://tccolumbia.qualtrics.com/SE/?SID=SV_6RRqlSAM6lZWYQt). Create two groups of clusters, the answers to the questions and regions where people grew up. Then create a visualization that shows the overlap between the two groups of clusters.
+
+```{r}
+D1 <- read.csv("cluster-class-data.csv")
+
+#Add the column names
+names(D1) <- c("duration","last.name","first.name","own.cat","g-iff","NYC.months","num.siblings","sports.week","miles.home","android.friends","movies.thisyr","classes.semester","States.Traveled","hometown","homestate","homecountry")
+
+#Remove duration and names
+D2 <- dplyr::select(D1, 4:16)
+
+#Convert categorical to binary
+D2$own.cat <- ifelse(D2$own.cat=="Yes", 1, 0)
+D2$"g-iff" <- ifelse(D2$"g-iff"=="g-iff", 1, 0)
+
+#insert Latitude and Longitude columns
+
+latitude="lat"
+D3 <- cbind(D2,latitude)
+
+longitude="long"
+D4 <- cbind(D3,longitude)
+
+#Remove the blanks
+D5 <-na.omit(D4)
+
+#Update the lat/long columns with data
+D5$latitude <- c("37.57","42.29","31.23","22.54","36.65","-33.02","39.14","35.09","24.47","30.44","29.87","22.54","28.70","40.71","23.02","21.31","39.90","41.14","39.96","40.89","41.43")
+
+D5$longitude <- c("126.98","-71.29","121.47","114.06","117.12","-77.55","-77.72","-92.44","118.09","-84.28","121.54","114.06","77.10","-74.01","113.75","-157.86","116.41","-73.36","-82.99","-74.48","-74.04")
+
+#convert to numeric
+D5$latitude <- as.numeric(D5$latitude)
+D5$longitude <- as.numeric(D5$longitude)
+
+#remove location names, use lat/long instead
+D6 <- subset(D5, select = -c(hometown,homestate,homecountry))
+
+#adjust for differences in scale
+D6 <- scale(D6)
+
+#First cluster
+cluster1 <- kmeans(D6,2)
+D7 <- data.frame(D6, cluster1$cluster)
+
+
+```
