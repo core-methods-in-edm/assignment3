@@ -31,7 +31,7 @@ K3 <- na.omit(K2)
 ### Convert all regions into two new columns"Longtitude" and "Latitute"
 
 ```{r}
-###create new varible/vector called "Lo" 
+### Store longtitude and latitude into new varibles called "Lo" and "La"
 Lo <-c(37.5665,14.0583,31.1343,22.5431,36.6512,33.0245,39.1368,35.0887,24.4798,30.4383,29.8683,22.5431,22.5431,28.6139,40.7128,23.0207,21.3069,39.9042,41.1415,39.9612,40.8923,41.4343)
 
 La <- c(126.9780,108.2772,121.2829,114.0579,117.1200,71.5523,77.7147,92.4421,18.0894,84.2807,121.5440,114.0579,114.0579,77.2090,74.0059,113.7518,157.8583,116.4074,73.3579,82.9988,74.4774,74.0354)
@@ -61,13 +61,13 @@ K4 <- data.frame(K4, fit$cluster)
 ```
 
 ```{r}
-#Change the names of the variables
+#Change the names of the variables with coordinates x & y 
 names(K4) <- c("x", "Y", "cluster")
 ```
 
 ### Second part: cluster with questions other than regions (T group of sets)
 ```{r}
-###### Since algorithm will treat each row as a value belonging to a person, so remove the name column and remoce the "regions" columns
+###### Since algorithm will treat each row as a value belonging to a person, so remove the name column and remove the "regions" columns
 T2 <- dplyr::select(K1, 6:13)
 ###going to add on "cat" and "gif" columns later 
 ```
@@ -78,14 +78,14 @@ names(T2) <- c("months"," siblings","times_sports","miles","friends_Andorid","mo
 ```
 
 ```{r}
-###select question3 and transfer into numeric answers
+###select question3 and transfer string into numeric answers
 T3<- dplyr::select(K1, QID3)
 T3$QID3<-ifelse(T3$QID3 == 'No', 0, 1)
 names(T3) <- "cat"
 ```
 
 ```{r}
-###select question4 and transfer into numeric answers
+###select question4 and transfer string into numeric answers
 T4<- dplyr::select(K1, QID4)
 T4$QID4<-ifelse(T4$QID4 == 'g-iff', 0, 1)
 names(T4) <- "gif"
@@ -121,10 +121,11 @@ T2 <- data.frame(T2, fit2$cluster)
 names(T2) <- c("months"," siblings","times_sports","miles","friends_Andorid","movies","classes","states_visited","cat","git","cluster")
 ```
 
-###Third part : now there are two groups of data: one group is  the "regions" data (K4), and the other is the "questions" (T2), the followings are trying to create visualization for those two groups of data
+###Third part : now there are two groups of data: one group is  the "regions" data (K4), and the other is other "questions" (T2), the followings are trying to create visualization for those two groups of data
 
 ```{r}
 ###convert cluster from an "integer" format to a "factor"
+###this step is unnessary for completing this assignment
 K4$x <- as.numeric(K4$x)
 K4$Y <- as.numeric(K4$Y)
 K4$cluster <- as.factor(K4$cluster)
@@ -143,7 +144,7 @@ T2$cluster <- as.factor(T2$cluster)
 ```
 
 ```{r}
-###some interesting plots for T2 & K4
+###some interesting plots for T2 & K4 seperately
  ggplot(T2, aes(months,times_sports, colour = cluster)) +geom_dotplot(stackgroups = TRUE, dotsize=0.5, stackdir = "up", stackratio = 1,binwidth = 0.5, binpositions="all")
 
 ggplot(K4, aes(x, Y, colour = cluster)) + geom_line() + xlab("Longtitude") + ylab("Latitude")
@@ -162,3 +163,14 @@ ggplot(df1, aes(df1$Var1,df1$Var2, colour = Freq)) +geom_raster(aes(fill = Freq)
 ###geom_tile
 ggplot(df1, aes(df1$Var1,df1$Var2, colour = Freq)) +  geom_tile(aes(fill = Freq)) +xlab ( "Regions.Cluster") + ylab ( "Questions.Cluster")
 ```
+
+```{r}
+###Interpretation with results
+
+###To be conluded, people in Regions-cluster 1 (Asians) also group with Questions-cluster 1 while Geo-cluster 2 are spread between Question-clusters 1 & 2.
+
+###In other words, students' clusters really depend on their different characteristics: where they grow, and where they live. For exmaple, those types of questions really group asians together (how long they stay in United States i.e.), and thus reflected in their regions.
+
+###That is, if the Question-clusters 1& Regions-cluster 1 with freq in 8 can be considered as the most typical  asian-type students, then probably, Question-clusters 2 & Geo-cluster 1 are those who are not that much typical asians in behaviour.
+
+###Lastly, there are 2 people are geographical remotes and also with distinctive answers for questions, so that they belong to Questions-cluster 2 & Regions-cluster 2.
