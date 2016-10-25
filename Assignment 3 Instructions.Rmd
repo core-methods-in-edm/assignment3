@@ -147,6 +147,7 @@ ggplot(K6, aes(week, avg, colour = cluster)) + geom_line() + xlab("Week") + ylab
 ```
 
 What patterns do you see in the plot?
+Cluster 1 has lower average motivation than cluster 2 except in week 5. When the motivation of cluster 2 decreases compared to the previous week, cluster 1 increases. And as cluster 2 increases motivation compared to the previous week, cluster 1 decreases.
 
 It would be useful to determine how many people are in each cluster. We can do this easily with dplyr.
 
@@ -155,15 +156,109 @@ K7 <- dplyr::count(K4, cluster)
 ```
 
 Look at the number of people in each cluster, now repeat this process for 3 rather than 2 clusters. Which cluster grouping do you think is more informative? Write your answer below:
+The K=3 plot is more informative than the K=2 plot. It is because it showed very distinct patterns of 3 clusters with one that is always motivated
+
+Now we choose K as 3 and repeat the process.
+
+```{r}
+K1 <- read.csv("Class_Motivation.csv",  sep = ",")
+fit <- kmeans(K3, 3) 
+fit$cluster
+K4 <- data.frame(K3, fit$cluster)
+names(K4) <- c("1", "2", "3", "4", "5", "cluster")
+K5 <- tidyr::gather(K4, "week", "motivation", 1:5)
+K6 <- K5 %>% group_by(week, cluster)
+K6 <- summarise(K6, avg = mean(motivation))
+K6$week <- as.numeric(K6$week)
+K6$cluster <- as.factor(K6$cluster)
+ggplot(K6, aes(week, avg, colour = cluster)) + geom_line() + xlab("Week") + ylab("Average Motivation")
+K7 <- dplyr::count(K4, cluster)
+```
 
 
-
-Once you have done this, save both of your plots to the Assignment 5 file. Create a Zotero item to index your new computer program (Assignment 5.rmd) in Zotero. Then commit your assignment, push it to your Github account and then Pull request your version to the original assignment version so I can see it.
 
 ##Extension Exercise
 
 Now, try to do the same Now, try to do the same for the data collected in class. Create two groups of clusters, the answers to the questions and regions where people grew up. Then create a visualization that shows the overlap between the two groups of clusters.
 
+Libraries
+```{r}
+library(tidyr)
+library(dplyr)
+library(igraph)
+library(cluster)
+```
+
+Data Wrangling
+
+```{r}
+# Read and save data as D1
+D1 <- read.csv("cluster-class-data.csv",  sep = ",", header = T)
+
+# Remove duration from the list and unite first two columns of information
+D2 <- D1[,-1]
+D2 <- tidyr::unite(D2, Name, QID1_TEXT, QID2_TEXT, sep = " ", remove = TRUE)
+                    
+# Rename each column to indicate real meanings
+names(D2) <- c("Name", "Cat", "G-iff", "NYC", "Siblings", "Sport", "Home.to.TC", "Android", "Movie", "Class", "US.states", "City", "State", "Country")
+
+#code Cat(Yes/No) and Gif(g-iff, j-iff) to binary response
+D2$Cat <- ifelse(D2$Cat == "Yes", 1, 0)
+D2$`G-iff` <- ifelse(D2$`G-iff` == "g-iff", 1, 0)
+
+#Read and save latitude and longitude of City, State, Country
+L1 <- read.csv("location.csv",  sep = ",", header = F)
+names(L1) <- c("Latitude", "Longitude")
+
+#Merge two datasets and delete "City, State, Country" (with "Latitude and Longitude" in place)
+
+D3 <- merge(D2, L1)
+D3 <- select(D3, -City, -State, -Country)
+
+```
+
+K-means clustering
+
+```{r}
+#Create two clusters, one for questions (Q) and one for region (R)
+
+#cluster for questions
+Q1 <- select(D3,-Name, -Latitude, -Longitude)
+Q1 <- scale(Q1)
+fitQ <- kmeans(Q1, 3) 
+fitQ$cluster
+Q2 <- data.frame(Q1, fitQ$cluster)
+names(Q2) <- c("2", "3", "4", "5", "6","7","8","9","10","11","clusterQ")
+Q3 <- tidyr::gather(Q2, "questions", "answers", 1:10)
+Q4 <- Q3 %>% group_by(questions, clusterQ)
+Q4 <- summarise(Q4, avg = mean(answers))
+Q4$questions <- as.numeric(Q4$questions)
+Q4$fitQ.cluster <- as.factor(Q4$clusterQ)
+ggplot(Q4, aes(questions, avg, colour = clusterQ)) + geom_line() + xlab("Questions") + ylab("Average Answers")
+Q5 <- dplyr::count(Q4, clusterQ)
+
+
+#cluster for region
+R1 <- select(D3, Latitude, Longitude)
+R1 <- scale(R1)
+fitR <- kmeans(R1, 3) 
+fitR$cluster
+R2 <- data.frame(R1, fitR$cluster)
+names(R2) <- c("12", "13","clusterR")
+R3 <- tidyr::gather(R2, "latlong", "value", 1:2)
+R4 <- R3 %>% group_by(latlong, clusterR)
+R4 <- summarise(R4, avg = mean(value))
+R4$latlong <- as.numeric(R4$latlong)
+R4$clusterR <- as.factor(R4$clusterR)
+ggplot(R4, aes(latlong, avg, colour = clusterR)) + geom_line() + xlab("Latlong") + ylab("Values")
+R5 <- dplyr::count(R4, clusterR)
+```
+
+Visualizations
+```{r}
+clusplot(Q2, fitQ$cluster, color= TRUE, shade= TRUE, lines = 0, main ="Questions")
+clusplot(R2, fitR$cluster, color= TRUE, shade= TRUE, lines = 0, main ="Region")
+```
 Code Book:
 
 Duration (in seconds) Q1 - First Name Q2 - Last Name Q3 - Have you ever owned a cat? Q4 - Do you pronounce "gif", with a J (j-iff) or a G (g-iff)? Q5 - How many months have you lived in New York City? Q6 - How many siblings (brothers/sisters) do you have? Q7 - How many times do you play sport each week? Q8 - How many miles do you travel from home to TC? Q9 - Estimate how many of your friends own Android phones Q10 - How many movies have you seen in the cinema this year? Q11 - How many classes are you taking this semester? Q12 - How many states have you visited in the US? Q13 - What city/town did you grow up in? Q14 - What state/province did you grow up in? Q15 - What country did you grow up in?
