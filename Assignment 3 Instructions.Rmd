@@ -13,25 +13,13 @@ You will need three packages to complete this assignment: "dplyr", "tidyr" and a
 
 ```{r}
 
-install.packages("colorspace")
-install.packages("ggplot2")
+install.packages("colorspace", repos = "http://cran.us.r-project.org")
+install.packages("ggplot2", repos = "http://cran.us.r-project.org")
 library(ggplot2)
 library(dplyr)
 library(tidyr)
 
 ```
-
-```{r}
-
-install.packages("ggplot2") #If this doesn't work, use the "Packages" tab to install the package.
-
-library(dplyr)
-library(tidyr)
-library(ggplot2)
-
-```
-
-
 
 
 Now, upload the file "Class_Motivation.csv" from the Assignment 3 Repository as a data frame called "K1""
@@ -206,8 +194,8 @@ d2$cat <- ifelse(d2$cat == "No",0,1) # codes 0 for no cat, 1 for cat
 d2$gif <- ifelse(d2$gif == "j-iff",0,1) #codes 0 for "j-iff" (wrong pronunciation, 1 for "g-iff" (right pronunciation)
 levels(d2$country)
 
-levels(d2$country)[levels(d2$country)=="United States of America "] <- "United States"
 levels(d2$country)[levels(d2$country)=="United States "] <- "United States"
+levels(d2$country)[levels(d2$country)=="United States of America "] <- "United States"
 levels(d2$country)[levels(d2$country)=="The United States of America"] <- "United States"
 levels(d2$country)[levels(d2$country)=="The United States of America "] <- "United States"
 levels(d2$country)[levels(d2$country)=="USA"] <- "United States"
@@ -268,7 +256,7 @@ d5$cluster <- as.factor(d5$cluster)
 ```{r}
 d6 <- select(d5, cat, sportsweekly, cluster)
 d6 %>% group_by(cat, cluster)
-d6 <- summarise(d6, avg = mean(sportsweekly))
+#d6 <- summarise(d6, avg = mean(sportsweekly))
 # Error: Each variable must be a 1d atomic vector or list.
 # Problem variables: 'sportsweekly'
 ```
@@ -283,13 +271,13 @@ d6 <- summarise(d6, avg = mean(sportsweekly))
 ```{r}
 
 loc <- dplyr::select(d2, 11:13)
-loc[] <- lapply(loc, as.character)
+loc <- lapply(loc, as.character)
 
 ```
 * Install package for converting names of location data to coordinates:
 ```{r}
 
-install.packages("ggmap")
+install.packages("ggmap", repos = "http://cran.us.r-project.org")
 library(ggmap) 
 
 ```
@@ -297,7 +285,7 @@ library(ggmap)
 * Prepare data for reading into google maps:
 ```{r}
 
-loc2[] <- lapply(loc, as.character)
+loc2 <- data.frame(lapply(loc, as.character, stringsAsFactors = FALSE))
 loc3 <- tidyr::unite(loc2, location, city, stateprovince, country, sep = ", ")
 
 ```
@@ -305,7 +293,7 @@ loc3 <- tidyr::unite(loc2, location, city, stateprovince, country, sep = ", ")
 * Add coordinate data
 ```{r}
 
-loc3 <- mutate_geocode(loc3, location) # did confirm that "Hanoi, NA, Vietnam" returned the correct coordinates, even with its missing state/province data
+loc3 <- mutate_geocode(loc3, location) # did confirm that "Hanoi, NA, Vietnam" returned the correct coordinates, even with missing state/province data
 
 ```
 
@@ -322,6 +310,15 @@ loc4 <- dplyr::select(loc3, 2:3)
 fitloc <- kmeans(loc4, 4)
 loc5 <- data.frame(loc4, fitloc$cluster)
 names(loc5) <- c("lon", "lat", "cluster")
+
+```
+
+* Plot clustered location data
+```{r}
+
+install.packages('cluster', repos = "http://cran.us.r-project.org")
+library(cluster)
+clusplot(loc5, loc5$cluster, labels = 2, colors = TRUE)
 
 ```
 
