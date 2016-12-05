@@ -1,0 +1,58 @@
+---
+title: "Assignment 3 part2"
+author: "Victoria Bertotti"
+date: "October 25, 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+
+install.packages("ggplot2") #If this doesn't work, use the "Packages" tab to install the package.
+
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+
+D1 <- read.csv("~/Documents/VLB SCHOOL - ALL/TC.CU.2015-16/Learning Analytics FALL2016/Projects/assignment3/cluster-class-data.csv", header=TRUE)
+
+#remove the "duration" column
+D2 <- dplyr:: select(D1, 2:16)
+
+names(D2)<-c("first_name","last_name","cat","gif","nyc","siblings","sport","disTC","frdAndroid","cinema","classes","statesVisted","town","state","country")
+
+#make the categorical variables numeric/ from JING not in mine/ not working
+D2$cat<-ifelse(D2$cat=="No",0,1)
+View(D2)
+D2$gif<-ifelse(D2$gif=="g-iff",0,1)
+
+library(ggmap)
+cities<- c("Seoul","Tallahasse", "New York")
+geocode(cities[1])
+geocode(cities[2])
+geocode(cities[3])
+
+D3<-dplyr::select(D2,town,state,country)
+
+D3_new<-tidyr::unite(D3, location,town,state,country, sep=",")
+geocodes <- geocode(D3_new$location)
+geocodes <- dplyr::slice(geocodes, -1)
+
+D5 <-dplyr::select(D2, statesVisted)
+D5 <- dplyr::slice(D5, -1)
+geo <-kmeans(geocodes, 2)
+geo
+geo$cluster
+library(cluster)
+clusplot(geocodes,geo$cluster, main="clusterfuck", Longitude = "longitude", Latitude = "latitude", color = TRUE, shade= FALSE,labels=1,lines=0)
+
+
+#code from Jing start
+statesWent <-kmeans(D5, 2)
+statesWent$cluster
+
+#pick two variables I am interested to know
+D6<- data.frame(geocodes, statesWent$cluster)
+
+#plot the mosaic tables
+total <- table(geo$cluster, statesWent$cluster)
+mosaicplot(total, main="Mosaic Plot", xlab = "geo", ylab = "statesWent")
