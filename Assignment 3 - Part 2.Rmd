@@ -5,10 +5,9 @@ date: "25 October 2016"
 output: html_document
 ---
 ##Extension Exercise
-
-
-
+setwd()
 ```{r}
+
 install.packages("ggplot2")
 install.packages("cluster")
 install.packages("ggmap")
@@ -21,22 +20,28 @@ library(ggmap)
 
 ```
 
+#load the data
 
 ```{r}
-P1 <- read.table("E:/TC/4050/GITHUB/assignment3/cluster-class-data.csv", header = TRUE, sep = ",")
+P1 <- read.table("cluster-class-data.csv", header = TRUE, sep = ",")
+```
 
 #name the head labels in P1 data frame
+
+```{r}
 names(P1) <- c("duration", "name1", "name2", "cats", "giff_jiff", "nylife", "siblings", "sports", "distancefromtc", "androidfriends", "movies", "classesthissem", "placesvisited", "city", "state", "country")
 ```
 
-
-```{r}
 #Location part
-
-P7 <- dplyr::select(P1, city, state, country)
 #select the location variables from P1 into a new data frame
 
+```{r}
+P7 <- dplyr::select(P1, city, state, country)
+```
+
 #clean the data if you like. I haave just cleaned the country data. This step canbe omited.
+
+```{r}
 levels(P7$country)
 levels(P7$country)[levels(P7$country) == "United States "] <- "United States"
 levels(P7$country)[levels(P7$country) == "United States of America"] <- "United States"
@@ -47,111 +52,193 @@ levels(P7$country)[levels(P7$country) == "china"] <- "China"
 levels(P7$country)[levels(P7$country) == "CHINA"] <- "China"
 levels(P7$country)[levels(P7$country) == "Viet Nam "] <- "Vietnam"
 levels(P7$country)[levels(P7$country) == "chile"] <- "Chile"
+```
 
 #change the data type of each variable to charachter
+
+```{r}
 P7$country <- as.character(P7$country)
 P7$state <- as.character(P7$state)
 P7$city <- as.character(P7$city)
+```
 
 #unite all the variables under 1 variable.
+
+```{r}
 P7 <- tidyr::unite(P7, location, city, state, country, sep = ",")
+```
 
 #use ggmap to get thelongtude and latitude of each loation.
+
+```{r}
 library(ggmap)
 P7 <- mutate_geocode(P7, location)
+```
 
 #make a new data frame that contains only thelongitude and latitude variables
+
+```{r}
 P8 <- dplyr::select(P7, 2:3)
+```
 
 #use kmeans to make 2 clusters may be
+
+```{r}
 fit <- kmeans(P8, 2)
+```
 
 #add a variable cluster to fit
+
+```{r}
 fit$cluster
+```
 
 #make a new data frame that contains 
+
+```{r}
 P9 <- data.frame(P8, fit$cluster)
+```
 
 #make the cluster plot
-library(cluster)
-clusplot(P9, P9$fit.cluster, labels = 2, colors = TRUE)
-#name of the plot is Rplot2 - location
+#name of the plot is Rplot2_location
 
-#add a new variable named id, 1 through 22 
+```{r}
+library(cluster)
+clusplot(P9, P9$fit.cluster, labels = 2, color= TRUE)
+```
+Interpretation of Cluster plot - Location
+Cluster 1 - students' location includes: united states and areas around it
+Cluster 2 - students' location includes: asia and near by - China, Chile, India etc 
+
+#add a new variable named id, 1 through 22
+
+```{r}
 P8$id <- c(1:22)
 ```
 
-```{r}
 #Response dataframe
 
-#make another dataframe that contains data related to questions answered in the survey. 
-P3 <- dplyr::select(P1, siblings, classesthissem, placesvisited)
+#make another dataframe that contains data related to questions answered in the survey.
+
+```{r}
+P3 <- dplyr::select(P1, sports, placesvisited)
+```
 
 #change the data typeto numeric 
-P3$siblings <- as.numeric(P3$siblings)
-P3$classesthissem <- as.numeric(P3$classesthissem)
-P3$placesvisited <- as.numeric(P3$placesvisited)
 
-#use kmeans tomake 4 clusters this time 
-fit1 <- kmeans(P3, 4)
+```{r}
+P3$sports <- as.numeric(P3$sports)
+P3$placesvisited <- as.numeric(P3$placesvisited)
+```
+
+#use kmeans tomake 3 clusters this time 
+
+```{r}
+fit1 <- kmeans(P3, 3)
+```
 
 #add a variabe cluster
+
+```{r}
 fit1$cluster
 P4 <- data.frame(P3, fit1$cluster)
+```
 
 #plot the cluster plot
-library(cluster)
-clusplot(P4, P4$fit1.cluster, labels = 2, colors = TRUE)
+#name of the plot is Rplot2_responses
 
-#name of the plot is Rplot2 - responses
+```{r}
+library(cluster)
+clusplot(P4, P4$fit1.cluster, labels = 2, color = TRUE)
+#This cluster plot depicts 
+#cluster 2 - students who visited places from 9 to 15
+#cluster 3 - students who visted more than 15 places
+#cluster 1 - students who visited less than 9 places
+#This implies thst playing sports and visiting places is not related to a big extent
+```
 
 #add the variable id 1 through 22
+
+```{r}
 P3$id <- c(1:22)
 ```
 
-```{r}
 #merge the 2 data frames p3 and p8 on the basis of common variable id
+
+```{r}
 Q <- merge(P8, P3,by="id")
+```
 
-# change the dat type of id to numeric
+#change the data type of id to numeric
+
+```{r}
 Q$id <- as.numeric(Q$id)
+```
 
-
+```{r}
 fit2 <- kmeans(Q, 2)
+```
+
 #change the 2 above for number clusters 
+
+```{r}
 fit2$cluster
 q1 <- data.frame(Q, fit2$cluster)
-
+```
 
 #final clusterplot
-library(cluster)
-clusplot(q1, q1$fit2.cluster, labels = 2, colors = TRUE)
-
 #name of the plot is Rplot2 - location+responses
+
+```{r}
+library(cluster)
+clusplot(q1, q1$fit2.cluster, labels = 2, color = TRUE)
+
+#1. see how we did not change the data type to numeric in location cluster and we had to in the response data frame. this is because longitude and latitude are already in numeric format in location data frame
+
+
+#2. location cluster plot reveals how the locations of the participants have been divided into 2 groups or clusters
+
+#3. response cluster plot reveals the 4 cluster based the response types chosen
+
+#4. the final cluster is the integration of the location as well as the responses into 2 clusters.
+```
+
+#install the package vcd
+```{r}
+install.packages("vcd", dependencies = TRUE)
+library(vcd)
+```
+
+```{r}
+fit1$cluster <- as.factor(fit1$cluster)
+fit$cluster <- as.factor(fit$cluster)
+```
+
+Make anew table that contains only the cluster values
+
+```{r}
+N <- table(fit1$cluster, fit$cluster)
+```
+
+Plot a mosaic table
+
+```{r}
+mosaicplot(N, main = "Mosaic Plot", sub = NULL, xlab = "Responses", ylab = "Location", sort = NULL, off = NULL, dir = NULL, color = blues9, shade = FALSE, margin = NULL, cex.axis = 0.6, las = par("las"), border = NULL, type = c("pearson", "deviance", "FT"))
+
+#Interpretation of Mosaic Plot - 
+#The clusters on y axis are locations and there are 2 main clusters: "1" around Asia and "2" around United States. Which implies that students from Asia have visited lesser number of places than people from United States in general.
 ```
 
 
-1. see how we did not change the data type to numeric in location cluster and we had to in the response data frame. this is because longitude and latitude are already in numeric format in location data frame
 
 
-2. location cluster plot reveals how the locations of the participants have been divided into 2 groups or clusters
-
-3. response cluster plot reveals the 4 cluster based the response types chosen
-
-4. the final cluster is the integration of the location as well as the responses into 2 clusters.
-
+Extra - for future refrence of the author (to learn)
 ```{r}
-#install thepackage vcd
-install.packages("vcd", dependencies = TRUE)
-library(vcd)
-
-#plot q1
+#plot q1 - only for future reference (this plot does not really mean anything in specific)
 mosaicplot(q1, main = deparse(substitute(q1)), sub = NULL, xlab = NULL, ylab = NULL, sort = NULL, off = NULL, dir = NULL, color = blues9, shade = FALSE, margin = NULL, cex.axis = 0.6, las = par("las"), border = NULL, type = c("pearson", "deviance", "FT"))
-
 
 #name of the plot is Rplot2-mosaicplot
 ```
 
 
-Done my best..!! I know improvement is always possible, and would love to learn some
-:D
+Done my best..!!
