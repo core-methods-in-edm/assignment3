@@ -21,7 +21,7 @@ library(ggplot2)
 Now, upload the file "Class_Motivation.csv" from the Assignment 3 Repository as a data frame called "K1""
 ```{r}
 
-K1 <- read.table(...)
+K1 <- read.csv("Class_Motivation.csv")
 
 ```
 
@@ -179,3 +179,6 @@ Q12 - How many states have you visited in the US?
 Q13 - What city/town did you grow up in?
 Q14 - What state/province did you grow up in?
 Q15 - What country did you grow up in?
+
+
+

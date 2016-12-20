@@ -1,0 +1,80 @@
+---
+title: "Assigment3"
+output: html_document
+---
+
+ Create two groups of clusters, the answers to the questions and regions where people grew up. Then create a visualization that shows the overlap between the two groups of clusters.
+
+Code Book:
+
+Duration (in seconds)
+Q1 - First Name
+Q2 - Last Name
+Q3 - Have you ever owned a cat?
+Q4 - Do you pronounce "gif", with a J (j-iff) or a G (g-iff)?
+Q5 - How many months have you lived in New York City?
+Q6 - How many siblings (brothers/sisters) do you have?
+Q7 - How many times do you play sport each week?
+Q8 - How many miles do you travel from home to TC?
+Q9 - Estimate how many of your friends own Android phones
+Q10 - How many movies have you seen in the cinema this year?
+Q11 - How many classes are you taking this semester?
+Q12 - How many states have you visited in the US?
+Q13 - What city/town did you grow up in?
+Q14 - What state/province did you grow up in?
+Q15 - What country did you grow up in?
+
+
+```{r}
+t1<-read.csv("cluster-class-data.csv")
+
+t2<-dplyr::select(t1, 4:13)
+t3 <- na.omit(t2)
+
+v1<-ifelse(t3$QID3 == "Yes", 1,0)
+v2<-ifelse(t3$QID4 == "j-iff", 1,0)
+
+t4<-dplyr::select(t3, 3:10)
+
+t5 <- data.frame(v1, v2, t4)
+t6<-scale(t5)
+
+fit1 <- kmeans(t6, 2)
+
+
+fit1$cluster
+t7 <- data.frame(t6, fit1$cluster)
+
+
+
+ s1 <- dplyr::select(t1, 14:16)
+
+ s2<-na.omit(s1)
+ 
+lat<-as.data.frame(c(37.57,42.29,31.23,22.54,36.65,-33.02,39.14,35.09,24.47,30.44,29.87,22.54,28.70,40.71,23.02,21.31,39.90,41.14,39.96,40.89,41.43))
+ 
+lon<-as.data.frame(c(126.98,-71.29,121.47,114.06,117.12,-77.55,-77.72,-92.44,118.09,-84.28,121.54,114.06,77.10,-74.01,113.75,-157.86,116.41,-73.36,-82.99,-74.48,-74.04))
+
+s2<-cbind(lat,lon)
+ 
+s2<-scale(s2)
+fit2 <- kmeans(s2, 2)
+s3<- data.frame(s2, fit2$cluster)
+names(s3)<-c("lat","lon","value")
+id<-c(1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,8,9,20,21)
+id<-as.data.frame(id)
+
+fit1c<-as.data.frame(fit1$cluster)
+
+fit1c<-fit1c[2:22,]
+
+total<-cbind(id, fit1c, fit2$cluster)
+
+library(ggplot2)
+ll<-ggplot(total, aes(id)) + 
+  geom_line(aes(y = fit1c, colour = "fit1c")) + 
+  geom_line(aes(y = fit2$cluster, colour = "fit2$cluster"))+
+ggtitle("cluster overlap") +
+  labs(x="id",y="cluster")
+ll
+
