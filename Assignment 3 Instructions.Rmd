@@ -1,5 +1,6 @@
 ---
 title: "Assignment 3: K Means Clustering"
+author: Zhijun Huang
 ---
 
 In this assignment we will be applying the K-means clustering algorithm we looked at in class. At the following link you can find a description of K-means, create a webpage index in Zotero and add some notes about the use and limitations of K-means clustering:
@@ -9,10 +10,10 @@ https://www.cs.uic.edu/~wilkinson/Applets/cluster.html
 You will need three packages to complete this assignment: "dplyr", "tidyr" and a new package called "ggplot2". Install ggplot2 and then load all three packages.
 
 ```{r}
+#Set working directory
+setwd("~/Documents/EDM2016/assignment3")
 
-install.packages("ggplot2") 
-#If this doesn't work, use the "Packages" tab to install the package.
-
+#Load libraries
 library(dplyr)
 library(tidyr)
 library(ggplot2)
@@ -39,6 +40,8 @@ K2 <- dplyr::select(K1, 2:6)
 ```
 
 It is important to think about the meaning of missing values when clustering. We could treat them as having meaning or we could remove those people who have them. Neither option is ideal. What problems do you foresee if we recode or remove these values? Write your answers below:
+If we treat missing data as having meaning, such as assuming the students were absent, but in reality, it could be either they just lost the data when entering them or it's a combination of losing data and absence. There is no consistency in decoding them. 
+On the other hand, if we remove those people with missing data entirely, we can lose meaningful information in two possible ways: 1.Students with missing data points can contain meaningful information in the existing data points. Deleting them will decrease the sample size. 2.The missing data points have consistent meaning. Deleting them will wipe out an entire category of students.
 
 
 
@@ -49,7 +52,7 @@ We will remove people with missing values for this assignment, but keep in mind 
 
 K3 <- na.omit(K2) 
 #This command create a data frame with only those people with no missing values. It "omits" all rows with missing values, also known as a "listwise deletion". EG - It runs down the list deleting rows as it goes.
-
+#[Observation] Data of 15 students were deleted, sample size went from 38 to 23.
 ```
 
 Another pre-processing step used in K-means is to standardize the values so that they have the same range. We do this because we want to treat each week as equally important - if we do not standardise then the week with the largest range will have the greatest impact on which clusters are formed. We standardise the values by using the "scales()" command.
@@ -83,7 +86,7 @@ fit <- kmeans(K3, 2)
 
 fit$cluster
 
-#We can also attach these clusters to te original dataframe by using the "data.frame" command to create a new data frame called K4.
+#We can also attach these clusters to the original dataframe by using the "data.frame" command to create a new data frame called K4.
 
 K4 <- data.frame(K3, fit$cluster)
 
@@ -156,7 +159,7 @@ K7 <- dplyr::count(K4, cluster)
 ```
 
 Look at the number of people in each cluster, now repeat this process for 3 rather than 2 clusters. Which cluster grouping do you think is more informative? Write your answer below:
-The K=3 plot is more informative than the K=2 plot. It is because it showed very distinct patterns of 3 clusters with one that is always motivated
+The K=3 plot is more informative than the K=2 plot. It is because it showed very distinct patterns of 3 clusters with different starting points and paths. It also provides more details for week 5, with one cluster started with high motivation dropping sharply and two other started with lower motivations increase in the end.
 
 Now we choose K as 3 and repeat the process.
 
@@ -179,7 +182,7 @@ K7 <- dplyr::count(K4, cluster)
 
 ##Extension Exercise
 
-Now, try to do the same Now, try to do the same for the data collected in class. Create two groups of clusters, the answers to the questions and regions where people grew up. Then create a visualization that shows the overlap between the two groups of clusters.
+Now, try to do the same for the data collected in class. Create two groups of clusters, the answers to the questions and regions where people grew up. Then create a visualization that shows the overlap between the two groups of clusters.
 
 Libraries
 ```{r}
@@ -195,69 +198,106 @@ Data Wrangling
 # Read and save data as D1
 D1 <- read.csv("cluster-class-data.csv",  sep = ",", header = T)
 
-# Remove duration from the list and unite first two columns of information
+# Remove duration from the list
 D2 <- D1[,-1]
-D2 <- tidyr::unite(D2, Name, QID1_TEXT, QID2_TEXT, sep = " ", remove = TRUE)
-                    
+
 # Rename each column to indicate real meanings
-names(D2) <- c("Name", "Cat", "G-iff", "NYC", "Siblings", "Sport", "Home.to.TC", "Android", "Movie", "Class", "US.states", "City", "State", "Country")
+names(D2) <- c("First", "Last", "Cat", "G-iff", "NYC", "Siblings", "Sport", "Home.to.TC", "Android", "Movie", "Class", "States.Visited", "City", "State", "Country")
+
+#Unite: 1. Last and First to Name 2. City and State to Location
+D2 <- tidyr::unite(D2, Name, First, Last, sep = " ", remove = TRUE)
+D2 <- tidyr::unite(D2, Location, City, State, sep = " ", remove = TRUE)
 
 #code Cat(Yes/No) and Gif(g-iff, j-iff) to binary response
 D2$Cat <- ifelse(D2$Cat == "Yes", 1, 0)
 D2$`G-iff` <- ifelse(D2$`G-iff` == "g-iff", 1, 0)
 
-#Read and save latitude and longitude of City, State, Country
-L1 <- read.csv("location.csv",  sep = ",", header = F)
-names(L1) <- c("Latitude", "Longitude")
+#Load ggmap
+library(ggmap)
+##########testing###############
+cities<-c("Seoul","Shenzhen")
+geocode(cities[1])
+geocode(cities[2])
+################################
+#convert locations to latitude and longitude and save as new variables 
+geocode <- data.frame(geocode(D2$Location))
+#delete location and country from D2 and save as D3
+D3 <- data.frame(D2, geocode)
+D3 <- select(D3, -Location, -Country)
 
-#Merge two datasets and delete "City, State, Country" (with "Latitude and Longitude" in place)
+#Visualize location of data points with a world map
+library(ggthemes)
+world <- map_data("world")
+world <- world[world$region != "Antarctica",]
 
-D3 <- merge(D2, L1)
-D3 <- select(D3, -City, -State, -Country)
+#plot the students' origins
+p <- ggplot(D3, aes(lon, lat)) 
+    + geom_point()  
+    + ggtitle("Students' Origins") 
+    + theme(plot.title = element_text(hjust = 0.5))
 
+#put the plot on a world map
+p + geom_map(data=world, map=world,
+  aes(x=long, y=lat, map_id=region),
+  color="white", fill="#7f7f7f", size=0.05, alpha=1/4) 
 ```
 
 K-means clustering
 
 ```{r}
-#Create two clusters, one for questions (Q) and one for region (R)
+#Create two clusters, one for region (R) and one for questions (Q)
+#cluster for region
+R1 <- select(D3, lon, lat)
+R2 <- scale(R1)
+#k=2
+fitR <- kmeans(R2, 2) 
+fitR$cluster <- as.factor (fitR$cluster)
+#scaled lat-lon and clusters
+R2 <- data.frame(R2, fitR$cluster)
+names(R2) <- c("lon", "lat","clusterR")
+#ggplot with scaled value and cluster
+ggplot(R2, aes(lon, lat, colour = clusterR)) + geom_point() + xlab("Latlong") + ylab("Values")
+
+#lat-lon without scale and cluster
+R3 <- data.frame(R1,fitR$cluster)
+names(R3) <- c("lon", "lat","clusterR")
+
+##ggplot on a world map with cluster
+p2 <- ggplot(R3, aes(lon, lat, colour = clusterR)) + geom_point() + ggtitle("Students' Origins by Cluster") + theme(plot.title = element_text(hjust = 0.5))
+
+p2 + geom_map(data=world, map=world,
+                    aes(x=long, y=lat, map_id=region),
+                    color="white", fill="#7f7f7f", size=0.05, alpha=1/4) +    
+                    xlab("Longitude") + ylab("Latitude")
 
 #cluster for questions
-Q1 <- select(D3,-Name, -Latitude, -Longitude)
+Q1 <- select(D3, Movie, States.Visited)
 Q1 <- scale(Q1)
-fitQ <- kmeans(Q1, 3) 
-fitQ$cluster
+fitQ <- kmeans(Q1, 2) 
+fitQ$cluster <-  as.factor (fitQ$cluster)
 Q2 <- data.frame(Q1, fitQ$cluster)
-names(Q2) <- c("2", "3", "4", "5", "6","7","8","9","10","11","clusterQ")
-Q3 <- tidyr::gather(Q2, "questions", "answers", 1:10)
-Q4 <- Q3 %>% group_by(questions, clusterQ)
-Q4 <- summarise(Q4, avg = mean(answers))
-Q4$questions <- as.numeric(Q4$questions)
-Q4$fitQ.cluster <- as.factor(Q4$clusterQ)
-ggplot(Q4, aes(questions, avg, colour = clusterQ)) + geom_line() + xlab("Questions") + ylab("Average Answers")
-Q5 <- dplyr::count(Q4, clusterQ)
+names(Q2) <- c("Movie", "States.Visited","clusterQ")
 
+ggplot(Q2, aes(Movie, States.Visited, colour = clusterQ)) + geom_point() + ggtitle("States.Visited vs. Movie by Cluster") + theme(plot.title = element_text(hjust = 0.5))
 
-#cluster for region
-R1 <- select(D3, Latitude, Longitude)
-R1 <- scale(R1)
-fitR <- kmeans(R1, 3) 
-fitR$cluster
-R2 <- data.frame(R1, fitR$cluster)
-names(R2) <- c("12", "13","clusterR")
-R3 <- tidyr::gather(R2, "latlong", "value", 1:2)
-R4 <- R3 %>% group_by(latlong, clusterR)
-R4 <- summarise(R4, avg = mean(value))
-R4$latlong <- as.numeric(R4$latlong)
-R4$clusterR <- as.factor(R4$clusterR)
-ggplot(R4, aes(latlong, avg, colour = clusterR)) + geom_line() + xlab("Latlong") + ylab("Values")
-R5 <- dplyr::count(R4, clusterR)
+location <- R3
+question <- Q2
+
+total <- table(fitR$cluster, fitQ$cluster)
+# total
+#     1  2
+#  1  8  2
+#  2  1  11
+
+#mosaic plot
+mosaicplot(total, main = "Mosaic Plot: Question vs. Location by Cluster",  xlab = "Question", ylab = "Location",color = c("lightblue","pink"))
+
 ```
 
 Visualizations
 ```{r}
 clusplot(Q2, fitQ$cluster, color= TRUE, shade= TRUE, lines = 0, main ="Questions")
-clusplot(R2, fitR$cluster, color= TRUE, shade= TRUE, lines = 0, main ="Region")
+clusplot(R3, fitR$cluster, color= TRUE, shade= TRUE, lines = 0, main ="Region")
 ```
 Code Book:
 
