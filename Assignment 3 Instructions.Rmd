@@ -21,7 +21,7 @@ library(ggplot2)
 Now, upload the file "Class_Motivation.csv" from the Assignment 3 Repository as a data frame called "K1""
 ```{r}
 
-K1 <- read.table(...)
+K1 <- read.csv("~/Desktop/HUDK 4050/Assignment#3Cluster/Class_Motivation.csv", header=TRUE)
 
 ```
 
@@ -153,10 +153,49 @@ K7 <- dplyr::count(K4, cluster)
 
 Look at the number of people in each cluster, now repeat this process for 3 rather than 2 clusters. Which cluster grouping do you think is more informative? Write your answer below:
 
+```{r}
+fit1 <- kmeans(K3, 3)
+K8 <- data.frame(K3, fit1$cluster)
+names(K8) <- c("1", "2", "3", "4", "5", "cluster")
 
+K9 <- tidyr::gather(K8, "week", "motivation", 1:5)
+
+K10 <- K9 %>% group_by(week, cluster)
+K10 <- summarise(K10, avg = mean(motivation))
+
+K10$week <- as.numeric(K10$week)
+K10$cluster <- as.factor(K10$cluster)
+
+ggplot(K10, aes(week, avg, colour = cluster)) + geom_line() + xlab("Week") + ylab("Average Motivation")
+
+K11 <- dplyr::count(K8, cluster)
+
+##I think it's more informative,since it seems that the average motivation is distributed in three clusters and each cluster has the range of 7-9 observations, which is a good number.
+
+```
 
 Once you have done this, save both of your plots to the Assignment 5 file. Create a Zotero item to index your new computer program (Assignment 5.rmd) in Zotero. Then commit your assignment, push it to your Github account and then Pull request your version to the original assignment version so I can see it.
 
 ##Extension Exercise
 
-Now, try to do the same... 
+Now, try to do the same for the data [collected in class](https://tccolumbia.qualtrics.com/SE/?SID=SV_6RRqlSAM6lZWYQt). Create two groups of clusters, the answers to the questions and regions where people grew up. Then create a visualization that shows the overlap between the two groups of clusters.
+
+Code Book:
+
+Duration (in seconds)
+Q1 - First Name
+Q2 - Last Name
+Q3 - Have you ever owned a cat?
+Q4 - Do you pronounce "gif", with a J (j-iff) or a G (g-iff)?
+Q5 - How many months have you lived in New York City?
+Q6 - How many siblings (brothers/sisters) do you have?
+Q7 - How many times do you play spo
+rt each week?
+Q8 - How many miles do you travel from home to TC?
+Q9 - Estimate how many of your friends own Android phones
+Q10 - How many movies have you seen in the cinema this year?
+Q11 - How many classes are you taking this semester?
+Q12 - How many states have you visited in the US?
+Q13 - What city/town did you grow up in?
+Q14 - What state/province did you grow up in?
+Q15 - What country did you grow up in?
