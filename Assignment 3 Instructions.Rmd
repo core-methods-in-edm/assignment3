@@ -21,7 +21,7 @@ library(ggplot2)
 Now, upload the file "Class_Motivation.csv" from the Assignment 3 Repository as a data frame called "K1""
 ```{r}
 
-K1 <- read.table(...)
+K1 <- read.table("Class_Motivation.csv",sep= ",", header=TRUE)
 
 ```
 
@@ -152,9 +152,19 @@ K7 <- dplyr::count(K4, cluster)
 ```
 
 Look at the number of people in each cluster, now repeat this process for 3 rather than 2 clusters. Which cluster grouping do you think is more informative? Write your answer below:
+```{r}
+ fit1 <- kmeans(K3, 3)
+fit1$cluster
+K8 <- data.frame(K3, fit1$cluster)
+names(K8) <- c("1", "2", "3", "4", "5", "cluster") 
+K9 <- tidyr::gather(K8, "week", "motivation", 1:5)
+K10 <- K9 %>% group_by(week, cluster)
+K10 <- summarise(K10, avg = mean(motivation))
+K10$week <- as.numeric(K10$week)
 
-
-
+K10$cluster <- as.factor(K10$cluster)
+ggplot(K10, aes(week, avg, colour = cluster)) + geom_line() + xlab("Week") + ylab("Average Motivation")
+K11 <- dplyr::count(K8, cluster)
 Once you have done this, save both of your plots to the Assignment 5 file. Create a Zotero item to index your new computer program (Assignment 5.rmd) in Zotero. Then commit your assignment, push it to your Github account and then Pull request your version to the original assignment version so I can see it.
 
 ##Extension Exercise
