@@ -18,7 +18,7 @@ install.packages("ggplot2", repos = "http://cran.us.r-project.org")
 library(ggplot2)
 library(dplyr)
 library(tidyr)
-
+library(colorspace)
 ```
 
 
@@ -222,6 +222,11 @@ d2$moviesthisyear[d2$moviesthisyear == 200] <- NA  # Bad data
 
 ```
 
+* Omit NA: 
+```{r}
+d2 <- na.omit(d2)
+```
+
 * Scale data along all int, numeric, non-binary values:
 ```{r}
 
@@ -236,19 +241,16 @@ d3$statesvisited <- scale(d3$statesvisited)
 
 ```
 
-* Omit NA: 
-```{r}
-d4 <- na.omit(d3)
-```
+
 
 * Use kmeans to generate clusters:
 ```{r}
 
-fit3 <- kmeans(d4, 4)
+fit3 <- kmeans(d3, 4)
 fit3$cluster
-d5 <- data.frame(d4, fit3$cluster)
-names(d5)[names(d5) == "fit3.cluster"] <- "cluster"
-d5$cluster <- as.factor(d5$cluster)
+d4 <- data.frame(d3, fit3$cluster)
+names(d4)[names(d4) == "fit3.cluster"] <- "cluster"
+d4$cluster <- as.factor(d4$cluster)
 
 ```
 
@@ -288,6 +290,8 @@ library(ggmap)
 loc2 <- data.frame(lapply(loc, as.character, stringsAsFactors = FALSE))
 loc3 <- tidyr::unite(loc2, location, city, stateprovince, country, sep = ", ")
 
+loc3$location[loc3$location=='Wellesley, Massachusetts, Vietnam'] <- 'Wellesley, Massachusetts'
+
 ```
 
 * Add coordinate data
@@ -299,26 +303,16 @@ loc3 <- mutate_geocode(loc3, location) # did confirm that "Hanoi, NA, Vietnam" r
 
 * Create new data frame, with only numeric location data
 ```{r}
-
 loc4 <- dplyr::select(loc3, 2:3)
-
 ```
-
-* Cluster location data using k-means, then create new data frame with appended cluster data
+* Append location data to d3
 ```{r}
-
-fitloc <- kmeans(loc4, 4)
-loc5 <- data.frame(loc4, fitloc$cluster)
-names(loc5) <- c("lon", "lat", "cluster")
-
+d5 <- dplyr::bind_cols(d4, loc4)
 ```
 
-* Plot clustered location data
+
+* Plot location data
 ```{r}
-
-install.packages('cluster', repos = "http://cran.us.r-project.org")
-library(cluster)
-clusplot(loc5, loc5$cluster, labels = 2, colors = TRUE)
-
+m<-get_map(location=c(lon=0, lat=0), zoom=1)
+ggmap(m, extent = "normal") + geom_point(aes(x = lon, y = lat, size = siblings, color = cluster), data = d5) + scale_colour_manual(values=c("red","orange","green","blue"))
 ```
-
