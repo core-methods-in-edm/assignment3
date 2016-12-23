@@ -223,5 +223,116 @@ K22 <- dplyr::count(K18, fit.cluster)
 
 ```
 
+```{r}
+#Extention excercise second trial
 
+#read the data
+D1 <- read.table("~/Desktop/FALL_2016/Assignment3/cluster-class-data.csv", sep = ",", header = TRUE)
 
+#put two first name and last name rows into one row
+D2<- tidyr::unite(D1, "studentname", QID1_TEXT, QID2_TEXT)
+
+#named the rows into words of my choice
+names(D2) <- c("duration", "studentname", "cat", "gif", "howlong", "sibling","sport","mile","friends","movies","classes","state_province","city","state","country")
+
+#removed duration 
+D3<- dplyr::select(D2, 2:15)
+
+#Fixed issue for nominal data
+D3$cat <- ifelse(D3$cat == "No",0,1)
+D3$gif <- ifelse(D3$gif == "g-iff",0,1)
+
+#Trying to figure out Geocode thingy
+library(ggmap)
+
+#selected several cities and figured out how to do this
+cities<- c("Seoul","Purcellville", "columbus")
+geocode(cities[1])
+ lon      lat
+1 126.978 37.56654
+geocode(cities[2])
+ lon      lat
+1 -77.71472 39.13677
+geocode(cities[3])
+ lon      lat
+1 -82.99879 39.96118
+
+#now selected whole data set's cities and figured out how to make this into geocode
+D4<-dplyr::select(D3,city,state,country)
+D4_1<-tidyr::unite(D4, location,city,state,country, sep=",")
+geocodes <- geocode(D4_1$location)
+
+#added up as a one data file (special thanks to Zee T.T)
+D5 <-data.frame(D3,geocodes)
+View(D5)
+D5 <- select(D5,-city,-state,-country)
+
+#downloaded ggthemes and try to locate each people in the world map 
+library(ggthemes)
+world <- map_data("world")
+world <- world[world$region != "Antarctica",]
+p <- ggplot(D5, aes(lon, lat)) + geom_point() + ggtitle("Students' Origins") + theme(plot.title = element_text(hjust = 0.5))
+p + geom_map(data=world, map=world, aes(x=long, y=lat, map_id=region), color="green", fill="#f47f59", size=0.05, alpha=1/4) 
+
+#cluster creation 1: by student's origin
+
+O1 <- dplyr::select(D5, lon, lat)
+O2 <- scale(O1)
+
+#K-means clustering, clustering into two groups.Let's see if this works
+fit5 <- kmeans(O2, 2) 
+fit5$cluster <-as.factor(fit5$cluster) 
+
+#scaled longitude and latitude and cluster
+O2 <- data.frame(O2, fit5$cluster)
+names(O2) <- c("lon", "lat","cluster5")
+
+#ggplot with newly scaled data set
+ggplot(O2, aes(lon, lat, colour = cluster5)) + geom_point() + xlab("Latlong") + ylab("Values")
+
+#setting up lattitude and longitudinal datapoints without scale and cluster
+O3 <- data.frame(O1,fit5$cluster)
+names(O3) <- c("lon", "lat","cluster6")
+
+#ggplot on a world map with cluster
+p2 <- ggplot(O3, aes(lon, lat, colour = cluster6)) + geom_point() + ggtitle("Students' Origins by Cluster") + theme(plot.title = element_text(hjust = 0.5))
+
+p2 + geom_map(data=world, map=world,aes(x=long, y=lat, map_id=region), color="blue", fill="#ffe200", size=0.05, alpha=1/4) + xlab("Longitude") + ylab("Latitude")
+
+We are mostly from East asia and East side of U.S ^-^
+
+#cluster creation 2: by answers to the questionnaire
+
+Z1 <- dplyr::select(D5, sibling, friends)
+Z2 <- scale(Z1)
+
+#K-means clustering, clustering into two groups.Let's see if this works
+fit6 <- kmeans(Z2, 2) 
+fit6$cluster <-as.factor(fit6$cluster) 
+
+#scaled longitude and latitude and cluster
+Z2 <- data.frame(Z1, fit6$cluster)
+names(Z2) <- c("siblings", "friends","cluster7")
+
+#ggplot with newly scaled data set
+ggplot(Z2, aes(siblings, friends, colour = cluster7)) + geom_point() + xlab("siblings") + ylab("Values")
+
+total<-table(fit5$cluster, fit6$cluster)
+total <-as.data.frame(total)
+(hand calculated the table based on the result)
+
+# total
+#     1  2
+#  1  0  10
+#  2  1  11
+
+#mosaic plot
+mosaicplot(total, main = "Mosaic Plot: Question vs. Location by Cluster",  xlab = "Question", ylab "Location",color = c("lightblue","pink"))
+
+#Visualizations
+library(cluster)
+clusplot(Z2, fit6$cluster, color= TRUE, shade= TRUE, lines = 0, main ="Region")
+clusplot(O3, fit5$cluster, color= TRUE, shade= TRUE, lines = 0, main ="Questions")
+
+Don't know about the reigion cluster plot, but regarding quetions plot, it seems to be well clustered and well divided.
+```
