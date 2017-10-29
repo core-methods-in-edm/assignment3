@@ -1,0 +1,113 @@
+---
+title: "Assignment3-rg33"
+author: "R. Glazer"
+date: "10/26/2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+
+```
+
+```{r}
+K1 <- read.csv("Class_Motivation.csv")
+K2 <- dplyr::select(K1, 2:6)
+```
+
+##Missing values. We could treat them as having meaning or we could remove those people who have them. Neither option is ideal. What problems do you foresee if we recode or remove these values?
+###If you recode, you are changing the data from what has been reported.  If you remove the values, you are limiting your data, based on either the variable that you're removing or the record(s)/observation(s) that you're removing.
+
+
+```{r}
+K3 <- na.omit(K2) #This command create a data frame with only those people with no missing values. It "omits" all rows with missing values, also known as a "listwise deletion". EG - It runs down the list deleting rows as it goes.
+K3 <- scale(K3)
+fit <- kmeans(K3, 2) 
+
+#We have created an object called "fit" that contains all the details of our clustering including which observations belong to each cluster.
+
+#We can access the list of clusters by typing "fit$cluster", the top row corresponds to the original order the rows were in. Notice we have deleted some rows.
+
+fit$cluster
+
+#We can also attach these clusters to the original dataframe by using the "data.frame" command to create a new data frame called K4.
+
+K4 <- data.frame(K3, fit$cluster)
+
+#Have a look at the K4 dataframe. Lets change the names of the variables to make it more convenient with the names() command.
+
+names(K4) <- c("1", "2", "3", "4", "5", "cluster") #c() stands for concatonate and it creates a vector of anything, in this case a vector of names.
+
+```
+
+```{r}
+#convert from wide to long format.
+K5 <- tidyr::gather(K4, "week", "motivation", 1:5)
+
+#average our motivation values by week and by cluster
+K6 <- K5 %>% group_by(week, cluster)
+K6 <- summarise(K6, avg = mean(motivation))
+
+#to create a line plot, with motivation on the Y-axis and weeks on the X-axis, convert weeks to numeric, using the as.numeric command.
+K6$week <- as.numeric(K6$week)
+
+#convert cluster from an "integer" format to a "factor" format
+K6$cluster <- as.factor(K6$cluster)
+
+#create line plot with "week" and "avg" on the x and y axes colored using the "cluster" variable
+ggplot(K6, aes(week, avg, colour = cluster)) + geom_line() + xlab("Week") + ylab("Average Motivation")
+```
+
+##What patterns do you see in the plot?
+The average motivation between group one and group two appear to be inversely correlated, in that when one increases or decreases, the other appears to do the opposite, albeit the changes to the average motivation of cluster two appears be more steep in the week to week results than of cluster one.  
+
+##Number of people in each of the two clusters
+There are sixteen people in cluster 1 and seven people in cluster 2.
+
+```{r}
+#number of people in each of two clusters
+K7 <- dplyr::count(K4, cluster)
+table(K4$cluster)
+
+```
+
+##Repeat this process for 3 rather than 2 clusters.
+
+```{r threeclusters}
+fit_with_3 <- kmeans(K3, 3) 
+fit_with_3$cluster
+
+#We can also attach these clusters to the original dataframe by using the "data.frame" command to create a new data frame called K4.
+
+K4b <- data.frame(K3, fit_with_3$cluster)
+
+#Have a look at the K4 dataframe. Lets change the names of the variables to make it more convenient with the names() command.
+
+names(K4b) <- c("1", "2", "3", "4", "5", "cluster") #c() stands for concatonate and it creates a vector of anything, in this case a vector of names.
+
+#convert from wide to long format.
+K5b <- tidyr::gather(K4b, "week", "motivation", 1:5)
+
+#average our motivation values by week and by cluster
+K6b <- K5b %>% group_by(week, cluster)
+K6b <- summarise(K6b, avg = mean(motivation))
+
+#to create a line plot, with motivation on the Y-axis and weeks on the X-axis, convert weeks to numeric, using the as.numeric command.
+K6b$week <- as.numeric(K6b$week)
+
+#convert cluster from an "integer" format to a "factor" format
+K6b$cluster <- as.factor(K6b$cluster)
+
+#create line plot with "week" and "avg" on the x and y axes colored using the "cluster" variable
+ggplot(K6b, aes(week, avg, colour = cluster)) + geom_line() + xlab("Week") + ylab("Average Motivation")
+
+K7b <- dplyr::count(K4b, cluster)
+table(K4b$cluster)
+```
+
+##Which cluster grouping do you think is more informative?
+I believe the second table, with three clusters, is more informative, as it provides a further level of detail.  Unfortunately, neither process indicates which records are in each, so it is hard to tell exactly how they are divided, but it looks as if cluster two in the first table looks to have the similar results as a similar cluster in the second table (on occasion after it is rerun, the cluster number changes). There appears to be seven records identified in cluster two in the first table and the same in the cluster with a similar shape in the second table. If the assumption can be made that they are the same, then the second table separates cluster one from the first table into two clusters that had different results that appear to be important.
+
