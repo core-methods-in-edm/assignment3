@@ -268,6 +268,8 @@ Create a visualization that shows the overlap between the two groups of clusters
 ggplot(DF, aes(x = lon, y = lat, color = fit.cluster)) + geom_point() + geom_jitter(width = 10, height = 5)
 ggsave("Clustered scatter plot with jitter, longitude and latitude corrected.pdf", path = file.path(getwd(), "Images"))
 
+#create table
+table(DF$fit.cluster, DF$cluster)
 ```
 
 ggplot(DF, aes(x = lat, y = lon, color = fit.cluster)) + geom_scatter()
