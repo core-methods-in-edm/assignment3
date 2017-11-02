@@ -206,8 +206,6 @@ Now, try to do the same for the data [collected in class](https://tccolumbia.qua
 #3. Scale numeric variables and dichotmous variables
 #4. Do the kmeans fit procedure
 #5. Add the clustered values back to dataframe
-#6. Make good names of df if neccessary
-#7. Use gather function
 
 #1. Load dataset
 D1 <- read.csv("HUDK4050_2017_Cluster_Survey.csv")
@@ -240,8 +238,8 @@ D2.2$country.grew <- recode(D2.2$country.grew, "USA" = "United States", "USA " =
 D3.2 <- geocode(as.character(D2.2$country.grew), output = "latlon")
 D3.2$country <- D2.2$country.grew
 #fill in missing data
-D3.2[c(2, 5),1:2] <- D3.2[1, 1:2]   #for China
-D3.2[c(24,17, 12, 16),1:2] <- D3.2[11, 1:2]      #for the US 
+D3.2[c(7, 9),1:2] <- D3.2[1, 1:2]   #for China
+D3.2[c(10),1:2] <- D3.2[11, 1:2]      #for the US 
 D3.2[20, 1:2] <- c(121.597366, 25.10547)      #for Taiwan
 D3.2[18, 1:2] <- c(106.774124, -6.121435)     #for Indonesia
 D3.2 <- D3.2[,1:2]  
@@ -259,6 +257,7 @@ DF  <- data.frame(D3, D3.2)
 #turn clusters into factors
 DF$fit.cluster <- as.factor(DF$fit.cluster)
 DF$cluster <- as.factor(DF$cluster)
+write.csv(DF, "Clustered and scaled data.csv")
 ```
 
 
@@ -266,18 +265,9 @@ DF$cluster <- as.factor(DF$cluster)
 
 Create a visualization that shows the overlap between the two groups of clusters you created in part III.
 ```{r Visualizing two clusters}
-ggplot(DF, aes(x = lat, y = lon, color = fit.cluster)) + geom_point() + geom_jitter(width = 2.5, height = 10)
-ggsave("Clustered scatter plot with jitter.pdf", path = file.path(getwd(), "Images"))
-DF1 <- DF
-DF1$fit.cluster <- as.factor(DF1$fit.cluster)
-ggplot(DF1, aes(x = lat, y = lon)) + geom_point()
-ggplot(DF1, aes(x = lat, y = lon, color = fit.cluster)) + geom_point() + geom_jitter(width = 2.5, height = 10)
+ggplot(DF, aes(x = lon, y = lat, color = fit.cluster)) + geom_point() + geom_jitter(width = 10, height = 5)
+ggsave("Clustered scatter plot with jitter, longitude and latitude corrected.pdf", path = file.path(getwd(), "Images"))
 
-
-
-       
-       
-       
 ```
 
 ggplot(DF, aes(x = lat, y = lon, color = fit.cluster)) + geom_scatter()
