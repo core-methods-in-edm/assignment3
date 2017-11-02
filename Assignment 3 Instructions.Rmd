@@ -8,20 +8,19 @@ https://www.cs.uic.edu/~wilkinson/Applets/cluster.html
 
 You will need three packages to complete this assignment: "dplyr", "tidyr" and a new package called "ggplot2". Install ggplot2 and then load all three packages.
 
-```{r}
-
-install.packages("ggplot2") #If this doesn't work, use the "Packages" tab to install the package.
-
+```{r setup}
+library(ggmap)
 library(dplyr)
 library(tidyr)
 library(ggplot2)
+knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
 
 ```
 
 Now, upload the file "Class_Motivation.csv" from the Assignment 3 Repository as a data frame called "K1""
-```{r}
+```{r Data Import}
 
-K1 <- read.table(...)
+K1 <- read.csv("Class_Motivation.csv")
 
 ```
 
@@ -31,7 +30,7 @@ But before we do that, we will need to manipulate the data frame into a structur
 
 The algorithm will treat each row as a value belonging to a person, so we need to remove the id variable.
 
-```{r}
+```{r Select only motivation scores}
 
 K2 <- dplyr::select(K1, 2:6)
 
@@ -39,12 +38,16 @@ K2 <- dplyr::select(K1, 2:6)
 
 It is important to think about the meaning of missing values when clustering. We could treat them as having meaning or we could remove those people who have them. Neither option is ideal. What problems do you foresee if we recode or remove these values? Write your answers below:
 
+#Recoding them, or imputing missing values, runs the risk that we are doing so incorrectly. To do so would require use to use the other observations, but there is no gurantee that the values we impute will be accurate
 
+#If we drop them, this could bias our analysis if the observations are not missing completly at random. If they are missing in a non-random pattern, then those that we have data for (and use in our analysis) will differ systematically from those that we do not have data for (and are thus dropped from our analysis)
+
+#either way, we are prone to having our analysis biased in some manner (unless we can assume the missingness is completly random)
 
 We will remove people with missing values for this assignment, but keep in mind the issues that you have identified.
 
 
-```{r}
+```{r Remove missing values}
 
 K3 <- na.omit(K2) #This command create a data frame with only those people with no missing values. It "omits" all rows with missing values, also known as a "listwise deletion". EG - It runs down the list deleting rows as it goes.
 
@@ -52,12 +55,11 @@ K3 <- na.omit(K2) #This command create a data frame with only those people with 
 
 Another pre-processing step used in K-means is to standardize the values so that they have the same range. We do this because we want to treat each week as equally important - if we do not standardise then the week with the largest range will have the greatest impact on which clusters are formed. We standardise the values by using the "scales()" command.
 
-```{r}
+```{r Center and standardize variables}
 
 K3 <- scale(K3)
 
 ```
-
 
 Now we will run the K-means clustering algorithm we talked about in class. 
 1) The algorithm starts by randomly choosing some starting values 
@@ -67,11 +69,11 @@ Now we will run the K-means clustering algorithm we talked about in class.
 5) Re-associates all observations closest to this observation
 6) Continues this process until the clusters are no longer changing
 
-Notice that in this case we have 5 variables and in class we only had 2. It is impossible to vizualise this process with 5 variables.
+Notice that in this case we have 5 variables and in class we only had 2. It is impossible to vizualise this process with 5 variables. -- Its in the fifth dimension
 
 Also, we need to choose the number of clusters we think are in the data. We will start with 2.
 
-```{r}
+```{r Fit cluster model with Kmeans method}
 
 fit <- kmeans(K3, 2) 
 
@@ -89,24 +91,25 @@ K4 <- data.frame(K3, fit$cluster)
 
 names(K4) <- c("1", "2", "3", "4", "5", "cluster") #c() stands for concatonate and it creates a vector of anything, in this case a vector of names.
 
-
 ```
 
 Now we need to visualize the clusters we have created. To do so we want to play with the structure of our data. What would be most useful would be if we could visualize average motivation by cluster, by week. To do this we will need to convert our data from wide to long format. Remember your old friends tidyr and dplyr!
 
 First lets use tidyr to convert from wide to long format.
-```{r}
+```{r Gather function: From wide to long format}
 
-K5 <- tidyr::gather(K4, "week", "motivation", 1:5)
+K5 <- tidyr::gather(K4, key = "week", value = "motivation", 1:5)
+#Key refers to the variable/column we want to keep, value is the variable/column we are deleting and replacing by placing its value in the new key column and deleting the old occurances. We also need the 1:5 to tell it there are five motivation columns we are collapsing
+plot(x = K5$week, y = K5$motivation)
 
 ```
 
 Now lets use dplyr to average our motivation values by week and by cluster.
 
-```{r}
+```{r Average motivation by week and cluster}
 
-K6 <- K5 %>% group_by(week, cluster)
-K6 <- summarise(K6, avg = mean(motivation))
+K6 <- K5 %>% group_by(week, cluster) %>%
+  summarise(avg = mean(motivation))
 
 ```
 
@@ -122,7 +125,7 @@ We are going to create a line plot similar to the one created in the school drop
 
 Likewise, since "cluster" is not numeric but rather a categorical label we want to convert it from an "integer" format to a "factor" format so that ggplot does not treat it as a number. We can do this with the as.factor() command.
 
-```{r}
+```{r Correct data types}
 
 K6$week <- as.numeric(K6$week)
 
@@ -133,36 +136,153 @@ K6$cluster <- as.factor(K6$cluster)
 Now we can plot our line plot using the ggplot command, "ggplot()".
 
 - The first argument in a ggplot is the dataframe we are using: K6
-- Next is what is called an aesthetic (aes), the aesthetic tells ggplot which variables to use and how to use them. Here we are using the variables "week" and "avg" on the x and y axes and we are going color these variables using the "cluster" variable
+- Next is what is called an aesthetic (aes), the aesthetic tells ggplot which variables to use and how to use them. Here we are using the variables "week" and "avg" on the x and y axes and we are going to color these variables using the "cluster" variable
 - Then we are going to tell ggplot which type of plot we want to use by specifiying a "geom()", in this case a line plot: geom_line()
 - Finally we are going to clean up our axes labels: xlab("Week") & ylab("Average Motivation")
 
-```{r}
+```{r ggplot time!}
 
 ggplot(K6, aes(week, avg, colour = cluster)) + geom_line() + xlab("Week") + ylab("Average Motivation")
+ggsave("Clustered line graph, motivation by week x2-test.pdf", path = file.path(getwd(), "Images"))
 
 ```
 
 What patterns do you see in the plot?
+#There are two clusters, one group with a high motivation and one group with a lower motivation. There appears to be an inverese relationship such that when one group's motivation increases, the other decreases 
 
 It would be useful to determine how many people are in each cluster. We can do this easily with dplyr.
 
-```{r}
+```{r Count numbers in each cluster}
+
 K7 <- dplyr::count(K4, cluster)
+#There are 8 people in cluster 1, and 15 people in cluster 2
 ```
 
 Look at the number of people in each cluster, now repeat this process for 3 rather than 2 clusters. Which cluster grouping do you think is more informative? Write your answer below:
 
+```{r Switching to three clusters}
 
-Once you have done this, save both of your plots to the Assignment 5 file. Create a Zotero item to index your new computer program (Assignment 5.rmd) in Zotero. Then commit your assignment, push it to your Github account and then Pull request your version to the original assignment version so I can see it.
+#Fit new model with three instead of 2 clusters
+fit.3 <- kmeans(K3, 3) 
+
+#create new data frame that adds the cluster of each observation to the old data frame and rename the column names
+K4.3 <- data.frame(K3, fit.3$cluster)
+names(K4.3) <- c("1", "2", "3", "4", "5", "cluster") 
+
+#Gather data so that we switch from wide to long format
+K5.3 <- tidyr::gather(K4.3, key = "week", value = "motivation", 1:5)
+
+#Group data and average it across clusters and weeks
+K6.3 <- K5.3 %>% group_by(week, cluster) %>%
+  summarise(avg = mean(motivation))
+
+#Correct data types
+K6.3$week <- as.numeric(K6.3$week)
+K6.3$cluster <- as.factor(K6.3$cluster)
+
+#Graph the three clusters!
+ggplot(K6.3, aes(week, avg, colour = cluster)) + geom_line() + xlab("Week") + ylab("Average Motivation")
+ggsave("Clustered line graph, motivation by week x3.pdf", path = file.path(getwd(), "Images"))
+
+#See how many students are in each cluster
+K7.3 <- dplyr::count(K4.3, cluster)
+#There are 7 in cluster 1, 1 in cluster 2, and 15 in cluster3
+
+#In my case, using three clusters resulted in only person in the second cluster, which is a bit non-sensicle to me. Therefore, I would use the two cluster approach. I re-ran a few iterations of the K-means approach (since the starting points are picked randomly)
+
+```
+
+
+Once you have done this, save both of your plots to the Assignment 3 file. Create a Zotero item to index your new computer program (Assignment 3.rmd) in Zotero. Then commit your assignment, push it to your Github account and then Pull request your version to the original assignment version so I can see it.
 
 ##Part II
 
 Now, try to do the same for the data [collected in class](https://tccolumbia.qualtrics.com/SE/?SID=SV_6RRqlSAM6lZWYQt). Create two groups of clusters, the answers to the questions and regions where people grew up. 
 
+```{r Part II K-means}
+#steps to carrying out cluster analysis
+#1. Load dataset
+#2. Tidy data: Remove missing values, select subset of variables that are usable 
+#3. Scale numeric variables and dichotmous variables
+#4. Do the kmeans fit procedure
+#5. Add the clustered values back to dataframe
+#6. Make good names of df if neccessary
+#7. Use gather function
+
+#1. Load dataset
+D1 <- read.csv("HUDK4050_2017_Cluster_Survey.csv")
+
+#2. Tidy data: Remove missing values, select subset of variables that are usable 
+D2 <- unite(D1, Name, first, last, sep = " ")                   #Combine first and last name into single column
+D2$cat <- ifelse(D2$cat == "Yes", 1, 0)                         #Recode cat variable
+D2$gif.jiff <- ifelse(D2$gif.jiff == unique(D2$gif.jiff)[[1]], 1, 0)            #Recode gif.jiff variable
+D2$country.grew <- recode(D2$country.grew, "USA" = "United States", "USA " = "United States", "Indonesia " = "Other", "Taiwan" = "Other")                                    #recode countries
+D2 <-na.omit(D2)                                                #Remove missing values, listwise deletion
+
+#Select varaibles used in analysis
+D3 <- select(D2, 2:11)
+
+#3. Scale numeric variables and dichotmous variables
+D3 <- scale(D3)
+
+#4. Do the kmeans fit procedure
+fit <- kmeans(D3, 5) 
+fit$cluster
+
+#5. Add the clustered values back to dataframe
+D3 <- data.frame(D3, fit$cluster)
+
+#2. Tidy data: Remove missing values, select subset of variables that are usable 
+D2.2 <- select(D1, country.grew)
+D2.2$country.grew <- recode(D2.2$country.grew, "USA" = "United States", "USA " = "United States", "Indonesia " = "Indonesia")                                    #recode countries
+
+#3. Scale numeric variables and dichotmous variables
+D3.2 <- geocode(as.character(D2.2$country.grew), output = "latlon")
+D3.2$country <- D2.2$country.grew
+#fill in missing data
+D3.2[c(2, 5),1:2] <- D3.2[1, 1:2]   #for China
+D3.2[c(24,17, 12, 16),1:2] <- D3.2[11, 1:2]      #for the US 
+D3.2[20, 1:2] <- c(121.597366, 25.10547)      #for Taiwan
+D3.2[18, 1:2] <- c(106.774124, -6.121435)     #for Indonesia
+D3.2 <- D3.2[,1:2]  
+
+#4. Do the kmeans fit procedure
+fit.2 <- kmeans(D3.2, 4) 
+fit.2$cluster
+
+#5. Add the clustered values back to dataframe
+D3.2$cluster <- fit.2$cluster
+
+#the two clusters are created 
+DF  <- data.frame(D3, D3.2)
+
+#turn clusters into factors
+DF$fit.cluster <- as.factor(DF$fit.cluster)
+DF$cluster <- as.factor(DF$cluster)
+```
+
+
 ##Part III
 
 Create a visualization that shows the overlap between the two groups of clusters you created in part III.
+```{r Visualizing two clusters}
+ggplot(DF, aes(x = lat, y = lon, color = fit.cluster)) + geom_point() + geom_jitter(width = 2.5, height = 10)
+ggsave("Clustered scatter plot with jitter.pdf", path = file.path(getwd(), "Images"))
+DF1 <- DF
+DF1$fit.cluster <- as.factor(DF1$fit.cluster)
+ggplot(DF1, aes(x = lat, y = lon)) + geom_point()
+ggplot(DF1, aes(x = lat, y = lon, color = fit.cluster)) + geom_point() + geom_jitter(width = 2.5, height = 10)
+
+
+
+       
+       
+       
+```
+
+ggplot(DF, aes(x = lat, y = lon, color = fit.cluster)) + geom_scatter()
+
+
 
 Code Book:
 
