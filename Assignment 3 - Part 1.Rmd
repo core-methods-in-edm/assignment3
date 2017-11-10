@@ -4,9 +4,10 @@ author: "Shreya"
 date: "25 October 2016"
 output: html_document
 ---
+# K-means clustering algorithm
 
-#K-means clustering algorithm
-setwd()
+setwd() <- set working directory
+
 ```{r}
 install.packages("ggplot2") 
 
@@ -15,57 +16,52 @@ library(tidyr)
 library(ggplot2)
 ```
 
-#upload the file "Class_Motivation.csv"
+upload the file "Class_Motivation.csv"
 
+This file contains the self-reported motivation scores for a class over five weeks. We are going to look for patterns in motivation over this time and sort people into clusters based on those patterns.
+But before we do that, we will need to manipulate the data frame into a structure that can be analyzed by our clustering algorithm.
 ```{r}
 K1 <- read.table("Class_Motivation.csv", header = TRUE, sep = ",")
-
-#This file contains the self-reported motivation scores for a class over five weeks. We are going to look for patterns in motivation over this time and sort people into clusters based on those patterns.
-
-#But before we do that, we will need to manipulate the data frame into a structure that can be analyzed by our clustering algorithm.
 ```
 
-#The algorithm will treat each row as a value belonging to a person, so we need to remove the id variable.
+The algorithm will treat each row as a value belonging to a person, so we need to remove the id variable.
 
 ```{r}
 K2 <- dplyr::select(K1, 2:6)
 ```
 
+We will remove people with missing values for this assignment, but keep in mind the issues that you have identified.
+
+It "omits" all rows with missing values, also known as a "listwise deletion". EG - It runs down the list deleting rows as it goes.
 
 ```{r}
-#We will remove people with missing values for this assignment, but keep in mind the issues that you have identified.
-#Now, the next command create a data frame with only those people with no missing values. It "omits" all rows with missing values, also known as a "listwise deletion". EG - It runs down the list deleting rows as it goes.
-
 K3 <- na.omit(K2)
 ```
+Another pre-processing step used in K-means is to standardize the values so that they have the same range. We do this because we want to treat each week as equally important - if we do not standardise then the week with the largest range will have the greatest impact on which clusters are formed. We standardise the values by using the "scales()" command.
 
 ```{r}
-#Another pre-processing step used in K-means is to standardize the values so that they have the same range. We do this because we want to treat each week as equally important - if we do not standardise then the week with the largest range will have the greatest impact on which clusters are formed. We standardise the values by using the "scales()" command.
-
 K3 <- scale(K3)
 ```
 
+Now we will run the K-means clustering algorithm. 
+1) The algorithm starts by randomly choosing some starting values 
+2) Associates all observations near to those values with them
+3) Calculates the mean of those clusters of values
+4) Selects the observation closest to the mean of the cluster
+5) Re-associates all observations closest to this observation
+6) Continues this process until the clusters are no longer changing
+
+Notice that in this case we have 5 variables and in class we only had 2. It is impossible to vizualise this process with 5 variables.
+
+Also, we need to choose the number of clusters we think are in the data. We will start with 2.
+
 ```{r}
-#Now we will run the K-means clustering algorithm. 
-#1) The algorithm starts by randomly choosing some starting values 
-#2) Associates all observations near to those values with them
-#3) Calculates the mean of those clusters of values
-#4) Selects the observation closest to the mean of the cluster
-#5) Re-associates all observations closest to this observation
-#6) Continues this process until the clusters are no longer changing
-
-#Notice that in this case we have 5 variables and in class we only had 2. It is impossible to vizualise this process with 5 variables.
-
-#Also, we need to choose the number of clusters we think are in the data. We will start with 2.
-
 fit <- kmeans(K3, 2)
-
-#We have created an object called "fit" that contains all the details of our clustering including which observations belong to each cluster.
 ```
 
-```{r}
-#We can access the list of clusters by typing "fit$cluster", the top row corresponds to the original order the rows were in. Notice we have deleted some rows.
+We have created an object called "fit" that contains all the details of our clustering including which observations belong to each cluster. We can access the list of clusters by typing "fit$cluster", the top row corresponds to the original order the rows were in. Notice we have deleted some rows.
 
+```{r}
 fit$cluster
 ```
 
@@ -76,7 +72,7 @@ K4 <- data.frame(K3, fit$cluster)
 ```
 
 Have a look at the K4 dataframe. Lets change the names of the variables to make it more convenient with the names() command.
-#c() stands for concatonate and it creates a vector of anything, in this case a vector of names.
+c() stands for concatonate and it creates a vector of anything, in this case a vector of names.
 
 ```{r}
 names(K4) <- c("1", "2", "3", "4", "5", "cluster") 
@@ -85,23 +81,23 @@ names(K4) <- c("1", "2", "3", "4", "5", "cluster")
 Now we need to visualize the clusters we have created. To do so we want to play with the structure of our data. What would be most useful would be if we could visualize average motivation by cluster, by week. To do this we will need to convert our data from wide to long format. Remember your old friends tidyr and dplyr!
 
 First lets use tidyr to convert from wide to long format.
-# we make 2 new columns namely week and motivation
-# week column contains the column heads
-# motivation column contains the values under each column which have been put to long data format
+ - we make 2 new columns namely week and motivation
+ - week column contains the column heads
+ - motivation column contains the values under each column which have been put to long data format
 
 ```{r}
 K5 <- tidyr::gather(K4, "week", "motivation", 1:5)
 ```
 
 Now lets use dplyr to average our motivation values by week and by cluster.
-# %>% is the pipe function
+ - %>% is the pipe function
 
 ```{r}
 library (dplyr)
 K6 <- K5 %>% group_by(week, cluster)
 ```
 
-#or
+or
 
 ```{r}
 library (dplyr)
@@ -115,14 +111,15 @@ K6 <- summarise(K6, avg = mean(motivation))
 ```
 
 Now it's time to do some visualization! We are going to start using the ggplot2 package, a very popular visualization package in R. It is based on the "Grammar of Graphics" a theory of how visualizations work best. 
+
 ```{r}
 K6$week <- as.numeric(K6$week)
 K6$cluster <- as.factor(K6$cluster)
 ```
 
-#Now we can plot our line plot using the ggplot command, "ggplot()".
+Now we can plot our line plot using the ggplot command, "ggplot()".
 
-#name of the plot - Rplot1-1
+# Rplot1-1
 
 ```{r}
 library(ggplot2)
@@ -138,18 +135,19 @@ ggplot(K6, aes(week, avg, colour = cluster)) + geom_line() + xlab("Week") + ylab
 What patterns do you see in the plot?
 
 It would be useful to determine how many people are in each cluster. We can do this easily with dplyr.
-# to get the number of clusters
+#to get the number of clusters
 
 ```{r}
 K7 <- dplyr::count(K4, cluster)
 ```
 
-Look at the number of people in each cluster, now repeat this process for 3 rather than 2 clusters. 
+Look at the number of people in each cluster.
 
-#Now 3 clusters instead of 2
+Now 3 clusters instead of 2
+
+# Rplot1-2
 
 ```{r}
-
 K8 <- na.omit(K2)
 K8 <- scale(K8)
 
@@ -173,18 +171,17 @@ K11$cluster <- as.factor(K11$cluster)
 
 library(ggplot2)
 ggplot(K11, aes(week, avg, colour = cluster)) + geom_line() + xlab("Week") + ylab("Average Motivation")
-#Rplot1-2
+
 
 K11 <- dplyr::count(K9, cluster)
+```
 
+Which cluster grouping do you think is more informative? 
 
-#Which cluster grouping do you think is more informative? Write your answer below:
-
-#According to me, the Rplot2 makes more sense or is more informative. SInce, there are 3 clusters we can differntiate them more and on comparing we see 
+According to me, the Rplot1-2 makes more sense or is more informative. SInce, there are 3 clusters we can differntiate them more and on comparing we see 
 #- the group 1 , in red is sinking on the level of motivation over the weeks
 #- the group 3 in blue almost inthe middle, started with a negative motivation. Its trying hard, fluctuating but motivation level seems to improve.
 #- the group 2 in green, at the bottom is not motivated to a normal level that should be there, but is rather negative. 
 
-#Hence, group 2 need more attention and external motivation may be. Group 3 is trying good.
-#Group 1 needs to pull its strings, because it started good but is sinking negatively over the weeks.
-```
+Hence, group 2 need more attention and external motivation may be. Group 3 is trying good.
+Group 1 needs to pull its strings, because it started good but is sinking negatively over the weeks.
