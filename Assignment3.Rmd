@@ -5,6 +5,8 @@ date: "10/26/2017"
 output: html_document
 ---
 
+##Part I. 
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(dplyr)
@@ -18,9 +20,8 @@ K1 <- read.csv("Class_Motivation.csv")
 K2 <- dplyr::select(K1, 2:6)
 ```
 
-##Missing values. We could treat them as having meaning or we could remove those people who have them. Neither option is ideal. What problems do you foresee if we recode or remove these values?
-###If you recode, you are changing the data from what has been reported.  If you remove the values, you are limiting your data, based on either the variable that you're removing or the record(s)/observation(s) that you're removing.
-
+###Missing values. We could treat them as having meaning or we could remove those people who have them. Neither option is ideal. What problems do you foresee if we recode or remove these values?
+If you recode, you are changing the data from what has been reported.  If you remove the values, you are limiting your data, based on either the variable that you're removing or the record(s)/observation(s) that you're removing.
 
 ```{r}
 K3 <- na.omit(K2) #This command create a data frame with only those people with no missing values. It "omits" all rows with missing values, also known as a "listwise deletion". EG - It runs down the list deleting rows as it goes.
@@ -61,10 +62,10 @@ K6$cluster <- as.factor(K6$cluster)
 ggplot(K6, aes(week, avg, colour = cluster)) + geom_line() + xlab("Week") + ylab("Average Motivation")
 ```
 
-##What patterns do you see in the plot?
+###What patterns do you see in the plot?
 The average motivation between group one and group two appear to be inversely correlated, in that when one increases or decreases, the other appears to do the opposite, albeit the changes to the average motivation of cluster two appears be more steep in the week to week results than of cluster one.  
 
-##Number of people in each of the two clusters
+###Number of people in each of the two clusters
 There are sixteen people in cluster 1 and seven people in cluster 2.
 
 ```{r}
@@ -74,7 +75,7 @@ table(K4$cluster)
 
 ```
 
-##Repeat this process for 3 rather than 2 clusters.
+###Repeat this process for 3 rather than 2 clusters.
 
 ```{r threeclusters}
 fit_with_3 <- kmeans(K3, 3) 
@@ -108,6 +109,54 @@ K7b <- dplyr::count(K4b, cluster)
 table(K4b$cluster)
 ```
 
-##Which cluster grouping do you think is more informative?
+###Which cluster grouping do you think is more informative?
 I believe the second table, with three clusters, is more informative, as it provides a further level of detail.  Unfortunately, neither process indicates which records are in each, so it is hard to tell exactly how they are divided, but it looks as if cluster two in the first table looks to have the similar results as a similar cluster in the second table (on occasion after it is rerun, the cluster number changes). There appears to be seven records identified in cluster two in the first table and the same in the cluster with a similar shape in the second table. If the assumption can be made that they are the same, then the second table separates cluster one from the first table into two clusters that had different results that appear to be important.
+
+##Part II
+###Create two groups of clusters, the answers to the questions and regions where people grew up.
+
+```{r ourgroup}
+KC1 <- read.csv("HUDK4050_2017_Cluster_Survey.csv")
+
+#cleaning country data
+KC1$country.grew <- as.character(KC1$country.grew)
+KC1$country.grew <- with(KC1, ifelse(KC1$country.grew == "USA ", "USA", KC1$country.grew))
+KC1$country.grew <- with(KC1, ifelse(KC1$country.grew == "Indonesia ", "Indonesia", KC1$country.grew))
+KC1$country.grew <- with(KC1, ifelse(KC1$country.grew == "United States", "USA", KC1$country.grew))
+#define regions based on United Nations Statistic Division regions
+#Region 1 - Africa, with subcategories Eastern Africa (1.1), Middle Africa (1.2), Northern Africa (1.3), Southern Africa (1.4) and Western Africa (1.5)
+#Region 2 - Americas, with subcategories Latin America and the Caribbean (2.1), and Northern America (2.2)
+#Region 3 - Asia, with subcategories Central Asia (3.1), Eastern Asia (3.2), Southern Asia (3.3), South-Eastern Asia (3.4), Western Asia (3.5)
+# Region 4 - Europe, with subcategories Eastern Europe (4.1), Northern Europe (4.2), Southern Europe (4.3) and Western Europe (4.4)
+#Region 5 - Oceania, with subcategories Australia and New Zealand (5.1), Melanasia (5.2), Micronesia (5.3) and Polynesia (5.4)
+
+KC1$region <- with(KC1, ifelse(KC1$country.grew == "China", 3.2, ifelse(KC1$country.grew == "Taiwan", 3.2, ifelse(KC1$country.grew == "USA", 2.2, ifelse(KC1$country.grew == "Indonesia", 3.3, 9)))))
+
+KC1$cat <- as.integer(KC1$cat)
+KC1$gif.jiff <- as.integer(KC1$gif.jiff)
+KC1 <- KC1[,c(1,2,3,4,5,6,7,8,9,10,11,12,16,13,14,15)]
+KC2 <- dplyr::select(KC1, 3:13)
+KC3 <- na.omit(KC2) 
+KC3 <- scale(KC3)
+fit <- kmeans(KC3, 2)
+fit$cluster
+KC4 <- data.frame(KC3, fit$cluster)
+table(KC4$cluster)
+```
+
+##Part III
+###Create a visualization that shows the overlap between the two groups of clusters you created in part II.
+
+
+```{r part3}
+names(KC4) <- c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "region", "cluster") #c() stands for concatonate and it creates a vector of anything, in this case a vector of names.
+
+KC5 <- tidyr::gather(KC4, "question", "answer", 1:10)
+KC6 <- KC5 %>% group_by(question, cluster)
+#KC6 <- summarise(KC6, avg = mean(answer))
+KC6$cluster <- as.factor(KC6$cluster)
+ggplot(KC6, aes(question, answer, fill = factor(cluster))) + geom_boxplot() + xlab("Questions") + ylab("Answers") + scale_x_discrete(breaks=c("1","2","3","4","5","6","7","8","9","10"), limits=c("1","2","3","4","5","6","7","8","9","10"),
+       labels=c("owned a cat","gif/jiff","NYC time","sibling","sports","travel to TC","friends w/android","movies","classes","states visited")) + theme(axis.text.x = element_text(angle=45))
+
+```
 
