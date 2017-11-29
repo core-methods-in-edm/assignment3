@@ -125,7 +125,7 @@ K6$week <- as.numeric(K6$week)
 K6$cluster <- as.factor(K6$cluster)
 ```
 
-# Rplot1-1
+### Rplot1-1
 
 ```{r}
 library(ggplot2)
@@ -149,7 +149,7 @@ Look at the number of people in each cluster.
 
 Now 3 clusters instead of 2
 
-# Rplot1-2
+### Rplot1-2
 
 ```{r}
 K8 <- na.omit(K2)
@@ -199,7 +199,7 @@ Group 1 needs to pull its strings, because it started good but is sinking negati
 
 
 
-## Extension Exercise
+# Extension Exercise
 Data [collected in class](https://tccolumbia.qualtrics.com/SE/?SID=SV_6RRqlSAM6lZWYQt). We want to create two groups of clusters, the answers to the questions and regions where people grew up. Then we create a visualization that shows the overlap between the two groups of clusters.
 
 ```{r}
@@ -293,7 +293,7 @@ P9 <- data.frame(P8, fit$cluster)
 ```
 
 make the cluster plot
-# Rplot2_location
+### Rplot2_location
 
 ```{r}
 library(cluster)
@@ -339,7 +339,7 @@ P4 <- data.frame(P3, fit1$cluster)
 ```
 
 plot the cluster plot
-# Rplot2_responses
+### Rplot2_responses
 
 ```{r}
 library(cluster)
@@ -380,7 +380,7 @@ q1 <- data.frame(Q, fit2$cluster)
 ```
 
 final clusterplot
-# Rplot2 - location+responses
+### Rplot2 - location+responses
 
 ```{r}
 library(cluster)
