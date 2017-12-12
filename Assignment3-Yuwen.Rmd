@@ -1,0 +1,131 @@
+
+```{r}
+
+install.packages("dplyr")
+install.packages("tidyr")
+install.packages("ggplot2")
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+K1 <- read.csv("~/Documents/RStudio/Assignment3_Yuwen/Class_Motivation.csv", header = TRUE)
+K2 <- dplyr::select(K1, 2:6)
+```
+
+```{r}
+K3 <- na.omit(K2) #This command create a data frame with only those people with no missing values. It "omits" all rows with missing values, also known as a "listwise deletion". EG - It runs down the list deleting rows as it goes.
+K3 <-scale(K3)
+
+```
+
+```{r}
+fit <- kmeans(K3, 2) 
+
+#We have created an object called "fit" that contains all the details of our clustering including which observations belong to each cluster.
+
+#We can access the list of clusters by typing "fit$cluster", the top row corresponds to the original order the rows were in. Notice we have deleted some rows.
+
+fit$cluster
+
+#We can also attach these clusters to te original dataframe by using the "data.frame" command to create a new data frame called K4.
+
+K4 <- data.frame(K3, fit$cluster)
+
+#Have a look at the K4 dataframe. Lets change the names of the variables to make it more convenient with the names() command.
+
+names(K4) <- c("1", "2", "3", "4", "5", "cluster") #c() stands for concatonate and it creates a vector of anything, in this case a vector of names.
+
+
+```
+
+
+```{r}
+K5 <- tidyr::gather(K4, "week", "motivation", 1:5)
+
+K6 <- K5 %>% group_by(week, cluster)
+K6 <- summarise(K6, avg = mean(motivation))
+
+K6$week <- as.numeric(K6$week)
+
+K6$cluster <- as.factor(K6$cluster)
+
+ggplot(K6, aes(week, avg, colour = cluster)) + geom_line() + xlab("Week") + ylab("Average Motivation") 
+
+ggsave("plot1.pdf")
+K7 <- dplyr::count(K4, cluster)
+```
+
+#Look at the number of people in each cluster, now repeat this process for 3 rather than 2 clusters. Which cluster grouping do you think is more informative? Write your answer below:
+
+#Answer: I think 2 clusters is better. Because if there are 3 clusters, there is only 1 person in the third cluster, while in 2 clusters, the number is 16 vs. 7.
+```{r}
+fit2 <- kmeans(K3, 3) 
+fit2$cluster
+
+k4 <- data.frame(K3, fit2$cluster)
+
+names(k4) <- c("1", "2", "3", "4", "5", "cluster") 
+k5 <- tidyr::gather(k4, "week", "motivation", 1:5)
+
+k6 <- k5 %>% group_by(week, cluster)
+k6 <- summarise(k6, avg = mean(motivation))
+
+k6$week <- as.numeric(k6$week)
+k6$cluster <- as.factor(k6$cluster)
+```
+
+```{r}
+ggplot(k6, aes(week, avg, colour = cluster)) + geom_line() + xlab("Week") + ylab("Average Motivation")
+ggsave("plot2.pdf")
+
+k7 <- dplyr::count(k4, cluster)
+```
+
+#What patterns do you see in the plot?
+#Answer: Obviously it is a line plot with a large variance.
+
+
+
+##Part II
+
+Now, try to do the same for the data collected in class. Create two groups of clusters, the answers to the questions and regions where people grew up.
+
+##Part III
+
+Create a visualization that shows the overlap between the two groups of clusters you created in part III.
+```{r}
+library(readr)
+H1 <- read_csv("~/Documents/RStudio/Assignment3_Yuwen/HUDK4050_2017_Cluster_Survey.csv")
+View(H1)
+```
+
+```{r}
+H2 <- dplyr::select(H1, 3, 6)
+fit_h <- kmeans(H2$sibling, 2) 
+fit_h$cluster
+```
+
+```{r}
+H4 <- data.frame(H3, fit_h$cluster)
+
+names(H4) <- c("cat", "sibling", "cluster") 
+```
+
+```{r}
+H5 <- dplyr::count(H4, cluster)
+View(H5)
+```
+
+
+```{r}
+H4$cluster <- as.factor(H4$cluster)
+H4$sibling <- as.numeric(H4$sibling)
+
+ggplot(H4, aes(cat, sibling, colour = cluster)) + geom_point() + xlab("cat") + ylab("sibling")
+
+
+```
+
+#I don't understand the question and I'm super curious about if people have more siblings prefer dogs..(sorry) but the visualization is bad.
+
+
+
