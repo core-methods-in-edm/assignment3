@@ -1,0 +1,233 @@
+---
+title: "assignment3_final"
+author: "Melanie Nethercott"
+date: "12/16/2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Part I
+
+```{r}
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+```
+### Upload file and remove id variable.
+```{r}
+K1 <- read.csv ("Class_Motivation.csv", sep = ",", header = TRUE) 
+K2 <- dplyr::select(K1, 2:6)
+
+summary (K2)
+```
+### It is important to think about the meaning of missing values when clustering. We could treat them as having meaning or we could remove those people who have them. Neither option is ideal. What problems do you foresee if we recode or remove these values? Write your answers below:
+
+There are a number of reasons for missing data- sometimes it can be an error on the respondents part, or a deliberate choice to not provide information (random and non-random). I think this is worth bearing in mind. 
+
+K-means clustering can't analyze data if it is missing, so if we remove the missing data, these are simply not included in the algorithm. We could be ignoring important data by deleting it (mising data itself can reveal interesting information), and there is also a risk of this resulting in biased estimates. If we recode the missing data, the data will be included in the k-means calculation, but might provide false similarities (or differences- depending on how we recode them), and affect the clustering results. Recoding the missing data is more likely to change the structure of the data. 
+
+However, with both options, the level of 'risk' depends on how much missing data there is. Using summary() we can see there are 8 missing values for motivation in week 2 and 3, and 12 missing values in week 5; a total of 28 out of a possible 190 values in our dataset. This is about 15% of the data, which seems to me to not be too high to use listwise deletion in this instance.
+
+```{r}
+#Removing missing data using listwise deletion.
+K3 <- na.omit(K2) 
+
+#Standardizing scores so that they have the same range. This helps us treat each week as equally important - if we do not standardise then the week with the largest range will have the greatest impact on which clusters are formed.
+K3 <- scale(K3)
+```
+
+### Running K-means clustering algorithm: 
+1) The algorithm starts by randomly choosing some starting values 
+2) Associates all observations near to those values with them
+3) Calculates the mean of those clusters of values
+4) Selects the observation closest to the mean of the cluster
+5) Re-associates all observations closest to this observation
+6) Continues this process until the clusters are no longer changing
+
+```{r}
+#Creating object containing details of our cluster (starting with two clusters).
+fit <- kmeans(K3, 2) 
+
+#Accessing list of clusters.
+fit$cluster
+
+#Attaching clusters to K3 dataframe (i.e. creating new variable in dataframe showing which cluster the values belong to). 
+K4 <- data.frame(K3, fit$cluster)
+
+#Changing variable (column) names.
+View(K4)
+names(K4) <- c("1", "2", "3", "4", "5", "cluster")
+```
+
+### Visualizing the clusters we have created. We need to visualize average motivation by cluster, by week, so need to convert our data from wide to long format. 
+
+```{r}
+#Converting wide to long format. Use gather() to gather columns 1-5 of K4 into week, cluster and motivation columns.
+K5 <- tidyr::gather(K4, "week", "motivation", 1:5) 
+
+#Averaging motivation values by week and cluster. Group_by() groups the data into rows with the same value of average motivation per week, per cluster.
+K6 <- K5 %>% group_by(week, cluster)
+K6 <- summarise(K6, avg = mean(motivation))
+```
+
+### Before visualizing the k-means clustering, we need convert the weeks variable to numbers and variable names to characters. "Cluster" should be converted to factor (from integer) so it isn't treated like a number.
+  
+```{r}
+#Converting to numeric and factor values.
+K6$week <- as.numeric(K6$week)
+K6$cluster <- as.factor(K6$cluster)
+```
+
+
+```{r}
+#Ploting the line graph.
+ggplot(K6, aes(week, avg, colour = cluster)) + geom_line() + xlab("Week") + ylab("Average Motivation")
+ggsave ("Assignment3plot1.pdf", path = file.path(getwd()))
+```
+####What patterns do you see in the plot?
+
+Cluster one's motivation levels rise and fall each week across the five weeks, ending in week 5 on the same average level of motivation as in week 1. Cluster one's average motiation sits between 0.2 and 0.6. Cluster two's motivation levels are lower than cluster one's movtivation but also rise and fall weekly across the timeframe- between -0.6 and -1.4. The two clusters are the inverse of each other- when cluster one's motivation rises, cluster two's average motivation falls, with weeks two and four being the most divisive in terms of difference in average motivation between the clusters (I wonder what the content or task was!?)
+
+
+```{r}
+#Identifying number of people in the cluster.
+K7 <- dplyr::count(K4, cluster)
+View(K7)
+```
+
+####Running K-means clustering for 3 clusters and comparing to the 2 cluster results.
+```{r}
+#Creating object containing details of our cluster (three clusters). Because K3 data was already processed, the missing data has been removed and scores standardized and we don't need to do that again.
+fit2 <- kmeans(K3, 3) 
+
+#Accessing list of clusters.
+fit2$cluster
+
+#Attaching clusters to D1 dataframe. 
+D1 <- data.frame(K3, fit2$cluster)
+
+#Changing variable (column) names.
+View(D1)
+names(D1) <- c("1", "2", "3", "4", "5", "cluster")
+
+#Converting wide to long format.
+D2 <- tidyr::gather(D1, "week", "motivation", 1:5) 
+
+#Averaging motivation values by week and cluster. 
+D3 <- D2 %>% group_by(week, cluster)
+D3 <- summarise(D3, avg = mean(motivation))
+
+#Converting to numeric and factor values.
+D3$week <- as.numeric(D3$week)
+D3$cluster <- as.factor(D3$cluster)
+
+#Ploting the line graph.
+ggplot(D3, aes(week, avg, colour = cluster)) + geom_line() + xlab("Week") + ylab("Average Motivation")
+
+D4 <- dplyr::count(D1, cluster)
+View(D4)
+```
+
+#### Which cluster grouping do you think is more informative? Write your answer below:
+We can see that cluster three students are more motivated overall than the other two clusters until week 5, after which their average motivation level drops. Cluster one follows a similar pattern of motivation levels to cluster three, but with an overall lower average level of motivation. However, their motivation increases in week 5, unlike cluster three. Patterns in cluster two’s motivation levels are the inverse of clusters one and three, rising when the other two clusters’ motivation levels fall and vice versa. 
+
+The clusters’ average motivation levels all seem to increase and decrease week on week until week 5, when the pattern from previous week stops. What happened in week 5 may be significant in that regard. This is not as clear in the two cluster grouping.  
+
+Based on this, I think this three cluster grouping reveals more information than the first cluster grouping and this shows average motivation in the class in a more nuanced, and therefore useful, way. This is useful for future classes because a  teacher/ professor can track motivation and differentiate for three groups of students- I don't think this is too tricky. If we were looking at more than three clusters, I would say this would be too complex, and also less relevant for this many students.
+
+####Once you have done this, save both of your plots to the Assignment 3 file. Create a Zotero item to index your new computer program (Assignment 3.rmd) in Zotero. Then commit your assignment, push it to your Github account and then Pull request your version to the original assignment version so I can see it. 
+
+```{r}
+#Saving plot 2
+ggsave ("Assignment3plot2.pdf", path = file.path(getwd()))
+```
+
+##Part II
+
+Now, try to do the same for the data [collected in class](https://tccolumbia.qualtrics.com/SE/?SID=SV_6RRqlSAM6lZWYQt). Create two groups of clusters, the answers to the questions and regions where people grew up. 
+
+
+####: Creating two groups of clusters 
+```{r}
+RC1 <- read.csv ("HUDK4050_2017_Cluster_Survey.csv", sep = ",", header = TRUE) 
+
+#GROUP 1: Region
+#First I am going to assign students to a region (Asia, USA) based on their country of birth. 
+region <- recode(RC1$country.grew, "China" = "Asia", "Taiwan" = "Asia", "Indonesia " = "Asia", "United States" = "USA")
+RC2 <- data.frame(RC1, region)
+region2 <- recode(RC2$region, "Asia" = "1", "USA" = "0", "USA " = "0")
+RC3 <- data.frame(RC2, region2)
+
+#Removing first and last name and state and country variables. 
+RC4 <- dplyr::select(RC3, -first, -last, -city.grew, -state.grew, -country.grew, -region)
+
+#Running K-means on region to create first group of clusters and putting into a separate dataframe for now.
+Rcluster <- kmeans(RC4$region2, 2) 
+Rcluster$cluster
+RC5 <- data.frame(RC4$region2, Rcluster$cluster)
+
+
+#GROUP 2: Answers
+#K-means can work on categorical variables, but I need to turn these into binary values first. For cat 'yes' will be 1 and 'no' will be 0; giff will be 1 and jiff 0. 
+cat2 <- recode(RC4$cat, "Yes" = "1", "No" = "0")
+AC1 <- data.frame(RC4, cat2)
+giff2 <- recode(RC4$gif.jiff, "g-iff" = "1", "j-iff" = "0")
+AC2 <- data.frame(AC1, giff2)  
+
+#Removing the original categorical varibles to just keep the new binary equivalent variables. Before scaling, I need to convert the integer variables into numeric values, however since there are two factor variables, these need to be converted into characters first. 
+AC3 <- dplyr::select(AC2, -gif.jiff, -cat, -region2)
+AC3[9:10] <- lapply(AC3[9:9], as.numeric)
+AC4 <- scale(AC3)
+
+#Running K-means on answers to create second group of clusters based on all answers.
+Acluster <- kmeans(AC4, 2) 
+Acluster$cluster
+AC5 <- data.frame(AC4, Acluster$cluster)
+```
+
+##Part III
+
+Create a visualization that shows the overlap between the two groups of clusters you created in part II.
+
+Code Book:
+
+Duration (in seconds)
+Q1 - First Name  
+Q2 - Last Name  
+Q3 - Have you ever owned a cat?  
+Q4 - Do you pronounce "gif", with a J (j-iff) or a G (g-iff)?  
+Q5 - How many months have you lived in New York City?  
+Q6 - How many siblings (brothers/sisters) do you have?  
+Q7 - How many times do you play sport each week?  
+Q8 - How many miles do you travel from home to TC?  
+Q9 - Estimate how many of your friends own Android phones  
+Q10 - How many movies have you seen in the cinema this year?  
+Q11 - How many classes are you taking this semester?  
+Q12 - How many states have you visited in the US?  
+Q13 - What city/town did you grow up in?  
+Q14 - What state/province did you grow up in?  
+Q15 - What country did you grow up in?  
+
+
+```{r}
+#Attaching the two dataframes (answers and answer cluster dataframe and region and region cluster dataframe) together.
+install.packages ("vcd")
+library (vcd)
+AC6 <- bind_cols(AC5, RC5)
+AC6 = rename(AC6, allanswcluster = Acluster.cluster, region = RC4.region2, regioncluster = Rcluster.cluster)
+as.numeric (AC6$region)
+
+#Visualizing the overlap between region (USA or Asia) and length of time in NYC (in three clusters) instead.
+livenyc <- kmeans(AC6$live.nyc, 3)
+livenyc$cluster
+toplot <- data.frame(AC6$regioncluster, livenyc$cluster)
+toplot = rename(toplot, regioncluster = AC6.regioncluster, timeinnyc = livenyc.cluster)
+
+table (toplot)
+toplot <- as.matrix(toplot)
+mosaicplot(toplot, main="Mosaic Plot")
+```
+
