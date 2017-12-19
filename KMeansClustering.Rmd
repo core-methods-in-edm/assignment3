@@ -1,5 +1,5 @@
 ---
-title: "Assignment 3: K Means Clustering"
+title: "K Means Clustering"
 author: "Shreya"
 date: "25 October 2016"
 output: html_document
