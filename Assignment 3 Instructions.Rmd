@@ -1,5 +1,5 @@
 ---
-title: "Assignment 3: K Means Clustering"
+title: "Abbey Keener - Assignment 3: K Means Clustering"
 ---
 
 In this assignment we will be applying the K-means clustering algorithm we looked at in class. At the following link you can find a description of K-means, create a webpage index in Zotero and add some notes about the use and limitations of K-means clustering:
@@ -21,7 +21,7 @@ library(ggplot2)
 Now, upload the file "Class_Motivation.csv" from the Assignment 3 Repository as a data frame called "K1""
 ```{r}
 
-K1 <- read.table(...)
+K1 <- read.csv("/Users/abbeykeener/HUDK Assignments/Assignment 3/Class_Motivation.csv")
 
 ```
 
@@ -39,7 +39,7 @@ K2 <- dplyr::select(K1, 2:6)
 
 It is important to think about the meaning of missing values when clustering. We could treat them as having meaning or we could remove those people who have them. Neither option is ideal. What problems do you foresee if we recode or remove these values? Write your answers below:
 
-
+#need an answer here --------
 
 We will remove people with missing values for this assignment, but keep in mind the issues that you have identified.
 
@@ -139,11 +139,13 @@ Now we can plot our line plot using the ggplot command, "ggplot()".
 
 ```{r}
 
-ggplot(K6, aes(week, avg, colour = cluster)) + geom_line() + xlab("Week") + ylab("Average Motivation")
+Plot2 <- ggplot(K6, aes(week, avg, colour = cluster)) + geom_line() + xlab("Week") + ylab("Average Motivation")
 
 ```
 
 What patterns do you see in the plot?
+
+The two clusters seem to be moving in opposite directions as the weeks progress. 
 
 It would be useful to determine how many people are in each cluster. We can do this easily with dplyr.
 
@@ -151,14 +153,89 @@ It would be useful to determine how many people are in each cluster. We can do t
 K7 <- dplyr::count(K4, cluster)
 ```
 
-Look at the number of people in each cluster, now repeat this process for 3 rather than 2 clusters. Which cluster grouping do you think is more informative? Write your answer below:
+Look at the number of people in each cluster, now repeat this process for 3 rather than 2 clusters. Which cluster grouping do you think is more informative? Write your answer below: 
+The 2 cluster group seems more informative becausue the three cluster groups looks like it might be too specific because the lines are more erratic so it might be easier to get applicable patterns from 2 clusters.  
 
+```{r}
+#repeating process for 3 clusters 
+
+# Put K3 into 3 clusters
+fit3 <- kmeans(K3,3)
+
+# to check whether the clustering has been done
+fit3$cluster
+
+# integrate the cluster information into the dataframe
+K10 <- data.frame(K3,fit3$cluster)
+
+# rename the vectors
+names(K10) <- c("1", "2", "3", "4", "5", "cluster")
+
+# transform the dataform from a wide from into a long one
+K11 <- gather(K10,key="week",value="motivation",-"cluster")
+
+# Group by week and cluster and then summarize the data
+K12 <- K11 %>% group_by(week, cluster) 
+K12 <- summarise(K12, avg = mean(motivation))
+
+# Change the class
+K12$week <- as.numeric(K12$week)
+K12$cluster <- as.factor(K12$cluster)
+
+# get the plot
+Plot3 <- ggplot(K12, aes(week, avg, colour = cluster)) + geom_line() + xlab("Week") + ylab("Average Motivation")
+
+# Get the number of each plot
+K13 <- count(K10, cluster)
+
+```
 
 Once you have done this, save both of your plots to the Assignment 5 file. Create a Zotero item to index your new computer program (Assignment 5.rmd) in Zotero. Then commit your assignment, push it to your Github account and then Pull request your version to the original assignment version so I can see it.
 
 ##Part II
 
 Now, try to do the same for the data [collected in class](https://tccolumbia.qualtrics.com/SE/?SID=SV_6RRqlSAM6lZWYQt). Create two groups of clusters, the answers to the questions and regions where people grew up. 
+
+
+```{r}
+
+# read the data
+C1 <- read.csv("/Users/abbeykeener/HUDK Assignments/Assignment 3/HUDK4050_2017_Cluster_Survey.csv", sep=",", header = TRUE)
+C2 <- select(C1, -c(1:2))
+
+#recode question 3 - cat ownership -- Yes(1) NO(0)
+C2[1] <- ifelse(C2[1]=="Yes",1,0)
+
+#recode question 4 -- G-iff (1) & J-iff(0)
+C2[2] <- ifelse(C2[2]=="g-iff",1,0)
+
+# Dataset of numeric answers
+C3 <- select(C2,c(1:10))
+
+# missing data
+C3 <- na.omit(C3)
+
+# scale and cluster
+C3 <- scale(C3)
+K30 <- kmeans(C3,2)
+C3 <- data.frame(C3,K30)
+
+# got stuck here, not sure about the rest 
+
+# visualization
+C <- gather(C, key= "question", value="answer", -cluster)
+C <- C %>% group_by(question, cluster) 
+C <- summarise(C, avg = mean(answer))
+class(C$question)
+C$question <- as.numeric(C$question)
+class(C$cluster)
+C$cluster <- as.factor(C$cluster)
+
+# get the plot
+PlotII <- ggplot(C_, aes(question, avg)) + geom_line() + xlab("Question") + ylab("Average Answer")
+
+
+```
 
 ##Part III
 
