@@ -8,13 +8,13 @@ https://www.cs.uic.edu/~wilkinson/Applets/cluster.html
 
 
 ```{r}
-library()
+library(tidyverse)
 ```
 
 Now, upload the file "Class_Motivation.csv" from the Assignment 3 Repository as a data frame called "K1""
 ```{r}
 
-K1 <- read.csv(...)
+K1 <- read.csv("Class_Motivation.csv")
 
 ```
 
@@ -26,16 +26,18 @@ The algorithm will treat each row as a value belonging to a person, so we need t
 
 ```{r}
 
-K2 <- 
+K2 <- K1[2:6]
 
 ```
 
 It is important to think about the meaning of missing values when clustering. We could treat them as having meaning or we could remove those people who have them. Neither option is ideal. What problems do you foresee if we recode or remove these values? Write your answers below:
 
+Since missing values are missing information they automatically reduce the explanatory power of our model. Recoding them assigns them values that we think they could mean but this may not be accurate. Removing them also inaccurately enhances the strength of the other non-missing values. It may skew our data when we remove the values.
 
 
 We will remove people with missing values for this assignment, but keep in mind the issues that you have identified.
 
+OK.
 
 ```{r}
 
@@ -66,20 +68,21 @@ Also, we need to choose the number of clusters we think are in the data. We will
 
 ```{r}
 
-fit <- 
+fit <- kmeans(K3,2)
 
 #We have created an object called "fit" that contains all the details of our clustering including which observations belong to each cluster.
 
 #We can access the list of clusters by typing "fit$cluster", the top row corresponds to the original order the rows were in. Notice we have deleted some rows.
 
-
+fit$cluster
 
 #We can also attach these clusters to the original dataframe by using the "data.frame" command to create a new data frame called K4.
 
-K4
+K4<-data.frame(K3)
+K4$cluster<-fit$cluster
 
 #Have a look at the K4 dataframe. Lets change the names of the variables to make it more convenient with the names() command.
-
+names(K4)<- c("1","2","3","4","5","cluster")
 
 ```
 
@@ -87,15 +90,15 @@ Now we need to visualize the clusters we have created. To do so we want to play 
 
 First lets use tidyr to convert from wide to long format.
 ```{r}
-
-K5 <- 
+library(tidyverse)
+K5 <- gather(K4,week,motivation,1:5,factor_key=TRUE)
 ```
 
 Now lets use dplyr to average our motivation values by week and by cluster.
 
 ```{r}
 
-K6 <- 
+K6 <- K5%>% group_by(week, cluster)%>% dplyr::summarize(Average=mean(motivation, na.rm=TRUE))
 
 ```
 
@@ -113,9 +116,9 @@ Likewise, since "cluster" is not numeric but rather a categorical label we want 
 
 ```{r}
 
-K6$week <- 
+K6$week <- as.numeric(K6$week)
 
-K6$cluster <- 
+K6$cluster <- as.factor(K6$cluster)
 
 ```
 
@@ -127,19 +130,38 @@ Now we can plot our line plot using the ggplot command, "ggplot()".
 - Finally we are going to clean up our axes labels: xlab("Week") & ylab("Average Motivation")
 
 ```{r}
-
+ggplot(K6,aes(week,Average, colour=K6$cluster, xlab="Week", ylab="Average Motivation"))+geom_line()
 
 ```
 
 What patterns do you see in the plot?
+After week 3, the #2 cluster drops significantly in average motivation. However, in the same time span the #1 cluster increases. Actually, the average motivation of each cluster moves oppositely between each week. Whatever is motivating to one cluster is not motivating to the other.
 
 It would be useful to determine how many people are in each cluster. We can do this easily with dplyr.
 
 ```{r}
-K7 <- 
+K7 <- count(K5, cluster, sort=FALSE)
 ```
 
 Look at the number of people in each cluster, now repeat this process for 3 rather than 2 clusters. Which cluster grouping do you think is more informative? Write your answer below:
+I think the 3 cluster grouping is more informative because the numbers of people in the clusters are more similar. The pattern of motivation is not as obvious but having not seen what the scatter plot looks like, a more similarly-sized clustering seems to be more informative.
+```{r}
+fit3 <- kmeans(K3,3)
+fit3$cluster
+
+#We can also attach these clusters to the original dataframe by using the "data.frame" command to create a new data frame called K4.
+
+K4<-data.frame(K3)
+K4$cluster<-fit3$cluster
+K5 <- gather(K4,week,motivation,1:5,factor_key=TRUE)
+K6 <- K5%>% group_by(week, cluster)%>% dplyr::summarize(Average=mean(motivation, na.rm=TRUE))
+K6$week <- as.numeric(K6$week)
+K6$cluster <- as.factor(K6$cluster)
+ggplot(K6,aes(week,Average, colour=K6$cluster, xlab="Week", ylab="Average Motivation"))+geom_line()
+K7 <- count(K5, cluster, sort=FALSE)
+
+
+```
 
 Once you have done this, save both of your plots to the Assignment 5 file. Create a Zotero item to index your new computer program (Assignment 5.rmd) in Zotero. Then commit your assignment, push it to your Github account and then Pull request your version to the original assignment version so I can see it.
 
