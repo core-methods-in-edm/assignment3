@@ -1,0 +1,122 @@
+---
+title: 'HUDK4050: Class Activity 6'
+author: "Charles Lang"
+date: "10/23/2018"
+output: html_document
+---
+# Data Management
+```{r}
+#Load data
+DF1 <- read.csv("HUDK405018-cluster.csv", header = TRUE)
+  
+#Wrangle data
+DF1 <- select(DF1,Q1_1,Q1_2) 
+
+```
+
+# Find lattitudes & longitudes for cities
+```{r}
+install.packages("ggmap")
+library(ggmap)
+
+#Request lattitude and longitude from Google Maps API
+DF2 <- geocode(as.character(DF1$Q1_1), output = "latlon", source = "dsk")
+DF2<-DF2[-c(1,2),]
+```
+
+Now we will run the K-means clustering algorithm we talked about in class. 
+1) The algorithm starts by randomly choosing some starting values 
+2) Associates all observations near to those values with them
+3) Calculates the mean of those clusters of values
+4) Selects the observation closest to the mean of the cluster
+5) Re-associates all observations closest to this observation
+6) Continues this process until the clusters are no longer changing
+
+Notice that in this case we have 5 variables and in class we only had 2. It is impossible to vizualise this process with 5 variables.
+
+Also, we need to choose the number of clusters we think are in the data. We will start with 4.
+
+```{r}
+
+fit_map <- kmeans(DF2, 2) 
+
+#We have created an object called "fit" that contains all the details of our clustering including which observations belong to each cluster.
+
+#We can access the list of clusters by typing "fit$cluster", the top row corresponds to the original order the rows were in. Notice we have deleted some rows.
+
+fit_map$cluster
+
+#We can also attach these clusters to te original dataframe by using the "data.frame" command to create a new data frame called K4.
+
+DF3 <- data.frame(DF2, fit_map$cluster)
+
+#Have a look at the K4 dataframe. Lets change the names of the variables to make it more convenient with the names() command.
+
+names(DF3) <- c("lon", "lat", "cluster") #c() stands for concatonate and it creates a vector of anything, in this case a vector of names.
+
+```
+
+# Visualize your clusters in ggplot
+```{r}
+#Create a scatterplot that plots location of each student and colors the points according to their cluster 
+
+g<-ggplot(data=DF3, aes(x=lon,y=lat, xlab = "longitude", ylab="latitude", colour=DF3$cluster)) + geom_point()
+g
+
+```
+
+# Can you group students according to their weekly activities?
+How much time did you spend this week in hours: - Coding (R, Java, SPSS, etc)
+How much time did you spend this week in hours: - Writing papers for class
+How much time did you spend this week in hours: - Reading/videos for class
+How much time did you spend this week in hours: - Watching videos for fun
+How much time did you spend this week in hours: - Cooking
+How much time did you spend this week in hours: - Using social media
+How much time did you spend this week in hours: - Social activities (movies, restaurants, etc)
+```{r}
+#Load data
+DF1 <- read.csv("HUDK405018-cluster.csv", header = TRUE, na.strings=c("","NA"), stringsAsFactors = FALSE)
+
+#Wrangle data
+DF1 <- select(DF1,Q2_1:Q2_7)
+DF2<-DF1[-c(1,2),]
+names(DF2) <- c("1", "2", "3","4","5","6", "7")
+
+# turn NAs into zeroes
+DF2[is.na(DF2)] <- 0
+DF3<-DF2
+#I know there's probably a faster way to do this but I got tired of searching for it
+DF3$'1' <-as.numeric(DF2$'1')
+DF3$'2' <-as.numeric(DF2$'2')
+DF3$'3'<-as.numeric(DF2$'3')
+DF3$'4'<-as.numeric(DF2$'4')
+DF3$'5'<-as.numeric(DF2$'5')
+DF3$'6'<-as.numeric(DF2$'6')
+DF3$'7'<-as.numeric(DF2$'7')
+
+#Rectifying the earlier stupid mistake to change names to numbers
+names(DF3)<-c("coding","writing papers","read/vid", "watch videos","cooking","social media", "going out")
+
+##maybe don't use this. scales down my hours way low
+#DF3<-scale(DF2)
+
+#Kmeans for activity of students
+activity <- kmeans(DF3,3)
+activity$cluster
+
+DF4<-data.frame(DF3)
+DF4$cluster<-activity$cluster
+
+DF5<-gather(DF4,activity,hours,1:7,factor_key=TRUE)
+
+DF6 <- DF5%>% group_by(activity, cluster)%>% dplyr::summarize(avg=mean(hours, na.rm=TRUE))
+
+DF6$activity <- as.numeric(DF6$activity)
+
+DF6$cluster <- as.factor(DF6$cluster)
+
+ggplot(DF6,aes(activity,avg, colour=DF6$cluster))+geom_line()+labs(x="activity:1=coding, 2=writing, 3=read/vid, 4=vid/fun, 5=cooking, 6=social media, 7=activities", y="Average hours")
+
+DF7 <- count(DF5, cluster, sort=FALSE)
+```
+

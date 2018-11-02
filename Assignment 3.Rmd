@@ -130,11 +130,12 @@ Now we can plot our line plot using the ggplot command, "ggplot()".
 - Finally we are going to clean up our axes labels: xlab("Week") & ylab("Average Motivation")
 
 ```{r}
-ggplot(K6,aes(week,Average, colour=K6$cluster, xlab="Week", ylab="Average Motivation"))+geom_line()
+ggplot(K6,aes(week,Average, colour=K6$cluster))+geom_line()+ labs(x="Week", y="Average Motivation")
 
 ```
 
 What patterns do you see in the plot?
+
 After week 3, the #2 cluster drops significantly in average motivation. However, in the same time span the #1 cluster increases. Actually, the average motivation of each cluster moves oppositely between each week. Whatever is motivating to one cluster is not motivating to the other.
 
 It would be useful to determine how many people are in each cluster. We can do this easily with dplyr.
@@ -144,6 +145,7 @@ K7 <- count(K5, cluster, sort=FALSE)
 ```
 
 Look at the number of people in each cluster, now repeat this process for 3 rather than 2 clusters. Which cluster grouping do you think is more informative? Write your answer below:
+
 I think the 3 cluster grouping is more informative because the numbers of people in the clusters are more similar. The pattern of motivation is not as obvious but having not seen what the scatter plot looks like, a more similarly-sized clustering seems to be more informative.
 ```{r}
 fit3 <- kmeans(K3,3)
@@ -157,7 +159,7 @@ K5 <- gather(K4,week,motivation,1:5,factor_key=TRUE)
 K6 <- K5%>% group_by(week, cluster)%>% dplyr::summarize(Average=mean(motivation, na.rm=TRUE))
 K6$week <- as.numeric(K6$week)
 K6$cluster <- as.factor(K6$cluster)
-ggplot(K6,aes(week,Average, colour=K6$cluster, xlab="Week", ylab="Average Motivation"))+geom_line()
+ggplot(K6,aes(week,Average, colour=K6$cluster))+geom_line()+ labs(x="Week", y="Average Motivation")
 K7 <- count(K5, cluster, sort=FALSE)
 
 
@@ -169,7 +171,52 @@ Once you have done this, save both of your plots to the Assignment 5 file. Creat
 
 Now, try to do the same for the data collected in class. Create two sets of clusters, the answers to the questions and regions where people grew up. 
 
+My answers are in the this folder's "class-activity-6.Rmd" for this part. It has the steps I took for this part.
+
 ##Part III
 
 Create a visualization that shows the overlap between the two groups of clusters you created in part III.
+```{r}
+#Load data
+data1 <- read.csv("HUDK405018-cluster.csv", header = TRUE, na.strings=c("","NA"))
+data1 <- select(data1,Q1_1:Q2_7)
+data2<- select(data1,Q1_1)
+data2<-data2[-c(1,2),]
+data2<-as.data.frame(data2)
+
+install.packages("ggmap")
+library(ggmap)
+
+#Request lattitude and longitude from Google Maps API
+data2 <- geocode(as.character(data1$Q1_1), output = "latlon", source = "dsk")
+
+data2<-data2[-c(1,2),]
+
+#make a kmeans cluster
+total_map <- kmeans(data2, 3) 
+
+total_map$cluster
+
+#We can also attach these clusters to the original dataframe by using the "data.frame" command to create a new data frame called K4.
+data3 <- data.frame(data2, total_map$cluster)
+
+
+names(data3) <- c("lon", "lat", "cluster")
+
+#Binding activity data frame with the long/lat data frame
+#DF3 data frame is from class-activity-6.Rmd
+data4<- cbind(data3,DF3)
+
+#looking at which activities people spend max number of hours
+data4[,"maxHours"]<- apply(data4[4:10],1,max)
+data4[,"activity"]<-colnames(data4[4:10])[apply(data4[4:10],1,which.max)]
+
+
+# Visualize your clusters in ggplot
+#Create a scatterplot that plots location of each student and colors the points according to their cluster 
+
+g1<-ggplot(data=data4, aes(x=lon,y=lat, colour=data4$cluster,size=data4$maxHours, shape=data4$activity )) + geom_point()+ labs(x="Longitude of Home City", y ="Latitude of Home City")+scale_shape_manual(values=c(16, 17, 15,0,1,2,10))+ggtitle("Weekly Activities People do Greatest Amount of Time based on Home Location")
+g1
+
+```
 
