@@ -8,13 +8,15 @@ https://www.cs.uic.edu/~wilkinson/Applets/cluster.html
 
 
 ```{r}
-library()
+library(tidyr)
+library(dplyr)
+library(ggplot2)
 ```
 
 Now, upload the file "Class_Motivation.csv" from the Assignment 3 Repository as a data frame called "K1""
 ```{r}
 
-K1 <- read.csv(...)
+K1 <- read.csv("Class_Motivation.csv", header=TRUE)
 
 ```
 
@@ -25,14 +27,15 @@ But before we do that, we will need to manipulate the data frame into a structur
 The algorithm will treat each row as a value belonging to a person, so we need to remove the id variable.
 
 ```{r}
-
-K2 <- 
-
+K1$id<-NULL
+K2 <- K1
 ```
 
 It is important to think about the meaning of missing values when clustering. We could treat them as having meaning or we could remove those people who have them. Neither option is ideal. What problems do you foresee if we recode or remove these values? Write your answers below:
 
-
+Problems:
+1) If we just remove people who have them, and if the removed size is not small, it may produce some biases.
+2) If we treat them as meaningful, it may skew or change the cluster in some way.
 
 We will remove people with missing values for this assignment, but keep in mind the issues that you have identified.
 
@@ -46,9 +49,7 @@ K3 <- na.omit(K2) #This command create a data frame with only those people with 
 Another pre-processing step used in K-means is to standardize the values so that they have the same range. We do this because we want to treat each week as equally important - if we do not standardise then the week with the largest range will have the greatest impact on which clusters are formed. We standardise the values by using the "scale()" command.
 
 ```{r}
-
 K3 <- scale(K3)
-
 ```
 
 
@@ -66,17 +67,17 @@ Also, we need to choose the number of clusters we think are in the data. We will
 
 ```{r}
 
-fit <- 
+fit <- kmeans(K3, 2)
 
 #We have created an object called "fit" that contains all the details of our clustering including which observations belong to each cluster.
 
+fit$cluster
 #We can access the list of clusters by typing "fit$cluster", the top row corresponds to the original order the rows were in. Notice we have deleted some rows.
 
-
-
+K4<-data.frame(K3, clusters = fit$cluster)
 #We can also attach these clusters to the original dataframe by using the "data.frame" command to create a new data frame called K4.
 
-K4
+names(K4)<-c(paste0("motivation_", 1:5), "cluster")
 
 #Have a look at the K4 dataframe. Lets change the names of the variables to make it more convenient with the names() command.
 
@@ -87,16 +88,13 @@ Now we need to visualize the clusters we have created. To do so we want to play 
 
 First lets use tidyr to convert from wide to long format.
 ```{r}
-
-K5 <- 
+K5 <- gather(K4, week, motivation, motivation_1:motivation_5, -cluster)
 ```
 
 Now lets use dplyr to average our motivation values by week and by cluster.
 
 ```{r}
-
-K6 <- 
-
+K5 <- K5%>% group_by(week, cluster) %>% mutate(value=mean(motivation)) 
 ```
 
 Now it's time to do some visualization: 
@@ -113,9 +111,9 @@ Likewise, since "cluster" is not numeric but rather a categorical label we want 
 
 ```{r}
 
-K6$week <- 
+K5$week<-ifelse(K5$week == "motivation_1", 1, ifelse(K5$week == "motivation_2", 2, ifelse(K5$week == "motivation_3", 3, ifelse(K5$week == "motivation_4", 4, 5))))
 
-K6$cluster <- 
+K5$cluster <- as.factor(K5$cluster)
 
 ```
 
@@ -127,7 +125,8 @@ Now we can plot our line plot using the ggplot command, "ggplot()".
 - Finally we are going to clean up our axes labels: xlab("Week") & ylab("Average Motivation")
 
 ```{r}
-
+ggplot(K5, aes(x=week, y=value, color = cluster)) +
+  geom_line()
 
 ```
 
@@ -136,18 +135,67 @@ What patterns do you see in the plot?
 It would be useful to determine how many people are in each cluster. We can do this easily with dplyr.
 
 ```{r}
-K7 <- 
+K6 <- group_by(K5, cluster) %>% summarise(n=n())
 ```
 
 Look at the number of people in each cluster, now repeat this process for 3 rather than 2 clusters. Which cluster grouping do you think is more informative? Write your answer below:
 
+<<<<<<< HEAD
+```{r}
+fit1<-kmeans(K3, 3)
+fit1$cluster
+k4<-data.frame(K3, cluster=fit1$cluster)
+
+k4<-gather(k4, week, motivation, motivation1:motivation5, -cluster)
+k4<-group_by(k4,week,cluster)%>%mutate(value=mean(motivation))
+k4$week<-ifelse(k4$week == "motivation1", 1, ifelse(k4$week == "motivation2", 2, ifelse(k4$week == "motivation3", 3, ifelse(k4$week == "motivation4", 4, 5))))
+k4$cluster<-as.factor(k4$cluster)
+# k4<-unique(k4)
+
+ggplot(k4, aes(x=week, y=value, color=cluster))+
+  geom_line()
+```
+
+Once you have done this, save both of your plots to the Assignment 5 file. Create a Zotero item to index your new computer program (Assignment 5.rmd) in Zotero. Then commit your assignment, push it to your Github account and then Pull request your version to the original assignment version so I can see it.
+=======
 Once you have done this, save both of your plots to the Assignment 5 file.
+>>>>>>> 773c0065161fc5a8423988317d548f2185f5f00d
 
 ##Part II
 
 Now, try to do the same for the data collected in class. Create two sets of clusters, the answers to the questions and regions where people grew up. 
+```{r}
+library(ggmap)
+
+# import data, clean and organize the data
+df1<-read.csv("HUDK405018-cluster.csv", header=TRUE, na.strings="")
+df1<-slice(df1, -(1:2))
+df2<-select(df1, 18:26)
+df2<-na.omit(df2)
+
+df3<-geocode(as.character(df2$Q1_1), output = "latlon", source = "dsk")
+df2<-data.frame(df2, df3)
+df4<-select(df2, Q2_1:Q2_7)
+
+# create two sets of clusters based on students' location and their ansuwer about time use
+fit2<-kmeans(df3, 3)
+fit3<-kmeans(df4, 3)
+
+df2<-data.frame(df2, fit2$cluster, fit3$cluster)
+names(df2)<-c("city", "country", paste0("question", 1:7), "lon", "lat", "cluster_position", "cluster_time")
+df2$cluster_position<-ifelse(df2$cluster_position == 1, "location1", ifelse(df2$cluster_position == 2, "location2", "location3"))
+df2$cluster_time<-ifelse(df2$cluster_time ==1, "timeuse1", ifelse(df2$cluster_time == 2, "timeuse2", "timeuse3"))
+
+# create contengency table for mosaic plot preparation
+df5<-select(df2, 12:13)
+t1<-table(df5$cluster_position, df5$cluster_time)
+```
+
 
 ##Part III
 
 Create a visualization that shows the overlap between the two groups of clusters you created in part III.
-
+```{r}
+# create mosaic plot
+mosaicplot(t1, color = c(2,3,4), main="Students' location and use of time", xlab="Locations", ylab="Use of time")
+```
