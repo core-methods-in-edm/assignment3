@@ -1,0 +1,107 @@
+---
+title: "Dristi_Assignment3"
+author: "DA"
+date: "November 4, 2018"
+output: html_document
+---
+```{r}
+#Part 1
+#load all library
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+`{r}
+class_motivation <- read.csv("Class_Motivation.csv", header = TRUE)
+remove_id_from_data <- select(class_motivation, motivation1:motivation5)
+remove_id_from_data_addzero <- na.omit(remove_id_from_data)
+remove_id_from_data_addzero <- scale(remove_id_from_data_addzero)
+remove_id_from_data_addzero <- as.data.frame(remove_id_from_data_addzero)
+```{r}
+#cluster1
+fit <- kmeans(remove_id_from_data_addzero, 2)
+fit$cluster
+remove_id_from_data_cluster <- data.frame(remove_id_from_data_addzero, fit$cluster)
+#now add names to your columns 
+names(remove_id_from_data_cluster) <- c("M1", "M2", "M3", "M4", "M5", "Cluster")
+```{r}
+#now change from wide to long- tidyr
+remove_id_from_data_cluster_gather <- remove_id_from_data_cluster %>% gather(Week,Scores, "M1", "M2", "M3", "M4", "M5", convert=FALSE) %>% group_by(Week, Cluster)
+#compile mean score
+remove_id_from_data_cluster_gather_summarize <- remove_id_from_data_cluster_gather %>% summarise(Avg_score=mean(Scores))
+remove_id_from_data_cluster_gather_summarize$Week <- as.numeric(remove_id_from_data_cluster_gather_summarize$Week)
+remove_id_from_data_cluster_gather_summarize$Cluster <- as.factor(remove_id_from_data_cluster_gather_summarize$Cluster)
+```{r}
+#plotting the cluster with K means = 2
+ggplot(data = remove_id_from_data_cluster_gather_summarize) + geom_line(mapping = aes(x = Week, y =Avg_score, color = as.factor(Cluster)))
+#how many people do we have in each cluster? We can do this by using the "count" function
+remove_id_from_data_cluster_gather_summarize_count <- count(remove_id_from_data_cluster_gather, Cluster, sore=FALSE)
+```{r}
+#when K = 3
+fit2 <- kmeans(remove_id_from_data_addzero, 3)
+fit2$cluster
+data_Frame_for_3clusters <- data.frame(remove_id_from_data_cluster, fit2$cluster)
+names(data_Frame_for_3clusters) <- c("M1", "M2", "M3", "M4", "M5", "Cluster")
+data_Frame_for_3clusters_gather <- data_Frame_for_3clusters %>% gather(Week, Scores, "M1", "M2", "M3", "M4", "M5", convert = FALSE) %>% group_by(Week, Cluster)
+data_Frame_for_3clusters_gather_summarize <- data_Frame_for_3clusters_gather %>% summarise(Avg_score = mean(Scores))
+data_Frame_for_3clusters_gather_summarize$Week <- as.numeric(data_Frame_for_3clusters_gather_summarize$Week)
+data_Frame_for_3clusters_gather_summarize$Cluster <- as.factor(data_Frame_for_3clusters_gather_summarize$Cluster)
+ggplot(data = data_Frame_for_3clusters_gather_summarize) + geom_line(mapping = aes(x = Week, y =Avg_score, color = Cluster)) +xlab("Week") + ylab("Average Motivation")
+data_Frame_for_3clusters_gather_summarize_count <- count(data_Frame_for_3clusters_gather, Cluster, sort = FALSE)
+```
+
+```{r}
+#Part2
+Class_Data_Frame <- read.csv("HUDK405018-cluster.csv", header = TRUE)
+library(dplyr)
+CDF_with_questios_only <- select(Class_Data_Frame, Q1_1:Q2_7)
+#now need to delete two first rows
+CDF_with_questios_only_norows <- CDF_with_questios_only[-c(1,2),]
+#need to tell R that empty spaces = na = o
+CDF_with_questios_only_norows[CDF_with_questios_only_norows==""] <- NA
+CDF_with_questios_only_norows <- na.omit(CDF_with_questios_only_norows)
+#now change the names of columns
+names(CDF_with_questios_only_norows) <- c("City", "Country", "A1",  "A2", "A3", "A4", "A5", "A6", "A7")
+#Note that this part is similar to assignment 6
+library(ggmap)
+CDF_withlatandlon <- geocode(as.character(CDF_with_questios_only_norows$Country), output = "latlon", source = "dsk")
+CDF_withlatandlon_scale <- scale(as.matrix(CDF_withlatandlon))
+CDF_withlatandlon_scale <- data.frame(CDF_withlatandlon_scale)
+#now cluster, when K=4
+fit3 <- kmeans(CDF_withlatandlon_scale, 4)
+fit3$cluster
+CDF_withlatandlon <- data.frame(CDF_withlatandlon_scale, fit3$cluster)
+#now change names of the columns
+names(CDF_withlatandlon) <-c("longitude", "latitude", "Cluster")
+CDF_withlatandlon$Cluster <- as.factor(CDF_withlatandlon$Cluster)
+#now create a scatterplot
+library(ggplot2)
+ggplot(CDF_withlatandlon, aes(x=longitude, y=latitude, color=Cluster)) + geom_point()
+#without the first two columns
+CDF_with_questios_only_norows_nocolumn <- CDF_with_questios_only_norows[,-(1:2)]
+CDF_with_questios_only_norows_nocolumn <- data.matrix(CDF_with_questios_only_norows_nocolumn)
+CDF_with_questios_only_norows_nocolumn <- scale(CDF_with_questios_only_norows_nocolumn)
+CDF_with_questios_only_norows_nocolumn <- data.frame(CDF_with_questios_only_norows_nocolumn)
+rownames(CDF_with_questios_only_norows_nocolumn) <- NULL
+#Clusters
+fit4 <- kmeans(CDF_with_questios_only_norows_nocolumn, 4)
+fit4$cluster
+CDF_withcluster <- data.frame(CDF_with_questios_only_norows_nocolumn, fit4$cluster)
+#change names of the columns
+names(CDF_withcluster) <- c("A1", "A2", "A3", "A4", "A5", "A6", "A7", "Cluster")
+#gather into one column
+CDF_with_gather <- CDF_withcluster %>% gather(Activity, Hours, 1:7, convert = FALSE) %>% group_by(Activity, Cluster)
+CDF_with_gather$Hours <- as.numeric(CDF_with_gather$Hours)
+#calculate avergae hours
+CDF_with_gather_averagehour <- summarize(CDF_with_gather, Avg_hours=mean(Hours))
+CDF_with_gather_averagehour$Activity <-as.numeric(CDF_with_gather_averagehour$Activity)
+CDF_with_gather_averagehour$Cluster <- as.factor(CDF_with_gather_averagehour$Cluster)
+#xlab = label for x-axis
+ggplot(CDF_with_gather_averagehour, aes(x=Activity, y=Avg_hours, color=Cluster)) + geom_line() + xlab("Activity") + ylab("Average Hours")
+#combine the two
+Combined_data_frame <- data.frame(CDF_withlatandlon, CDF_withcluster)
+colnames(Combined_data_frame) [3] <- "Cluster_Region"
+colnames(Combined_data_frame) [11] <- "Cluster_Activity"
+Combined_data_frame$Cluster_Activity <- as.factor(Combined_data_frame$Cluster_Activity)
+ggplot(Combined_data_frame, aes(x=longitude, y=latitude, color=Cluster_Region, shape=Cluster_Activity)) +geom_point()
+```
+
