@@ -8,13 +8,16 @@ https://www.cs.uic.edu/~wilkinson/Applets/cluster.html
 
 
 ```{r}
-library()
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+
 ```
 
 Now, upload the file "Class_Motivation.csv" from the Assignment 3 Repository as a data frame called "K1""
 ```{r}
 
-K1 <- read.csv(...)
+K1 <- read.csv("Class_Motivation.csv")
 
 ```
 
@@ -26,12 +29,13 @@ The algorithm will treat each row as a value belonging to a person, so we need t
 
 ```{r}
 
-K2 <- 
+K2 <- K1[,-1]
 
 ```
 
 It is important to think about the meaning of missing values when clustering. We could treat them as having meaning or we could remove those people who have them. Neither option is ideal. What problems do you foresee if we recode or remove these values? Write your answers below:
 
+Ans: Having missing values gives us a less robust picture of the relationship, giving us insights that may not be correct. We can't exactly speculate these points as well, doing so will not give us an accurate reflection of reality. 
 
 
 We will remove people with missing values for this assignment, but keep in mind the issues that you have identified.
@@ -39,7 +43,8 @@ We will remove people with missing values for this assignment, but keep in mind 
 
 ```{r}
 
-K3 <- na.omit(K2) #This command create a data frame with only those people with no missing values. It "omits" all rows with missing values, also known as a "listwise deletion". EG - It runs down the list deleting rows as it goes.
+K3 <- na.omit(K2) 
+#This command create a data frame with only those people with no missing values. It "omits" all rows with missing values, also known as a "listwise deletion". EG - It runs down the list deleting rows as it goes.
 
 ```
 
@@ -66,20 +71,25 @@ Also, we need to choose the number of clusters we think are in the data. We will
 
 ```{r}
 
-fit <- 
+fit <- kmeans(K3, 2)
+fit2<- kmeans(K3, 3)
 
 #We have created an object called "fit" that contains all the details of our clustering including which observations belong to each cluster.
 
 #We can access the list of clusters by typing "fit$cluster", the top row corresponds to the original order the rows were in. Notice we have deleted some rows.
 
-
+fit$cluster
+fit2$cluster
 
 #We can also attach these clusters to the original dataframe by using the "data.frame" command to create a new data frame called K4.
 
-K4
+K4 <- data.frame(K3, fit$cluster)
+K42 <- data.frame(K3, fit2$cluster )
 
 #Have a look at the K4 dataframe. Lets change the names of the variables to make it more convenient with the names() command.
 
+names(K4) <- c("1", "2", "3", "4", "5", "Cluster")
+names(K42) <- c("1", "2", "3", "4", "5", "Cluster")
 
 ```
 
@@ -88,14 +98,20 @@ Now we need to visualize the clusters we have created. To do so we want to play 
 First lets use tidyr to convert from wide to long format.
 ```{r}
 
-K5 <- 
+K5 <- gather(K4, "week", "motivation", 1:5)
+K52 <- gather(K42, "week", "motivation", 1:5)
+
 ```
 
 Now lets use dplyr to average our motivation values by week and by cluster.
 
 ```{r}
 
-K6 <- 
+K6 <- group_by(K5, week, Cluster)
+K6 <- summarise(K6, avg = mean(motivation))
+
+K62 <- group_by(K52, week, Cluster)
+K62 <- summarise(K62, avg = mean(motivation))
 
 ```
 
@@ -113,9 +129,13 @@ Likewise, since "cluster" is not numeric but rather a categorical label we want 
 
 ```{r}
 
-K6$week <- 
+K6$week <- as.numeric(K6$week)
 
-K6$cluster <- 
+K6$cluster <- as.factor(K6$Cluster)
+
+K62$week <- as.numeric(K62$week)
+K62$cluster <- as.factor(K62$Cluster)
+
 
 ```
 
@@ -127,7 +147,11 @@ Now we can plot our line plot using the ggplot command, "ggplot()".
 - Finally we are going to clean up our axes labels: xlab("Week") & ylab("Average Motivation")
 
 ```{r}
+#Plot with Two Clusters
+ggplot(K6, aes(week, avg, colour = cluster), xlab = "Week", ylab = "Average") + geom_line() + geom_point()
 
+#Plot with Three Clusters
+ggplot(K62, aes(week, avg, colour = cluster), xlab = "Week", ylab = "Average") + geom_line() + geom_point()
 
 ```
 
@@ -136,18 +160,76 @@ What patterns do you see in the plot?
 It would be useful to determine how many people are in each cluster. We can do this easily with dplyr.
 
 ```{r}
-K7 <- 
+K7 <- dplyr::count(K4, Cluster)
+#8 People in Cluster 1, 15 people in Cluster 2
+K72 <- dplyr::count(K42, Cluster)
+#7 people in Cluster 1, 9 people in Cluster 2, 7 peope in Cluster 3.
 ```
 
 Look at the number of people in each cluster, now repeat this process for 3 rather than 2 clusters. Which cluster grouping do you think is more informative? Write your answer below:
+
+The 3 Kmeans cluster shows slightly more information. 
+
 
 Once you have done this, save both of your plots to the Assignment 5 file. Create a Zotero item to index your new computer program (Assignment 5.rmd) in Zotero. Then commit your assignment, push it to your Github account and then Pull request your version to the original assignment version so I can see it.
 
 ##Part II
 
-Now, try to do the same for the data collected in class. Create two sets of clusters, the answers to the questions and regions where people grew up. 
+Now, try to do the same for the data collected in class. Create two sets of (choose how many you want) clusters, the answers to the questions and regions where people grew up. 
+```{r}
+#Here we will create two sets of clusters, one with 3 for the answers to the questions and 2 which clusters by region, using survey data from class.
+
+#Reading CSV File into a Variable
+data <- read.csv("HUDK405018-cluster.csv")
+
+#Taking Just the City and Region of the Answers
+data1 <- as.data.frame(data[,18:19])
+location <- data1[-2:-1,]
+names(location) <- c("City", "Country")
+
+#Finding the Longitude and Latitude of the Associated Regions
+lonlat <- geocode(as.character(location$City), output = "latlon", source = "dsk")
+
+#Scaling the Data 
+lonlatScale <- scale(lonlat)
+
+#Fitting the Data with KMeans
+fitL <- kmeans(lonlatScale, 2)
+
+#Binding Longitude and Lattitude with Cluster Results
+llc <- data.frame(lonlatScale, fitL$cluster)
+
+#Clustering by Question Answers
+data2 <- as.data.frame(data[,20:26])
+data2 <- data2[-2:-1, ]
+data2 <- data.matrix(data2)
+dataScale <- scale(data2)
+
+#Fitting Question Answers by KMeans
+fitQA <- kmeans(dataScale, 3)
+
+#Binding Scaled QA with Fit Clusters
+qac <- data.frame(dataScale, fitQA$cluster)
+
+#Combining both the Region Cluster and QA cluster into a Single Data Frame
+finalCluster <- data.frame(qac, llc)
+finalCluster$fitQA.cluster <- as.factor(finalCluster$fitQA.cluster)
+finalCluster$fitL.cluster <- as.factor(finalCluster$fitL.cluster)
+
+```
+
 
 ##Part III
 
 Create a visualization that shows the overlap between the two groups of clusters you created in part III.
+```{r}
+#We cluster the data purely by longitude and latitude, but this gives us no indication as to the answer similarity
+g1<-ggplot(finalCluster, aes(x=lon,y=lat, colour = finalCluster$fitL.cluster)) + geom_point()
+g1
+
+
+#We cluster the data by how similar the answers. Longitude and Latitude is naturally parsed by the axes, the different colors show which group belongs to where. 
+g2<-ggplot(finalCluster, aes(x=lon,y=lat, colour = finalCluster$fitQA.cluster)) + geom_point()
+g2
+```
 
