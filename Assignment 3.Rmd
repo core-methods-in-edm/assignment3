@@ -3,19 +3,18 @@ title: "Assignment 3: K Means Clustering"
 ---
 
 In this assignment we will be applying the K-means clustering algorithm we looked at in class. At the following link you can find a description of K-means:
-
 https://www.cs.uic.edu/~wilkinson/Applets/cluster.html
 
-
 ```{r}
-library()
+library(tidyr)
+library(dplyr)
+library(ggplot2)
+library(ggmap)
 ```
 
 Now, upload the file "Class_Motivation.csv" from the Assignment 3 Repository as a data frame called "K1""
 ```{r}
-
-K1 <- read.csv(...)
-
+K1 <- read.csv("Class_Motivation.csv",header=T)
 ```
 
 This file contains the self-reported motivation scores for a class over five weeks. We are going to look for patterns in motivation over this time and sort people into clusters based on those patterns.
@@ -25,9 +24,7 @@ But before we do that, we will need to manipulate the data frame into a structur
 The algorithm will treat each row as a value belonging to a person, so we need to remove the id variable.
 
 ```{r}
-
-K2 <- 
-
+K2 <- K1[,-1]
 ```
 
 It is important to think about the meaning of missing values when clustering. We could treat them as having meaning or we could remove those people who have them. Neither option is ideal. What problems do you foresee if we recode or remove these values? Write your answers below:
@@ -46,11 +43,8 @@ K3 <- na.omit(K2) #This command create a data frame with only those people with 
 Another pre-processing step used in K-means is to standardize the values so that they have the same range. We do this because we want to treat each week as equally important - if we do not standardise then the week with the largest range will have the greatest impact on which clusters are formed. We standardise the values by using the "scale()" command.
 
 ```{r}
-
 K3 <- scale(K3)
-
 ```
-
 
 Now we will run the K-means clustering algorithm we talked about in class. 
 1) The algorithm starts by randomly choosing some starting values 
@@ -66,37 +60,31 @@ Also, we need to choose the number of clusters we think are in the data. We will
 
 ```{r}
 
-fit <- 
+fit <- kmeans(K3,centers=2,nstart=20,iter.max=50)
 
 #We have created an object called "fit" that contains all the details of our clustering including which observations belong to each cluster.
 
 #We can access the list of clusters by typing "fit$cluster", the top row corresponds to the original order the rows were in. Notice we have deleted some rows.
-
-
-
+fit$cluster
 #We can also attach these clusters to the original dataframe by using the "data.frame" command to create a new data frame called K4.
 
-K4
+K4<-data.frame(K3,fit$cluster)
 
 #Have a look at the K4 dataframe. Lets change the names of the variables to make it more convenient with the names() command.
-
-
+names(K4)<-c("1","2","3","4","5","cluster")
 ```
 
 Now we need to visualize the clusters we have created. To do so we want to play with the structure of our data. What would be most useful would be if we could visualize average motivation by cluster, by week. To do this we will need to convert our data from wide to long format. Remember your old friends tidyr and dplyr!
 
 First lets use tidyr to convert from wide to long format.
 ```{r}
-
-K5 <- 
+K5 <- K4%>%gather(week, motivation,1:5)
 ```
 
 Now lets use dplyr to average our motivation values by week and by cluster.
 
 ```{r}
-
-K6 <- 
-
+K6 <- K5%>%group_by(week,cluster)%>%summarize(avg_motivation=mean(motivation))
 ```
 
 Now it's time to do some visualization: 
@@ -112,11 +100,9 @@ We are going to create a line plot similar to the one created in the school drop
 Likewise, since "cluster" is not numeric but rather a categorical label we want to convert it from an "integer" format to a "factor" format so that ggplot does not treat it as a number. We can do this with the as.factor() command.
 
 ```{r}
+K6$week <- as.numeric(K6$week)
 
-K6$week <- 
-
-K6$cluster <- 
-
+K6$cluster <- as.factor(K6$cluster)
 ```
 
 Now we can plot our line plot using the ggplot command, "ggplot()".
@@ -127,27 +113,82 @@ Now we can plot our line plot using the ggplot command, "ggplot()".
 - Finally we are going to clean up our axes labels: xlab("Week") & ylab("Average Motivation")
 
 ```{r}
-
+ggplot(K6,aes(x=week,y=avg_motivation,col=cluster))+geom_line()+xlab("Week")+ylab("Average Motivation")
 
 ```
 
 What patterns do you see in the plot?
+```{r}
+#almost symmetric line pattern
+```
 
 It would be useful to determine how many people are in each cluster. We can do this easily with dplyr.
 
 ```{r}
-K7 <- 
+K7 <- count(K5,cluster)
 ```
 
 Look at the number of people in each cluster, now repeat this process for 3 rather than 2 clusters. Which cluster grouping do you think is more informative? Write your answer below:
+```{r}
+#The data with 3 clusters is more informative
+fit2 <- kmeans(K3,centers=3,nstart=20,iter.max=50)
+fit2$cluster
+K8<-data.frame(K3,fit2$cluster)
+names(K8)<-c("1","2","3","4","5","cluster")
+K9 <- K8%>%gather(week, motivation,1:5)%>%group_by(week,cluster)
+K10 <- K9%>%summarize(avg_motivation=mean(motivation))
+K10$week <- as.numeric(K10$week)
+K10$cluster <- as.factor(K10$cluster)
+ggplot(K10,aes(x=week,y=avg_motivation,col=cluster))+geom_line()+xlab("Week")+ylab("Average Motivation")
+```
 
-Once you have done this, save both of your plots to the Assignment 5 file. Create a Zotero item to index your new computer program (Assignment 5.rmd) in Zotero. Then commit your assignment, push it to your Github account and then Pull request your version to the original assignment version so I can see it.
+Once you have done this, save both of your plots to the Assignment 3 file. Create a Zotero item to index your new computer program (Assignment 3.rmd) in Zotero. Then commit your assignment, push it to your Github account and then Pull request your version to the original assignment version so I can see it.
 
 ##Part II
 
 Now, try to do the same for the data collected in class. Create two sets of clusters, the answers to the questions and regions where people grew up. 
 
+```{r}
+D1<-read.csv("HUDK405018-cluster.csv",header=T)
+D2<-D1[-(1:2),]
+D3<-select(D2,Q1_1:Q1_2,Q2_1:Q2_7)
+D3[D3==""] <- NA
+D4<-na.omit(D3)
+
+#Cluster by Region
+D5<-geocode(as.character(D4$Q1_1),output = "latlon",source = "dsk")
+D6<-scale(D5)
+fit3 <- kmeans(D6,centers=4,nstart=20,iter.max=50)
+fit3$cluster
+D7<-data.frame(D6,fit3$cluster)
+names(D7)<-c("longitude","latitude","cluster")
+D7$cluster <- as.factor(D7$cluster)
+ggplot(D7,aes(x=longitude,y=latitude,col=cluster))+geom_point()+xlab("Longitude")+ylab("Latitude")
+
+#Cluster by Answers to the Questions
+D8<-select(D4,3:9)
+D9<-scale(data.matrix(D8))
+fit4 <- kmeans(D9,centers=4,nstart=20,iter.max=50)
+fit4$cluster
+D10<-data.frame(D9,fit4$cluster)
+names(D10)<-c("1","2","3","4","5","6","7","cluster")
+D11 <- D10%>%gather(activity,hours,1:7)
+D12 <- D11%>%group_by(activity,cluster)%>%summarize(avg_hours=mean(hours))
+D12$activity <- as.numeric(D12$activity)
+D12$cluster <- as.factor(D12$cluster)
+ggplot(D12,aes(x=activity,y=avg_hours,col=cluster))+geom_line()+xlab("Activity")+ylab("Average Hours")
+```
+
+
 ##Part III
 
-Create a visualization that shows the overlap between the two groups of clusters you created in part III.
+Create a visualization that shows the overlap between the two groups of clusters you created in part II.
+```{r}
+D13<-data.frame(D7,D10)
+colnames(D13)[3] <- "cluster_region"
+colnames(D13)[11]<- "cluster_activity"
+D13$cluster_activity<- as.factor(D13$cluster_activity)
+ggplot(D13) + geom_point(aes(color= cluster_region, shape=cluster_activity,x=longitude, y=latitude) ) 
+```
+
 
