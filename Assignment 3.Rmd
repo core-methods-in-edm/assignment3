@@ -236,6 +236,7 @@ H7 <- geocode(as.character(H2$Q1_1), output = "latlon", source = "dsk")
 fit_location <- kmodes(H7, 3, iter.max = 10)
 H8 <- data.frame(H5, fit_location$cluster)
 names(H8)[6] <- "location_cluster"
+H8$location_cluster <- as.factor(H8$location_cluster)
 ```
 
 
@@ -245,11 +246,13 @@ Create a visualization that shows the overlap between the two groups of clusters
 
 ```{r}
 library(ggplot2)
-##ggplot(H6, mapping, aes = )
 
 ggplot(H8, mapping = aes(Question_number, hours, color = hour_cluster, shape = location_cluster)) +
   geom_point() +
   xlab("Question#") + ylab("hours")
+
+attach(H8)
+plot(lat, lon, xlab = "lattidude", ylab = "longitude", col = hour_cluster)
 
 ##This cannot run because of "Error: A continuous variable can not be mapped to shape"
 ##Also, not sure to use plot() or ggplot() here.
