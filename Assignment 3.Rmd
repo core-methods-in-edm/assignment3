@@ -189,13 +189,27 @@ df2$cluster_time<-ifelse(df2$cluster_time ==1, "timeuse1", ifelse(df2$cluster_ti
 # create contengency table for mosaic plot preparation
 df5<-select(df2, 12:13)
 t1<-table(df5$cluster_position, df5$cluster_time)
-```
 
+df2<-df2%>%arrange(cluster_time)
+```
+Interpretation: 
+By arranging df2 according to students' answers on time use on different activities (cluster_time), we find that students in cluster1 (timeuse1) generally have higher numbers in question 1 and 2 (meaning that they spend more time in coding and writing papers for class than other activities), students in cluster 3 (timeuse3) generally have higher number in question 6 and 7 (meaning they spend more time on social mdeia and social activities), while students in cluster2 (timeuse2) are more evenly distributed their time (don't show particularly high number in certain questions). 
 
 ##Part III
 
 Create a visualization that shows the overlap between the two groups of clusters you created in part III.
 ```{r}
+# plot the geographic distribution
+ggplot(df2, aes(x=lon, y=lat, color=cluster_position))+
+  geom_point()
+# it seems that location1 is mainly east Asia, location2 is mainly west coast of North America, and location3 is mainly east coast of North America
+
+# plot the people's answers from question1 to question7 to help understand the distribution of timeuse in different time clusters (but seems not very informative)
+df22<-gather(df2, question_number, question_time, question1:question7)
+df22<-select(df22, 6:8)
+ggplot(df22, aes(x=factor(question_number), y=question_time, color=factor(cluster_time))) + 
+  geom_point()
+
 # create mosaic plot
 mosaicplot(t1, color = c(2,3,4), main="Students' location and use of time", xlab="Locations", ylab="Use of time")
 ```
