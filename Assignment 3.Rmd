@@ -16,7 +16,7 @@ Now, upload the file "Class_Motivation.csv" from the Assignment 3 Repository as 
 ```{r}
 
 K1 <- read.csv("Class_Motivation.csv")
-df <- read.csv("HUDK405018-cluster.csv")
+
 plot(K1)
 ```
 
@@ -189,7 +189,13 @@ Once you have done this, save both of your plots to the Assignment 5 file. Creat
 
 ##Part II
 
-Now, try to do the same for the data collected in class. Create two sets of clusters, the answers to the questions and regions where people grew up. 
+Now, try to do the same for the data collected in class. Create two sets of clusters, the answers to the questions and regions where people grew up.
+```{r}
+df <- read.csv("HUDK405018-cluster.csv")
+df[-2, ]
+
+```
+
 
 ##Part III
 
