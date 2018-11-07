@@ -191,13 +191,41 @@ Once you have done this, save both of your plots to the Assignment 5 file. Creat
 
 Now, try to do the same for the data collected in class. Create two sets of clusters, the answers to the questions and regions where people grew up.
 ```{r}
-df <- read.csv("HUDK405018-cluster.csv")
-df[-2, ]
+library(dplyr)
+library(tidyr)
+df <- read.csv("HUDK405018-cluster.csv", na.strings=c("", "NA"))
+df1 <- df[-c(1,2), ]
+place <- df1[ , 18:19]
+answer <- df1[ , 20:26]
+answer2 <- na.omit(answer)
+answer3 <- sapply( answer2, as.numeric )
+
+library(ggmap)
+library(cluster)
+df_ll <- geocode(as.character(place$Q1_1), output = "latlon", source = "dsk")
+
+
+# how to determin k in kmeans?
+fviz_nbclust(df_ll, kmeans, method = "gap_stat")
+fviz_nbclust(df_ll, kmeans, method = "wss")
+fviz_nbclust(df_ll, kmeans, method = "silhouette")
+
+fviz_nbclust(answer3, kmeans, method = "gap_stat")
+fviz_nbclust(answer3, kmeans, method = "wss")
+fviz_nbclust(answer3, kmeans, method = "silhouette")
+
+result <- kmeans(df_ll, 3)
+result2 <- kmeans(answer3, 4)
+
 
 ```
 
 
 ##Part III
 
-Create a visualization that shows the overlap between the two groups of clusters you created in part III.
+Create a visualization that shows the overlap between the two groups of clusters you created in part II.
+```{r}
+clusplot(df_ll, result$cluster, color = TRUE)
+clusplot(answer3, result2$cluster, color = TRUE)
+```
 
