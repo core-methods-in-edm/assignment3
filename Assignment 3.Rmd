@@ -105,6 +105,7 @@ Now lets use dplyr to average our motivation values by week and by cluster.
 ```{r}
 K5$week <- as.numeric(as.character(K5$week))
 
+# for each cluster and week, group them
 K6 <- K5 %>%
   group_by(cluster, week) %>% 
   summarise(avg_mtv = mean(mtv_value)) %>% 
@@ -142,8 +143,11 @@ Now we can plot our line plot using the ggplot command, "ggplot()".
 ```{r}
 library(ggplot2)
 K6$week <- as.numeric(K6$week)
-f <- ggplot(K6, aes(week, avg_mtv, color = cluster)) + geom_line()
-f
+
+# "color = cluster" should be put inside  ggplot()
+# if it is put into geom_line, then there won't be lines in the graph
+ggplot(K6, aes(week, avg_mtv, color = cluster)) + geom_line() + xlab("Week") + ylab("Average Motivation")
+ggsave ("Asg3_plot1_2clusters.pdf", path = file.path(getwd()))
 
 
 ```
@@ -177,10 +181,10 @@ K6_2$week <- as.factor(K6_2$week)
 K6_2$cluster <- as.factor(K6_2$cluster)
 
 K6_2$week <- as.numeric(K6_2$week)
-f2 <- ggplot(K6_2, aes(week, avg_mtv, color = cluster)) + geom_line()
-f
-f2
+ggplot(K6_2, aes(week, avg_mtv, color = cluster)) + geom_line() + xlab("Week") + ylab("Average Motivation")
+ggsave ("Asg3_plot1_3clusters.pdf", path = file.path(getwd()))
 fviz_nbclust(K3, kmeans, method = "gap_stat")
+ggsave ("fviz_nbclust.pdf", path = file.path(getwd()))
 
 ```
 
@@ -215,7 +219,7 @@ fviz_nbclust(answer3, kmeans, method = "wss")
 fviz_nbclust(answer3, kmeans, method = "silhouette")
 
 result <- kmeans(df_ll, 3)
-result2 <- kmeans(answer3, 4)
+result2 <- kmeans(answer3, 2)
 
 
 ```
@@ -225,7 +229,10 @@ result2 <- kmeans(answer3, 4)
 
 Create a visualization that shows the overlap between the two groups of clusters you created in part II.
 ```{r}
-clusplot(df_ll, result$cluster, color = TRUE)
-clusplot(answer3, result2$cluster, color = TRUE)
+clusplot(df_ll, result$cluster, color = TRUE, main = "clusplot of locations")
+ggsave ("clusplot_location.pdf", path = file.path(getwd()))
+clusplot(answer3, result2$cluster, color = TRUE, main = "clusplot of answers")
+ggsave ("clusplot_answer.pdf", path = file.path(getwd()))
+
 ```
 
