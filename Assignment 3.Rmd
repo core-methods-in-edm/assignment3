@@ -14,7 +14,7 @@ library()
 Now, upload the file "Class_Motivation.csv" from the Assignment 3 Repository as a data frame called "K1""
 ```{r}
 
-K1 <- read.csv(...)
+K1 <- read.csv("Class_Motivation.csv")
 
 ```
 
@@ -25,14 +25,18 @@ But before we do that, we will need to manipulate the data frame into a structur
 The algorithm will treat each row as a value belonging to a person, so we need to remove the id variable.
 
 ```{r}
-
-K2 <- 
+library(dplyr)
+K2 <- select(K1, 2:6)
 
 ```
 
 It is important to think about the meaning of missing values when clustering. We could treat them as having meaning or we could remove those people who have them. Neither option is ideal. What problems do you foresee if we recode or remove these values? Write your answers below:
 
-
+If we recode/remove those NA values, our data maybe biased and deviate from original results.
+Three types of missing data:
+- Missing completely at random: reduce analyzable sample, but do not introduce bias;
+- Missing at random: may or may not introduce bias, depends on the relationship between data and our research direction;
+- Missing not at random: may or may not introduce bias.
 
 We will remove people with missing values for this assignment, but keep in mind the issues that you have identified.
 
@@ -66,20 +70,22 @@ Also, we need to choose the number of clusters we think are in the data. We will
 
 ```{r}
 
-fit <- 
-
+fit <- kmeans(K3, 2)
+fit_3 <- kmeans (K3, 3)
 #We have created an object called "fit" that contains all the details of our clustering including which observations belong to each cluster.
 
+fit$cluster
+fit_3$cluster
 #We can access the list of clusters by typing "fit$cluster", the top row corresponds to the original order the rows were in. Notice we have deleted some rows.
 
-
-
+K4 <- data.frame(K3, fit$cluster)
+K4_3 <- data.frame(K3, fit_3$cluster)
 #We can also attach these clusters to the original dataframe by using the "data.frame" command to create a new data frame called K4.
 
 K4
-
+names(K4) <- c("1","2","3","4","5","Cluster")
+names(K4_3) <- c("1","2","3","4","5","Cluster")
 #Have a look at the K4 dataframe. Lets change the names of the variables to make it more convenient with the names() command.
-
 
 ```
 
@@ -87,16 +93,22 @@ Now we need to visualize the clusters we have created. To do so we want to play 
 
 First lets use tidyr to convert from wide to long format.
 ```{r}
-
-K5 <- 
+library(tidyr)
+K5 <- gather(K4, key = "Week", ...= 1:5)
+K5_3 <- gather(K4_3, key = "Week", ...= 1:5)
 ```
 
 Now lets use dplyr to average our motivation values by week and by cluster.
 
 ```{r}
+library(dplyr)
+K6 <- data.frame(K5 %>%
+                   group_by(Week, Cluster) %>%
+                   summarize(mean(value)))
 
-K6 <- 
-
+K6_3 <- data.frame(K5_3 %>%
+                   group_by(Week, Cluster) %>%
+                   summarize(mean(value)))
 ```
 
 Now it's time to do some visualization: 
@@ -113,9 +125,13 @@ Likewise, since "cluster" is not numeric but rather a categorical label we want 
 
 ```{r}
 
-K6$week <- 
+K6$Week <- as.numeric(K6$Week)
 
-K6$cluster <- 
+K6$Cluster <- as.factor(K6$Cluster)
+
+K6_3$Week <- as.numeric(K6_3$Week)
+
+K6_3$Cluster <- as.factor(K6_3$Cluster)
 
 ```
 
@@ -127,27 +143,113 @@ Now we can plot our line plot using the ggplot command, "ggplot()".
 - Finally we are going to clean up our axes labels: xlab("Week") & ylab("Average Motivation")
 
 ```{r}
+library(ggmap)
+g <- ggplot(K6, aes(x = Week, y = mean.value., col = Cluster)) +
+     geom_line() + xlab("Week") + ylab ("Average Motivation")
 
+g
+
+g_3 <- ggplot(K6_3, aes(x = Week, y = mean.value., col = Cluster)) +
+     geom_line() + xlab("Week") + ylab ("Average Motivation")
+g_3
 
 ```
 
 What patterns do you see in the plot?
+Students in cluster 1 and cluster 2 have very opposite behaviors regarding their motivation average scores. Also, starting from week3, cluster 1 people become more motivated while cluster 2 people become less motivated. 
 
 It would be useful to determine how many people are in each cluster. We can do this easily with dplyr.
 
 ```{r}
-K7 <- 
+K7 <- count(K5,Cluster)
+#75 people in cluster 1, 40 people in cluster 2
 ```
 
 Look at the number of people in each cluster, now repeat this process for 3 rather than 2 clusters. Which cluster grouping do you think is more informative? Write your answer below:
+I think 2 clusters make more sense compared with 3 clusters. For 3 clusters, the additional cluster people remain relatively high motivation compared with the other two.
 
 Once you have done this, save both of your plots to the Assignment 5 file. Create a Zotero item to index your new computer program (Assignment 5.rmd) in Zotero. Then commit your assignment, push it to your Github account and then Pull request your version to the original assignment version so I can see it.
+
+```{r}
+ggsave("Plot with 2 Clusters.png", plot = g)
+
+ggsave("Plot with 3 Clusters.png", plot = g_3)
+
+
+```
 
 ##Part II
 
 Now, try to do the same for the data collected in class. Create two sets of clusters, the answers to the questions and regions where people grew up. 
 
+```{r}
+D1 <- read.csv("HUDK405018-cluster.csv")
+D1 <- D1[-c(1,2),]
+D2 <- dplyr::select(D1, "Q1_1","Q2_1","Q2_2","Q2_3","Q2_4","Q2_5","Q2_6","Q2_7")
+
+D2[D2 == ""] <- "0"
+#D2[D2 == "U.S."] <- "USA"
+#D2[D2 == "U.S"] <- "USA"
+#D2[D2 == "United States"] <- "USA"
+#D2[D2 == "United States of America"] <- "USA"
+#D2[D2 == "CHINA"] <- "China"
+#D2[D2 == "china"] <- "China"
+#D2[D2 == "US"] <- "China"
+
+D2$Q2_1 <- as.numeric(D2$Q2_1)
+D2$Q2_2 <- as.numeric(D2$Q2_2)
+D2$Q2_3 <- as.numeric(D2$Q2_3)
+D2$Q2_4 <- as.numeric(D2$Q2_4)
+D2$Q2_5 <- as.numeric(D2$Q2_5)
+D2$Q2_6 <- as.numeric(D2$Q2_6)
+D2$Q2_7 <- as.numeric(D2$Q2_7)
+
+D2$Studytime <- rowSums(D2[,2:4] )
+D2$Playtime <- rowSums(D2[,5:8] )
+
+Region <- dplyr::select(D2, Q1_1)
+Study <- dplyr::select(D2, Studytime, Playtime)
+
+#Study Cluster
+fit_study <- kmeans(Study,3)
+StudyCluster <- data.frame(Study, fit_study$cluster) 
+names(StudyCluster) <- c("Studytime","Playtime", "Cluster")
+StudyCluster$Cluster <- as.factor(StudyCluster$Cluster)
+
+#Region Cluster
+Regioncode <- geocode(as.character(Region$Q1_1), output = "latlon", source = "dsk")
+fit_region <- kmeans(Regioncode$lon, 3)
+RegionCluster <- data.frame(Region, Regioncode, fit_region$cluster)
+names(RegionCluster) <- c("Region","Lon","Lat","Cluster")
+RegionCluster$Cluster <- as.factor(RegionCluster$Cluster)
+
+
+```
+
 ##Part III
 
 Create a visualization that shows the overlap between the two groups of clusters you created in part III.
+```{r}
+#Individual plot - Region
+g1 <- ggplot(RegionCluster, aes(x = Lon, y = Lat,col = Cluster) ) +
+      xlab("Region Longitude") + ylab("Region Latitude") + geom_point()
+g1
 
+ggsave("Individual Region Plot.png", plot = g1)
+
+#Individual plot - Work
+g2 <- ggplot(StudyCluster, aes (x = Studytime, y = Playtime, col = Cluster)) +
+      xlab("Study Time") + ylab ("Play Time") + geom_point(shape = 8) 
+g2
+
+ggsave("Individual Work Plot.png", plot = g2)
+
+#Plot on one graph to see overlap
+regionscale <- scale(Regioncode)
+regionscale <- data.frame(RegionCluster,regionscale)
+regionscale <- regionscale[,-c(2,3)]
+
+plot(g1)
+points(StudyCluster , col = StudyCluster$Cluster)
+
+```
