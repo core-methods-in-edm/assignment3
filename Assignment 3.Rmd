@@ -198,9 +198,12 @@ Now, try to do the same for the data collected in class. Create two sets of clus
 library(dplyr)
 library(tidyr)
 df <- read.csv("HUDK405018-cluster.csv", na.strings=c("", "NA"))
-df1 <- df[-c(1,2), ]
-place <- df1[ , 18:19]
-answer <- df1[ , 20:26]
+df1 <- df[-c(1,2), c(18:19,20:26)]
+
+#delete the NAs before cluster the data
+df2 <- na.omit(df1)
+place <- df2[ , 1:2]
+answer <- df2[ , 3:9]
 answer2 <- na.omit(answer)
 answer3 <- sapply( answer2, as.numeric )
 
@@ -234,5 +237,15 @@ ggsave ("clusplot_location.pdf", path = file.path(getwd()))
 clusplot(answer3, result2$cluster, color = TRUE, main = "clusplot of answers")
 ggsave ("clusplot_answer.pdf", path = file.path(getwd()))
 
+# combine the first and second  of cluster
+clusters <- data.frame(result$cluster, result2$cluster)
+colnames(clusters) <- c("c1", "c2")
+
+library(ggplot2)
+install.packages("ggmosaic")
+library(ggmosaic)
+ggplot(data = clusters) +
+   geom_mosaic(aes(x = product(c1, c2)))
+ggsave ("two_clusters.pdf", path = file.path(getwd()))
 ```
 
