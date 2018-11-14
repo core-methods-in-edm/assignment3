@@ -1,5 +1,8 @@
 ---
-title: "Assignment 3: K Means Clustering"
+title: 'Assignment 3: K Means Clustering'
+author: "Qiyu Chen"
+date: "November, 2018"
+output: html_document
 ---
 
 In this assignment we will be applying the K-means clustering algorithm we looked at in class. At the following link you can find a description of K-means:
@@ -7,14 +10,18 @@ In this assignment we will be applying the K-means clustering algorithm we looke
 https://www.cs.uic.edu/~wilkinson/Applets/cluster.html
 
 
+
+
 ```{r}
-library()
+library(dplyr)
+library(ggplot2)
 ```
 
 Now, upload the file "Class_Motivation.csv" from the Assignment 3 Repository as a data frame called "K1""
+
 ```{r}
 
-K1 <- read.csv(...)
+K1 <- read.csv("Class_Motivation.csv")
 
 ```
 
@@ -26,7 +33,7 @@ The algorithm will treat each row as a value belonging to a person, so we need t
 
 ```{r}
 
-K2 <- 
+K2 <- select(K1, -id)
 
 ```
 
@@ -66,7 +73,7 @@ Also, we need to choose the number of clusters we think are in the data. We will
 
 ```{r}
 
-fit <- 
+fit <- kmeans(K3, 2)
 
 #We have created an object called "fit" that contains all the details of our clustering including which observations belong to each cluster.
 
@@ -76,10 +83,11 @@ fit <-
 
 #We can also attach these clusters to the original dataframe by using the "data.frame" command to create a new data frame called K4.
 
-K4
+K4 <- data.frame(K3, fit$cluster)
 
 #Have a look at the K4 dataframe. Lets change the names of the variables to make it more convenient with the names() command.
 
+names(K4)[6] <- "cluster"
 
 ```
 
@@ -87,15 +95,16 @@ Now we need to visualize the clusters we have created. To do so we want to play 
 
 First lets use tidyr to convert from wide to long format.
 ```{r}
-
-K5 <- 
+library(tidyr)
+K5 <- gather(K4, week, motivation , - cluster)
+K5 <- mutate(K5, week = gsub("[a-z]","",week))
 ```
 
 Now lets use dplyr to average our motivation values by week and by cluster.
 
 ```{r}
 
-K6 <- 
+K6 <- K5 %>% group_by(week, cluster) %>% summarise(avg = mean(motivation))
 
 ```
 
@@ -113,9 +122,9 @@ Likewise, since "cluster" is not numeric but rather a categorical label we want 
 
 ```{r}
 
-K6$week <- 
+K6$week <- as.numeric(K6$week)
 
-K6$cluster <- 
+K6$cluster <- as.factor(K6$cluster)
 
 ```
 
@@ -127,19 +136,40 @@ Now we can plot our line plot using the ggplot command, "ggplot()".
 - Finally we are going to clean up our axes labels: xlab("Week") & ylab("Average Motivation")
 
 ```{r}
-
-
+ggplot(K6, aes(week, avg, color = cluster)) + geom_line() + xlab("Week") + ylab("Average Motivation")
 ```
 
 What patterns do you see in the plot?
 
+It can be seen for the two clusteres, the trend of Average Motivation with week are different, one cluster shows a decline trend while the other shows a ascend trend.
+
 It would be useful to determine how many people are in each cluster. We can do this easily with dplyr.
 
 ```{r}
-K7 <- 
+K7 <- K5 %>% group_by(cluster) %>% count()
+K7
 ```
 
 Look at the number of people in each cluster, now repeat this process for 3 rather than 2 clusters. Which cluster grouping do you think is more informative? Write your answer below:
+
+I think using cluster 3 is more apprpriate, as in addtion to the decline and ascend trends, now there is a cluster with average values to be stay about the same across week, so this gives more information that it is more appropriate.
+
+```{r}
+fit <- kmeans(K3, 3)
+fit$cluster
+K4 <- data.frame(K3, fit$cluster)
+names(K4)[6] <- "cluster"
+K5 <- gather(K4, week, motivation , - cluster)
+K5 <- mutate(K5, week = gsub("[a-z]","",week))
+K6 <- K5 %>% group_by(week, cluster) %>% summarise(avg = mean(motivation))
+K6$week <- as.numeric(K6$week)
+K6$cluster <- as.factor(K6$cluster)
+ggplot(K6, aes(week, avg, color = cluster)) + geom_line() + xlab("Week") + ylab("Average Motivation")
+K7 <- K5 %>% group_by(cluster) %>% count()
+K7
+```
+
+
 
 Once you have done this, save both of your plots to the Assignment 5 file.
 
@@ -147,7 +177,34 @@ Once you have done this, save both of your plots to the Assignment 5 file.
 
 Now, try to do the same for the data collected in class. Create two sets of clusters, the answers to the questions and regions where people grew up. 
 
+```{r}
+#load data
+data <- read.csv("HUDK405018-cluster.csv", skip = 2)
+headers <- read.csv("HUDK405018-cluster.csv")
+#set column names
+headers <- colnames(headers)
+colnames(data) <- headers
+ 
+K1 <- select(data, LocationLatitude ,LocationLongitude,Q2_1:Q2_7)
+K2 <- na.omit(K1)
+K3 <- scale(K2[,-c(1:2)])
+
+#use a cluster 2 groups using answers to questions
+fit <- kmeans(K3, 2)
+K4 <- data.frame(K2, fit$cluster)
+names(K4)[10] <- "cluster" 
+K4$cluster <- as.factor(K4$cluster)
+```
+
+
 ##Part III
 
 Create a visualization that shows the overlap between the two groups of clusters you created in part III.
+
+
+
+```{r}
+#show a plot of relation between regions and the clusters in answering questions
+ggplot(K4, aes(LocationLatitude, LocationLongitude, color = cluster)) + geom_jitter() + xlab("Latitude") + ylab("Longitude")
+```
 
