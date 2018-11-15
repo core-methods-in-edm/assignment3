@@ -213,30 +213,89 @@ D1<-read.csv("HUDK405018-cluster.csv", header = TRUE, sep = ",")
 #removing first rows
 D2<-D1[c(-1:-2),]
 
-#splitting dataframe into 2 dataframe: one for answers to the questions and another for regions where people grew up. 
-region<-select(D2,18:19)
-Question<-select(D2,20:26)
+#keeping important variables
+D3<-select(D2,18:26)
 
-## focusing on region first
+### Focusing on cluster of regions first
 
-#checking na
-table(is.na(region)) #no NAs
+#obtaining geocodes
+library(ggmap)
+D4 <- geocode(as.character(D3$Q1_1), output = "latlon", source = "dsk")
 
-#making repeated countries equal
-region$country<-region$Q1_2
-region$country[region$country == "U.S"] <- "USA"
-region$country[region$country == "U.S."] <- "USA"
-region$country[region$country == "United States"] <- "USA"
-region$country[region$country == "United States of America"] <- "USA"
-region$country[region$country == "US"] <- "USA"
-region$country[region$country == "china"] <- "China"
-region$country[region$country == "CHINA"] <- "China"
+#scaling, so  each city is equally important
+D5 <- scale(as.matrix(D4))
 
-#grouping by country
-region.n<- region %>% group_by(country) %>% tally()
+#becoming to dataframe
+D6<-data.frame(D5)
 
-## focusing on answers to the questions
-as 
+#plotting to visualize how many clusters are
+plot(D6$lon,D6$lat) # I think there are 4 clusters
+
+#clustering
+fit3 <- kmeans(D6, 4) 
+
+#printing cluster
+fit3$cluster
+
+#creating a dataframe for cluster
+D7 <- data.frame(D6, fit3$cluster)
+
+#becoming cluster to a factor
+D7$cluster<- as.factor(D7$fit3.cluster)
+
+#plotting 
+ggplot(D7, aes(lon, lat, fill=cluster,color=cluster, shape=cluster)) + 
+  geom_point() + xlab("Longitude") + ylab("Latitude") + ggtitle("Cities where students were living before coming to TC by cluster")
+
+#saving image
+ggsave("plot_cluster 4.png")
+
+### Focusing on cluster of activities second
+
+#removing removing country and city
+D8<-select(D3,-1:-2)
+
+#becoming  empty values  to 0; I'm assuming that students that did not report it is because they dedicate zero number of hours to that activity
+D8[D8==""] <- 0
+
+#scaling, so  each activity is equally important
+D9 <- scale(data.matrix(D8))
+
+#coverting to dataframe
+D10<-data.frame(D9)
+
+#After reading questions, it seems that there are at least two groups: students that mainly prefer academic activities and students that mainly prefer non-academic activities.
+
+#clustering
+fit4 <- kmeans(D10, 2) 
+
+#printing cluster
+fit4$cluster
+
+#creating a dataframe for cluster
+D11 <- data.frame(D10, fit4$cluster)
+
+#changing column names
+names(D11) <- c("1", "2", "3", "4", "5", "6", "7", "Cluster")
+
+#gathering
+D12 <- D11 %>% gather(Activity, Hours, 1:7, convert = FALSE) %>% group_by(Activity, Cluster)
+
+#average of hours per activity and cluster
+D13 <- summarize(D12, Avg_hours=mean(Hours))
+
+#becoming as numeric activity
+D13$Activity <-as.numeric(D13$Activity)
+
+#becoming as factor cluster
+D13$Cluster <- as.factor(D13$Cluster)
+
+#plotting 
+ggplot(D13, aes(x=Activity, y=Avg_hours, color=Cluster)) + geom_line() + xlab("Activity") + ylab("Average Hours")
+
+#saving image
+ggsave("plot_cluster 5.png")
+
 
 
 ```
@@ -245,4 +304,22 @@ as
 ##Part III
 
 Create a visualization that shows the overlap between the two groups of clusters you created in part III.
+
+```{r}
+
+#Combining data
+D14 <- data.frame(D7, D12)
+
+#renaming variables
+colnames(D14) [3] <- "Cluster_Region"
+colnames(D14) [5] <- "Cluster_Activity"
+
+#plotting
+D14$Cluster_Activity <- as.factor(D14$Cluster_Activity)
+ggplot(D14, aes(x=lon, y=lat, color=Cluster_Region, shape=Cluster_Activity)) +geom_point()
+
+#saving plot
+ggsave("plot_cluster 6.png")
+
+```
 
