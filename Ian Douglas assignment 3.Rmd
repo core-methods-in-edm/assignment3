@@ -1,0 +1,7 @@
+---
+title: "Ian Douglas assignment 3"
+author: "ian douglas"
+date: "11/8/2018"
+output: html_document
+---
+
