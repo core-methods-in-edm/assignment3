@@ -4,4 +4,144 @@ author: "ian douglas"
 date: "11/8/2018"
 output: html_document
 ---
+```{R}
+K1 <- read.csv("Class_Motivation.csv")
+library(dplyr)
+library(tidyr)
+K2 <- K1[,-c(1)]
+```
+I think that whether to remove observations containing NAs as opposed to recoding them as something analyzable would depend on the meaning and encoding of the variable to which the NA is assigned. This could, in some cases, help indicate a meaningful interpretation of NA that could be coded and then analyzed. However in this case, it is too hard to know for sure if all of the NA were produced for the same reason, and thus communicate the same information for each student. To the contrary, some NAs may have been produced because students hoped to communicate "zero", but others may have been the result of a student hoping to simply skip the question. Thus there is no clear, single interpretation for the NAs (and nor will there be a single way to re-code them either). Thus, I think it is will be worthwhile to remove the observations containing NAs.
+```{R}
+K3 <- na.omit(K2)
+K3[] <- lapply(K3, as.numeric)
+K3 <- scale(K3)
+```
 
+```{R}
+fit <- kmeans(K3, 2)
+```
+
+```{R}
+K4 <- cbind(K3, fit$cluster)
+K4 <- as.data.frame(K4)
+View(K4)
+names(K4) <- c("1","2","3","4","5","cluster")
+K5 <- tidyr::gather(as.data.frame(K4), "week", "motivation", 1:5)
+K6 <- K5 %>% group_by(week,cluster) %>% summarise("mean" = mean(motivation))
+names(K6) <- c("week","cluster","mean")
+K6$week <- c(1,1,2,2,3,3,4,4,5,5)
+K6$week <- as.numeric(K6$week)
+K6$cluster <- as.factor(K6$cluster)
+ggplot(K6, aes(week, mean, colour = cluster)) + geom_line() + xlab("Week") + ylab("Average Motivation")
+```
+
+It looks like one group of students (cluster 2 ) began with high motivation that has fluctuated and then steadily decreased beginning with week 3. Another group of students (cluster 1) began with low motivation which remained relatively constant for 3 weeks and then began steadily increasing. From beginning to end,cluster 1 remained more consistent overall, whereas cluster 2's net change was larger. That is in part reflected in the behavior of each cluster after week 3. At week three, cluster 1 improved in motivation about .75 points (in units of scaled average motivation). Cluster 2, however, decreased in motivation after week 3 at a rate of about 1.5 scaled average motivation points, or a total of 3 points from weeks 3 to 5.
+
+```{R}
+K7 <- count(as.data.frame(K4), cluster)
+View(K7)
+```
+```{R}
+fit3 <- kmeans(K3, 3)
+K4.3 <- cbind(K3, fit3$cluster)
+K4.3 <- as.data.frame(K4.3)
+names(K4.3) <- c("1","2","3","4","5","cluster")
+K5.3 <- tidyr::gather(as.data.frame(K4.3), "week", "motivation", 1:5)
+K6.3 <- K5.3 %>% group_by(week,cluster) %>% summarise("mean" = mean(motivation))
+names(K6.3) <- c("week","cluster","mean")
+K6.3$week <- c(1,1,1,2,2,2,3,3,3,4,4,4,5,5,5)
+K6.3$week <- as.numeric(K6.3$week)
+K6.3$cluster <- as.factor(K6.3$cluster)
+ggplot(K6.3, aes(week, mean, colour = cluster)) + geom_line() + xlab("Week") + ylab("Average Motivation")
+K7.3 <- count(as.data.frame(K4.3), cluster)
+View(K7.3)
+```
+
+I think this second plot is more informative. It shows that within the group of students who began with low motivation, two distinct groups existed with inverse behavioral patterns. This suggests that the three-group clustering is more informative in discerning between distinct patterns that emerged over time.
+```{R}
+fit4 <- kmeans(K3, 4)
+K4.4 <- cbind(K3, fit4$cluster)
+K4.4 <- as.data.frame(K4.4)
+names(K4.4) <- c("1","2","3","4","5","cluster")
+K5.4 <- tidyr::gather(as.data.frame(K4.4), "week", "motivation", 1:5)
+K6.4 <- K5.4 %>% group_by(week,cluster) %>% summarise("mean" = mean(motivation))
+names(K6.4) <- c("week","cluster","mean")
+K6.4$week <- c(1,1,1,1,2,2,2,2,3,3,3,3,4,4,4,4,5,5,5,5)
+K6.4$week <- as.numeric(K6.4$week)
+K6.4$cluster <- as.factor(K6.4$cluster)
+ggplot(K6.4, aes(week, mean, colour = cluster)) + geom_line() + xlab("Week") + ylab("Average Motivation")
+K7.4 <- count(as.data.frame(K4.4), cluster)
+View(K7.4)
+```
+The 4-cluster design shows another behavioral pattern, however, it is very similar to the 3-clusters already modeled previously. The new cluster only differs from one of the previous clusters after week 4, and from weeks 1 to 4 is extremely highly correlated. Thus, it is probably not a distinct "group". Furthermore, it only contained 4 individuals, which is too a small sample size to suggest that their cluster represented a distinct underlying behavioral trait.
+
+
+##Part II
+
+Now, try to do the same for the data collected in class. Create two sets of clusters, the answers to the questions and regions where people grew up. 
+
+```{R}
+DF <- read.csv("HUDK405018-cluster.csv")
+DF1 <- DF %>% select(Q1_1:Q2_7)
+names(DF1) <- c("city","region","coding","writing","reading","videos.fun","cooking","social.med","social.act")
+DF1 <- DF1[-c(1,2),]
+DF1[3:9] <- lapply(DF1[3:9],as.character)
+
+DF1[3:9] <- lapply(DF1[3:9],as.numeric)
+DF2 <- na.omit(DF1)
+
+DF2[,3:9] <- scale(DF2[,3:9])
+```
+
+```{R}
+#Cluster selection loop:
+fitDF4 <- kmeans(DF2[3:9],4)
+fit3 <- kmeans(DF2[3:9],3)
+out <- cbind(t(as.matrix(table(fitDF4$cluster))), t(as.matrix(table(fit3$cluster))))
+out
+```
+
+```{R}
+DF3 <- cbind(DF2,fitDF4$cluster)
+names(DF3)[10] <- "time.cluster"
+#I manually created 3 clusters with the location variable because after cleaning the data I realized that about 1/3 of the students were from southeast Asia, 2/3 from the US, and 1 from Australia.
+DF3$region  <- replace(DF3$region, c(which(DF3$region=="U.S" | DF3$region=="U.S." | DF3$region=="United States" | DF3$region=="United States of America" | DF3$region=="US")), "USA")
+place.cluster <- 1:37
+DF3 <-cbind(DF3,place.cluster)
+DF3$place.cluster <- replace(DF3$place.cluster, 
+               place.cluster[which(DF3$region=="Australia")], 
+               1)
+DF3$place.cluster <- replace(DF3$place.cluster,
+                             c(which(DF3$region=="USA" )),
+                             2)
+DF3$place.cluster <- replace(DF3$place.cluster,
+        c(which(DF3$region!="USA" & DF3$region!="Australia")),
+        3)
+just.clusters <- as.data.frame(cbind(DF3$time.cluster,DF3$place.cluster))
+```
+
+##Part 3
+##Visualization
+
+```{R}
+DF2.un <- na.omit(DF1)
+DF2.un <- cbind(DF2.un,DF3[,10:11])
+means <- DF2.un %>% group_by(time.cluster) %>% summarise("avg"=(mean(DF2.un[,3:9])))
+View(DF2.un)
+DF.avg <- DF2.un %>% group_by(time.cluster) %>% summarise("avg.code"=mean(coding),"avg.writ"=mean(writing),"avg.read"=mean(reading),"avg.vid.fun"=mean(videos.fun),"avg.cook"=mean(cooking),"avg.soc.med"=mean(social.med),"avg.soc.act"=mean(social.act))
+ind <- c(rep(1,4),rep(2,4),rep(3,4),rep(4,4),rep(5,4),rep(6,4),rep(7,4))
+DF.avg2 <- cbind(gather(DF.avg, "category","avg",2:8),ind)
+DF.place <- DF2.un %>% group_by(place.cluster) %>% summarise("avg.code"=mean(coding),"avg.writ"=mean(writing),"avg.read"=mean(reading),"avg.vid.fun"=mean(videos.fun),"avg.cook"=mean(cooking),"avg.soc.med"=mean(social.med),"avg.soc.act"=mean(social.act))
+ind2 <- c(rep(1,3),rep(2,3),rep(3,3),rep(4,3),rep(5,3),rep(6,3),rep(7,3))
+DF.place2 <- cbind(gather(DF.place, "category","score",2:8),ind2)
+ind3 <- c(rep(1,37),rep(2,37),rep(3,37),rep(4,37),rep(5,37),rep(6,37),rep(7,37))
+gathered <- gather(DF2.un, "category","hours",3:9)
+raw.place <- cbind(gathered[,4:6],ind3)
+names(raw.place) <- c("cluster","category","hours","ind")
+
+raw.place$ind[which(raw.place$cluster==2)] <- as.numeric(raw.place$ind[which(raw.place$cluster==2)]) - .07
+raw.place$ind[which(raw.place$cluster==3)] <- as.numeric(raw.place$ind[which(raw.place$cluster==3)]) + .07
+
+ggplot(NULL, aes(ind,hours,color=factor(cluster))) + geom_line(data=DF.avg2) + geom_point(data=raw.place, size =1,color="black",shape=raw.place$cluster) + scale_x_discrete(limits=c("Coding","Writing","Reading","Watching Vids","Cooking","Social Media","Socializing")) + xlab("Behavior") + ylab("Time Devoted per Week") 
+##The following plot shows how the class clustered into geographic region maps onto the behavioral clusters. Triangles denote the cluster of students from the US, crosses denote the cluster of students from Southeast Asia, and the circle represent the individual from Australia.
+```
