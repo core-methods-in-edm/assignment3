@@ -1,8 +1,8 @@
 ---
-title: "K Means Clustering"
-author: "Shreya"
-date: "25 October 2016"
-output: html_document
+Title: "K Means Clustering"
+Author: "Shreya Goel"
+Date: "25 October 2016"
+Output: html_document
 ---
 
 # K-means clustering algorithm
@@ -10,15 +10,7 @@ output: html_document
 https://www.cs.uic.edu/~wilkinson/Applets/cluster.html
 
 ```{r}
-setwd()
-getwd()
-```
-
-```{r}
-install.packages("ggplot2")
-library(dplyr)
-library(tidyr)
-library(ggplot2)
+install.packages("ggplot2", "dplyr", "tidyr")
 ```
 
 ```{r}
