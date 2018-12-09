@@ -8,13 +8,16 @@ https://www.cs.uic.edu/~wilkinson/Applets/cluster.html
 
 
 ```{r}
-library()
+library(cluster)
 ```
 
 Now, upload the file "Class_Motivation.csv" from the Assignment 3 Repository as a data frame called "K1""
 ```{r}
 
-K1 <- read.csv(...)
+K1 <- read.csv("Class_Motivation.csv")
+
+head(K1)
+ncol(K1)
 
 ```
 
@@ -26,7 +29,7 @@ The algorithm will treat each row as a value belonging to a person, so we need t
 
 ```{r}
 
-K2 <- 
+K2 <- K1[ , 2:6]
 
 ```
 
@@ -66,36 +69,44 @@ Also, we need to choose the number of clusters we think are in the data. We will
 
 ```{r}
 
-fit <- 
+fit <- kmeans(K3, 2)
 
 #We have created an object called "fit" that contains all the details of our clustering including which observations belong to each cluster.
 
 #We can access the list of clusters by typing "fit$cluster", the top row corresponds to the original order the rows were in. Notice we have deleted some rows.
 
-
+fit$cluster
 
 #We can also attach these clusters to the original dataframe by using the "data.frame" command to create a new data frame called K4.
 
-K4
+D1 <- na.omit(K1)
+
+K4<-data.frame(K3,fit$cluster)
 
 #Have a look at the K4 dataframe. Lets change the names of the variables to make it more convenient with the names() command.
 
-
+K4
 ```
 
 Now we need to visualize the clusters we have created. To do so we want to play with the structure of our data. What would be most useful would be if we could visualize average motivation by cluster, by week. To do this we will need to convert our data from wide to long format. Remember your old friends tidyr and dplyr!
 
 First lets use tidyr to convert from wide to long format.
 ```{r}
+library(tidyr)
+library(dplyr)
 
-K5 <- 
+K5 <- gather(K4, "week", "score", 2:6)
+  
+  
 ```
 
 Now lets use dplyr to average our motivation values by week and by cluster.
 
 ```{r}
 
-K6 <- 
+K6 <-K5 %>%
+ group_by(week,fit.cluster) %>%
+ summarise(avg = mean(score))
 
 ```
 
@@ -113,9 +124,11 @@ Likewise, since "cluster" is not numeric but rather a categorical label we want 
 
 ```{r}
 
-K6$week <- 
+library(readr)
 
-K6$cluster <- 
+K6$week <- parse_number(K6$week)
+
+K6$cluster <- as.factor(K6$fit.cluster)
 
 ```
 
@@ -127,19 +140,75 @@ Now we can plot our line plot using the ggplot command, "ggplot()".
 - Finally we are going to clean up our axes labels: xlab("Week") & ylab("Average Motivation")
 
 ```{r}
+library(ggplot2)
+g1<-ggplot(K6, aes(K6$week, K6$avg)) +
+  geom_line(aes(group=cluster,color=cluster))+
+  geom_point()+
+  xlab("Week")+
+  ylab("Avgrage Motivation")
 
+g1
+range(K6$avg)
 
 ```
 
 What patterns do you see in the plot?
 
+The average motivation of cluster 1 is higher than the average motivation of cluster 2 from week 1 to 4.
+The average motivation of cluster 2 peaks at week 5, the minimum points are at week 1 and 3.
+In general, the average motivation lines for both groups are in upward trend.
+The range of the average motivation is between 1 and 2.8
+
+
 It would be useful to determine how many people are in each cluster. We can do this easily with dplyr.
 
 ```{r}
-K7 <- 
+library(dplyr)
+K7<-dplyr::count(K4,K4$fit.cluster)
+K7
+
 ```
+The number of people in cluster 1 is 15 and the number of people in cluster 2 is 8
+
 
 Look at the number of people in each cluster, now repeat this process for 3 rather than 2 clusters. Which cluster grouping do you think is more informative? Write your answer below:
+
+We can see from the plot with 3 clusters, a new cluster shows that there is a group of people, whose average motivation goes down from week 4 to week5, while the other cluster groups are going up. 
+
+Cluster 1 and 3 is more informative, because the they have bigger population. and the general trend is the same.
+
+
+```{r}
+fit1 <- kmeans(K3, 3)
+
+newK4<-data.frame(D1,fit1$cluster)
+
+newK5 <- gather(newK4, "week", "score", 2:6)
+
+newK6 <-newK5 %>%
+ group_by(week,fit1.cluster) %>%
+ summarise(avg = mean(score))
+
+newK6$week <- parse_number(newK6$week)
+
+newK6$cluster <- as.factor(newK6$fit1.cluster)
+
+g2<-ggplot(newK6, aes(newK6$week, newK6$avg)) +
+  geom_line(aes(group=newK6$cluster,color=newK6$cluster))+
+  geom_point()+
+  xlab("Week")+
+  ylab("Avgrage Motivation")
+
+
+g2
+
+newK7<-dplyr::count(newK4,newK4$fit1.cluster)
+newK7
+
+
+```
+
+
 
 Once you have done this, save both of your plots to the Assignment 5 file. Create a Zotero item to index your new computer program (Assignment 5.rmd) in Zotero. Then commit your assignment, push it to your Github account and then Pull request your version to the original assignment version so I can see it.
 
@@ -147,7 +216,61 @@ Once you have done this, save both of your plots to the Assignment 5 file. Creat
 
 Now, try to do the same for the data collected in class. Create two sets of clusters, the answers to the questions and regions where people grew up. 
 
+```{r}
+
+data <- data.frame(read.csv("HUDK405018-cluster.csv",header=T))
+data2<- data[-1:-2, -1:-17]
+library(tidyverse)
+library(ggmap)
+
+
+data2[data2==""] <- NA
+data3<-na.omit(data2)
+
+
+data4<-geocode(as.character(data3$Q1_1), output = "latlon", source = "dsk")
+
+data5<-scale(data4)
+
+
+# with 3 clusters for regions where people grew up
+fit2 <- kmeans(data5,3)
+fit2$cluster
+data6 <- data.frame(data5, fit2$cluster)
+data6$fit2.cluster<-as.factor(data6$fit2.cluster)
+ggplot(data=data6, aes(lon,lat,color=fit2$cluster)) +
+  geom_point(data=data6, aes(lon, lat, color=fit2.cluster, size=3)) +
+       xlab("Longitude") + ylab("Latitude")
+
+# with 3 clusters foranswers to the questions
+data7<- data3[ ,-1:-2]
+names(data7)<-c("Coding","Writing","Reading","Watching","Cooking","Media","Activity")
+fit3 <- kmeans(data7,3)
+fit3$cluster
+data8<-data.frame(data7, fit3$cluster)
+data8$fit3.cluster<-as.factor(data8$fit3.cluster)
+names(data8)<-c("Coding","Writing","Reading","Watching","Cooking","Media","Activity","Cluster")
+
+data9 <- gather(data8,key=events, value=time,1:7)
+data9$time <- as.numeric(data9$time)
+data9$Cluster <- as.factor(data9$Cluster)
+ggplot(data9,aes(x=events,y=time))+
+  geom_point(data=data9, aes(events,time, color=data9$Cluster, size=3))+
+  labs(x="Events",y="Time")
+```
+
+
 ##Part III
 
 Create a visualization that shows the overlap between the two groups of clusters you created in part III.
+```{r}
+install.packages("vcd")
+library(vcd)
+
+P1 <- structable(fit2$cluster ~ fit3$cluster)
+mosaic(P1, shade=TRUE, legend=TRUE) 
+
+
+
+```
 
