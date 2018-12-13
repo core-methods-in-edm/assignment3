@@ -8,13 +8,13 @@ https://www.cs.uic.edu/~wilkinson/Applets/cluster.html
 
 
 ```{r}
-library()
+library("dplyr", "tidyr", "ggplot2")
 ```
 
 Now, upload the file "Class_Motivation.csv" from the Assignment 3 Repository as a data frame called "K1""
 ```{r}
 
-K1 <- read.csv(...)
+K1 <- read.csv("Class_Motivation.csv")
 
 ```
 
@@ -26,13 +26,13 @@ The algorithm will treat each row as a value belonging to a person, so we need t
 
 ```{r}
 
-K2 <- 
+K2 <- dplyr::select(K1, 2:6)
 
 ```
 
 It is important to think about the meaning of missing values when clustering. We could treat them as having meaning or we could remove those people who have them. Neither option is ideal. What problems do you foresee if we recode or remove these values? Write your answers below:
 
-
+If the values are not missing at random, it can produce a bias in the model.
 
 We will remove people with missing values for this assignment, but keep in mind the issues that you have identified.
 
@@ -66,21 +66,21 @@ Also, we need to choose the number of clusters we think are in the data. We will
 
 ```{r}
 
-fit <- 
+fit <- kmeans(K3, 2)
 
 #We have created an object called "fit" that contains all the details of our clustering including which observations belong to each cluster.
 
 #We can access the list of clusters by typing "fit$cluster", the top row corresponds to the original order the rows were in. Notice we have deleted some rows.
 
-
+fit$cluster
 
 #We can also attach these clusters to the original dataframe by using the "data.frame" command to create a new data frame called K4.
 
-K4
+K4 <- data.frame(K3, fit$cluster)
 
 #Have a look at the K4 dataframe. Lets change the names of the variables to make it more convenient with the names() command.
 
-
+names(K4) <- c("1", "2", "3", "4", "5", "cluster")
 ```
 
 Now we need to visualize the clusters we have created. To do so we want to play with the structure of our data. What would be most useful would be if we could visualize average motivation by cluster, by week. To do this we will need to convert our data from wide to long format. Remember your old friends tidyr and dplyr!
@@ -88,14 +88,16 @@ Now we need to visualize the clusters we have created. To do so we want to play 
 First lets use tidyr to convert from wide to long format.
 ```{r}
 
-K5 <- 
+K5 <- tidyr::gather(K4, "week", "motivation", 1:5)
 ```
 
 Now lets use dplyr to average our motivation values by week and by cluster.
 
 ```{r}
 
-K6 <- 
+K6 <- K5 %>% group_by(week, cluster)
+
+K6 <- summarise(K6, avg = mean(motivation))
 
 ```
 
@@ -113,9 +115,8 @@ Likewise, since "cluster" is not numeric but rather a categorical label we want 
 
 ```{r}
 
-K6$week <- 
-
-K6$cluster <- 
+K6$week <- as.numeric(K6$week)
+K6$cluster <- as.factor(K6$cluster)
 
 ```
 
@@ -127,27 +128,79 @@ Now we can plot our line plot using the ggplot command, "ggplot()".
 - Finally we are going to clean up our axes labels: xlab("Week") & ylab("Average Motivation")
 
 ```{r}
-
-
+library(ggplot2)
+ggplot(K6, aes(week, avg, color = cluster)) + geom_line() + xlab("Week") + ylab("Average Motivation")
 ```
 
-What patterns do you see in the plot?
+#What patterns do you see in the plot?
+Generally, cluster 1 students are more motivated than cluster 2 students, except for the final week. Also, it appears that the avarage motivation values for the two clusters are inversely related. That is, when one cluster increases its motivation, the other decreases its motivation. In addition, the students in cluster 1 appear to be less and less motivated from the high motivation level in the first week as time passes, while the students in cluster 2 appear to be more and more motivated from the relatively low motivation level as it goes on.
 
 It would be useful to determine how many people are in each cluster. We can do this easily with dplyr.
 
 ```{r}
-K7 <- 
+K7 <- dplyr::count(K4, cluster)
 ```
 
-Look at the number of people in each cluster, now repeat this process for 3 rather than 2 clusters. Which cluster grouping do you think is more informative? Write your answer below:
+Look at the number of people in each cluster, now repeat this process for 3 rather than 2 clusters. 
+```{r}
+fit2 <- kmeans(K3, 3)
+fit2$cluster
+K42 <- data.frame(K3, fit2$cluster)
+names(K42) <- c("1", "2", "3", "4", "5", "cluster")
+```
+```{r}
+K52 <- tidyr::gather(K42, "week", "motivation", 1:5)
+```
+```{r}
+K62 <- K52 %>% group_by(week, cluster)
+K62 <- summarise(K62, avg = mean(motivation))
+```
+```{r}
+K62$week <- as.numeric(K62$week)
+K62$cluster <- as.factor(K62$cluster)
+```
+```{r}
+ggplot(K62, aes(week, avg, colour = cluster)) + geom_line() + xlab("Week") + ylab("Average Motivation")
+
+```
+```{r}
+K72 <- dplyr::count(K42, cluster)
+```
+
+Which cluster grouping do you think is more informative? Write your answer below:
+I think the groupimg with 3 clusters is more informative than that with 2 clusters. This is because all of the 3 clusters show quite different traits of motivation transition which are not refleted in the grouping with 2 clusters. Especially, the cluster 3's movement cannot be captured from the grouping with 2 clusters.
 
 Once you have done this, save both of your plots to the Assignment 5 file.
 
 ##Part II
 
 Now, try to do the same for the data collected in class. Create two sets of clusters, the answers to the questions and regions where people grew up. 
+```{r}
+library(tidyverse)
+S1 <- data.frame(read.csv("HUDK405018-cluster.csv", header = T, na.strings = ""))
+
+S2 <- S1[3:47, 20:26]
+S2[S2==""] <- NA
+S2 <- S2 %>% mutate_all(funs(as.numeric(levels(.))[.]))
+S2[is.na(S2)] <- 99
+S2 <- as.data.frame(scale(S2))
+fit3 <- kmeans(S2, 3)
+T1 <- S1[3:47, 18:19]
+T1 <- unite(T1, place, Q1_1, Q1_2, sep = ",")
+
+library(ggmap)
+T2 <- geocode(as.character(T1$place), output = "latlon", source = "dsk")
+fit4 <- kmeans(T2, 2)
+
+```
 
 ##Part III
 
 Create a visualization that shows the overlap between the two groups of clusters you created in part III.
+```{r}
+install.packages("vcd")
+library(vcd)
+U1 <- structable(fit3$cluster ~ fit4$cluster)
+mosaic(U1, shade=TRUE, legend=TRUE) 
+```
 
