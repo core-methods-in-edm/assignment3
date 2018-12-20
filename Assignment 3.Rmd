@@ -1,5 +1,6 @@
 ---
-title: "Assignment 3: K Means Clustering"
+title: 'Assignment 3: K Means Clustering'
+output: pdf_document
 ---
 
 In this assignment we will be applying the K-means clustering algorithm we looked at in class. At the following link you can find a description of K-means:
@@ -8,13 +9,16 @@ https://www.cs.uic.edu/~wilkinson/Applets/cluster.html
 
 
 ```{r}
-library()
+library(tidyr)
+library(dplyr)
+library(ggmap)
+library(ggplot2)
 ```
 
 Now, upload the file "Class_Motivation.csv" from the Assignment 3 Repository as a data frame called "K1""
 ```{r}
 
-K1 <- read.csv(...)
+K1 <- read.csv("Class_Motivation.csv")
 
 ```
 
@@ -26,7 +30,7 @@ The algorithm will treat each row as a value belonging to a person, so we need t
 
 ```{r}
 
-K2 <- 
+K2 <- select(K1, motivation1, motivation2, motivation3, motivation4, motivation5)
 
 ```
 
@@ -66,7 +70,7 @@ Also, we need to choose the number of clusters we think are in the data. We will
 
 ```{r}
 
-fit <- 
+fit <- kmeans(K3, 2) 
 
 #We have created an object called "fit" that contains all the details of our clustering including which observations belong to each cluster.
 
@@ -76,10 +80,10 @@ fit <-
 
 #We can also attach these clusters to the original dataframe by using the "data.frame" command to create a new data frame called K4.
 
-K4
+K4 = data.frame(K3, fit$cluster)
 
 #Have a look at the K4 dataframe. Lets change the names of the variables to make it more convenient with the names() command.
-
+names(K4) <- c("1", "2", "3", "4", "5", "cluster")
 
 ```
 
@@ -88,14 +92,14 @@ Now we need to visualize the clusters we have created. To do so we want to play 
 First lets use tidyr to convert from wide to long format.
 ```{r}
 
-K5 <- 
+K5 <- gather(K4, "week", "motivation", 1:5)
 ```
 
 Now lets use dplyr to average our motivation values by week and by cluster.
 
 ```{r}
 
-K6 <- 
+K6 <- K5 %>% group_by(week, cluster) %>% summarise(avg = mean(motivation))
 
 ```
 
@@ -113,9 +117,9 @@ Likewise, since "cluster" is not numeric but rather a categorical label we want 
 
 ```{r}
 
-K6$week <- 
+K6$week <- as.numeric(K6$week)
 
-K6$cluster <- 
+K6$cluster <- as.factor(K6$cluster)
 
 ```
 
@@ -128,6 +132,7 @@ Now we can plot our line plot using the ggplot command, "ggplot()".
 
 ```{r}
 
+ggplot(data = K6) + geom_line(mapping = aes(week, avg, colour = cluster)) + xlab("Week") + ylab("Average Motivation")
 
 ```
 
@@ -136,18 +141,113 @@ What patterns do you see in the plot?
 It would be useful to determine how many people are in each cluster. We can do this easily with dplyr.
 
 ```{r}
-K7 <- 
+K7 <- count(K4, cluster)
 ```
 
 Look at the number of people in each cluster, now repeat this process for 3 rather than 2 clusters. Which cluster grouping do you think is more informative? Write your answer below:
 
 Once you have done this, save both of your plots to the Assignment 5 file.
+```{r}
+fit2 = kmeans(K3, 3) 
+fit2$cluster
+k4 = data.frame(K3,fit2$cluster)
+names(k4) = c("1", "2", "3", "4", "5", "cluster")
+k5 = gather(k4, "week", "motivation", 1:5)
+k6 <- k5 %>% group_by(week, cluster) %>% summarise(avg = mean(motivation))
+k6$week <- as.numeric(k6$week)
+k6$cluster <- as.factor(k6$cluster)
+ggplot(data = k6) + geom_line(mapping = aes(week, avg, colour = cluster)) + xlab("Week") + ylab("Average Motivation")
+k7 = count(k4, cluster)
+```
+
+
 
 ##Part II
 
 Now, try to do the same for the data collected in class. Create two sets of clusters, the answers to the questions and regions where people grew up. 
 
+```{r}
+install.packages("tidyverse")
+library(tidyverse)
+```
+
+```{r}
+D1 = read.csv("HUDK405018-cluster.csv")
+```
+
+* Create a dataframe that only includes the surevy questions about hours
+```{r}
+D2 <- D1[3:47, 20:26]
+```
+
+* Dealing with missing values - there are two problems created by students skipping questions in the survey
+1. There are missing values
+2. read.csv() is treating those missing values as characters when it imports the data. That means the variables are being stored as factor type and not numeric type and if you try to recode the missing variables it will give an error that you cannot add levels to the factor
+
+* First convert the blank cells to NAs and convert all columns to numeric
+```{r}
+D2[D2==""] = NA
+D2 = D2 %>% mutate_all(funs(as.numeric(levels(.))[.]))
+```
+
+* __Solution 1__: Remove students with missing values - but we will lose those students and be unable to allocate them to a group
+```{r}
+D2 <- na.omit(D2)
+```
+
+* __Solution 2__: Recode as zero - but missing is not the same as recording zero hours
+```{r}
+D2[is.na(D2)] <- 0
+```
+
+* __Solution 3__: Recode as some other number that doesn't appear in your data (EG - 99) and rescale
+```{r}
+D2[is.na(D2)] <- 99
+D2 = as.data.frame(scale(D2))
+D3 = scale(D2)
+```
+
+* Generate clusters for survey questions
+```{r}
+fit3 <- kmeans(D3, 4)
+D4 = data.frame(D3, fit3$cluster)
+```
+
+* Create a dataframe that only includes location data
+```{r}
+L1 <- D1[3:47, 18:19]
+L1 <- unite(L1, place, Q1_1, Q1_2, sep = ",")
+
+```
+
+* Request lattitude and longitude from Google Maps API
+```{r}
+install.packages('ggmap')
+library(ggmap)
+L2 <- geocode(as.character(L1$place), output = "latlon", source = "dsk")
+```
+
+* Generate clusters for lat/lon
+```{r}
+fit4 <- kmeans(L2, 2)
+fit4$cluster
+L3 = data.frame(L2, fit4$cluster)
+```
+
+
+
 ##Part III
 
 Create a visualization that shows the overlap between the two groups of clusters you created in part III.
 
+```{r}
+#There are lots of ways to answer this question. A common way was to do a scatterplot of students coloring the points with one set of clusters and using shapes for the other set of clusters. I think better way is to use a mosaic plot that can be generated eithe through ggplot or with a specific package called vcd.
+
+install.packages("vcd")
+library(vcd)
+P1 <- structable(fit3$cluster ~ fit4$cluster)
+mosaic(P1, shade=TRUE, legend=TRUE) 
+
+#This shows how much overlap there are between the groups of clusters
+
+```
