@@ -8,13 +8,15 @@ https://www.cs.uic.edu/~wilkinson/Applets/cluster.html
 
 
 ```{r}
-library()
+library(dplyr)
+library(tidyr)
+library(klaR)
 ```
 
 Now, upload the file "Class_Motivation.csv" from the Assignment 3 Repository as a data frame called "K1""
 ```{r}
 
-K1 <- read.csv(...)
+K1 <- read.csv("Class_Motivation.csv")
 
 ```
 
@@ -26,13 +28,13 @@ The algorithm will treat each row as a value belonging to a person, so we need t
 
 ```{r}
 
-K2 <- 
+K2 <- K1[,-1]
 
 ```
 
 It is important to think about the meaning of missing values when clustering. We could treat them as having meaning or we could remove those people who have them. Neither option is ideal. What problems do you foresee if we recode or remove these values? Write your answers below:
 
-
+On one hand, lack of an answer may be meaningful in that it may indicate something. For example, lack of answer may tend to mean a very low self-reported motivation level. On the other hand, it could have simply been overlooked in which case the lack of an answer was a legitimate error. In this case, treating them as meaningful would be incorrect. The pervading fact of course is that we don't know how to interpret the lack of an answer. Removing them may mean easier data manipulation.
 
 We will remove people with missing values for this assignment, but keep in mind the issues that you have identified.
 
@@ -66,20 +68,23 @@ Also, we need to choose the number of clusters we think are in the data. We will
 
 ```{r}
 
-fit <- 
+fit <- kmodes(K3, 2)
 
 #We have created an object called "fit" that contains all the details of our clustering including which observations belong to each cluster.
 
 #We can access the list of clusters by typing "fit$cluster", the top row corresponds to the original order the rows were in. Notice we have deleted some rows.
 
-
+fit$cluster
 
 #We can also attach these clusters to the original dataframe by using the "data.frame" command to create a new data frame called K4.
 
-K4
+K4 <- cbind(K3, fit$cluster)
 
 #Have a look at the K4 dataframe. Lets change the names of the variables to make it more convenient with the names() command.
 
+K4 <- as.data.frame(K4)
+
+names(K4) <- c("w1", "w2", "w3", "w4", "w5", "fit_cluster")
 
 ```
 
@@ -88,14 +93,19 @@ Now we need to visualize the clusters we have created. To do so we want to play 
 First lets use tidyr to convert from wide to long format.
 ```{r}
 
-K5 <- 
+K5 <- K4 %>%
+  gather(week, motivation,... = 1:5)
+
+
 ```
 
 Now lets use dplyr to average our motivation values by week and by cluster.
 
 ```{r}
 
-K6 <- 
+K6 <- K5 %>% 
+  group_by(fit_cluster, week) %>% 
+  summarise(average = mean(motivation)) 
 
 ```
 
@@ -113,9 +123,9 @@ Likewise, since "cluster" is not numeric but rather a categorical label we want 
 
 ```{r}
 
-K6$week <- 
 
-K6$cluster <- 
+K6$fit_cluster <- as.factor(K6$fit_cluster)
+
 
 ```
 
@@ -127,19 +137,43 @@ Now we can plot our line plot using the ggplot command, "ggplot()".
 - Finally we are going to clean up our axes labels: xlab("Week") & ylab("Average Motivation")
 
 ```{r}
+library(ggplot2)
+ggplot(K6, aes(x = week, y = average)) + geom_line(aes(color = fit_cluster)) + labs(x = "Week", y ="Average Motivation")
 
 
 ```
 
 What patterns do you see in the plot?
 
+I am not sure why but my lines aren't appearing. Everything else in the ggplot code seems to work well.
+
 It would be useful to determine how many people are in each cluster. We can do this easily with dplyr.
 
 ```{r}
-K7 <- 
+K7 <- count(K5, fit_cluster, week)
 ```
 
 Look at the number of people in each cluster, now repeat this process for 3 rather than 2 clusters. Which cluster grouping do you think is more informative? Write your answer below:
+
+```{r}
+fit_2 <- kmeans(K3,3)
+K_new <- cbind(K3, fit_2$cluster)
+K_new <- as.data.frame(K_new)
+colnames(K_new) <- c("1", "2", "3", "4", "5", "cluster")
+
+K5_new <- K_new %>%
+  gather(week, motivation, ...= 1:5)
+
+K6_new <- K5_new %>%
+  group_by(cluster, week) %>%
+  summarise(average = mean(motivation))
+
+K6_new$cluster <- as.factor(K6_new$cluster)
+
+ggplot(K6_new, aes(x = week, y =average)) + geom_line(aes(color = cluster)) +labs(x="Week", y="Average Motivation")
+
+```
+
 
 Once you have done this, save both of your plots to the Assignment 5 file.
 
@@ -147,7 +181,42 @@ Once you have done this, save both of your plots to the Assignment 5 file.
 
 Now, try to do the same for the data collected in class. Create two sets of clusters, the answers to the questions and regions where people grew up. 
 
+```{r}
+class <- read.csv("HUDK405018-cluster.csv")
+class <- class[-1:-2,]
+
+class_1 <- class
+
+class_1 <- class_1 %>%
+  dplyr::select(Q1_1, Q2_1:Q2_7) %>%
+  filter(class$Q2_1 != " " & class$Q2_2 != " " & class$Q2_3 != " " & class$Q2_4 != " " &
+           class$Q2_5 != " " & class$Q2_6 != " " & class$Q2_7 != " ")
+  
+library(ggmap)
+geo <- geocode(as.character(class_1$Q1_1), output = "latlon", source = "dsk")
+fit_geo <- kmeans(geo, 4)
+geo_clustered <- data.frame(geo, fit_geo$cluster)
+names(geo_clustered) <- c("lon", "lat", "geo_cluster")
+
+answers <- class_1[,2:8]
+fit_answers <- kmeans(answers,4)
+ans_clustered <- fit_answers$cluster
+
+
+```
+
+
+
 ##Part III
 
 Create a visualization that shows the overlap between the two groups of clusters you created in part III.
+
+```{r}
+library(ggplot2)
+ggplot(geo_clustered, aes(x=lon, y=lat)) + geom-point(aes(color=as.factor(geo_cluster),
+                                                          shape = as.factor(ans_clustered), size = 2, alpha = 0.1))
+
+
+```
+
 
