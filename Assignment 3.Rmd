@@ -2,7 +2,7 @@
 title: "Assignment 3: K Means Clustering"
 author: "Yuewen Lin"
 UNI: "yl3881"
-date: "11/06/18"
+date: "12/20/18"
 ---
 
 In this assignment we will be applying the K-means clustering algorithm we looked at in class. At the following link you can find a description of K-means:
@@ -65,7 +65,7 @@ Also, we need to choose the number of clusters we think are in the data. We will
 
 ```{r}
 
-fit <- kmodes(K3, 2, iter.max = 10)
+fit <- kmeans(K3, 2, iter.max = 10)
 
 #We have created an object called "fit" that contains all the details of our clustering including which observations belong to each cluster.
 
@@ -157,7 +157,7 @@ A: I think grouping with 3 clusters is more informative because there is one mor
 library(klaR)
 library(dplyr)
 
-fit3 <- kmodes(K3, 3, iter.max = 10)
+fit3 <- kmeans(K3, 3, iter.max = 10)
 fit3$cluster
 K8 <- data.frame(K3, fit3$cluster)
 names(K8)[6] <- "cluster"
@@ -214,7 +214,7 @@ H3$Q2_6 <- as.numeric(H3$Q2_6)
 H3$Q2_7 <- as.numeric(H3$Q2_7)
 H3 <- scale(H3)
 
-fit_hour <- kmodes(H3, 4, iter.max = 10)
+fit_hour <- kmeans(H3, 4, iter.max = 10)
 H4 <- data.frame(H3, fit_hour$cluster, H7)
 names(H4)[8] <- "hour_cluster"
 
@@ -233,7 +233,7 @@ install.packages("ggmap")
 library(ggmap)
 H7 <- geocode(as.character(H2$Q1_1), output = "latlon", source = "dsk")
 
-fit_location <- kmodes(H7, 3, iter.max = 10)
+fit_location <- kmeans(H7, 3, iter.max = 10)
 H8 <- data.frame(H5, fit_location$cluster)
 names(H8)[6] <- "location_cluster"
 H8$location_cluster <- as.factor(H8$location_cluster)
@@ -254,8 +254,5 @@ ggplot(H8, mapping = aes(Question_number, hours, color = hour_cluster, shape = l
 attach(H8)
 plot(lat, lon, xlab = "lattidude", ylab = "longitude", col = hour_cluster)
 
-##This cannot run because of "Error: A continuous variable can not be mapped to shape"
-##Also, not sure to use plot() or ggplot() here.
-##Sorry my logic is really messy over here. Will try to fix it later.
 ```
 
