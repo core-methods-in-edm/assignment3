@@ -17,7 +17,7 @@ library(ggplot2)
 Now, upload the file "Class_Motivation.csv" from the Assignment 3 Repository as a data frame called "K1""
 ```{r}
 
-K1 <- read.csv(...)
+K1 <- read.csv("Class_Motivation.csv")
 
 ```
 
@@ -100,7 +100,6 @@ K5 <- tidyr::gather(K4, "week", "motivation", 1:5)
 Now lets use dplyr to average our motivation values by week and by cluster.
 
 ```{r}
-
 K6 <- K5 %>% group_by(week, cluster)
 K6 <- summarise(K6, avg = mean(motivation))
 
@@ -202,9 +201,8 @@ Create a visualization that shows the overlap between the two groups of clusters
 #There are lots of ways to answer this question. A common way was to do a scatterplot of students coloring the points with one set of clusters and using shapes for the other set of clusters. I think better way is to use a mosaic plot that can be generated eithe through ggplot or with a specific package called vcd.
 
 install.packages("vcd")
-library(vcd)
-P1 <- structable(fit2$cluster ~ fit3$cluster)
-mosaic(P1, shade=TRUE, legend=TRUE) 
+library("vcd")
+P1 <- structable(fit2$cluster ~ fit3$cluster) mosaic(P1, shade=TRUE, legend=TRUE) 
 
 #This shows how much overlap there are between the groups of clusters
 ```
