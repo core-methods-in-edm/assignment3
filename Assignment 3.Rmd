@@ -3,9 +3,9 @@ title: "Assignment 3: K Means Clustering Response"
 author: "Timothy Lee"
 date: "19/10/2019"
 output:
+  pdf_document: default
   html_notebook: default
   html_document: default
-  pdf_document: default
 ---
 
 *Note that I didn't save the clustering results, so each time I knit the document we get different clustering results. Hence, the output for the graphs and network diagrams will vary, unfortunately.*
@@ -21,6 +21,10 @@ library(klaR)
 
 #For Data Wrangling
 library(tidyverse)
+
+#For mosaic plot
+library(ggmosaic)
+
 ```
 
 Now, upload the file "Class_Motivation.csv" from the Assignment 3 Repository as a data frame called "K1""
@@ -91,6 +95,9 @@ Notice that in this case we have 5 variables and in class we only had 2. It is i
 Also, we need to choose the number of clusters we think are in the data. We will start with 2.
 
 ```{r}
+#Set seed
+set.seed(4050)
+
 #Run k means clustering analysis
 fit <- kmeans(K3, 2)
 
@@ -181,6 +188,9 @@ K7 <- K4 %>% group_by(cluster) %>% summarise("count" = n())
 Look at the number of people in each cluster, now repeat this process for 3 rather than 2 clusters. Which cluster grouping do you think is more informative? Write your answer below:
 
 ```{r}
+#Set seed
+set.seed(4050)
+
 #Run k means clustering analysis
 fit_3 <- kmeans(K3, 3)
 
@@ -244,6 +254,9 @@ load("assn_2.RData")
 rownames(person_class_DF) <- person_class_DF$id
 person_class_DF_2 <- person_class_DF %>% dplyr::select(-id)
 
+#Set seed
+set.seed(4050)
+
 #Perform k modes clustering with 2 clusters
 class_fit <- kmodes(person_class_DF_2, 2)
 
@@ -296,25 +309,49 @@ act_6_new_df <- data.frame(class_act_6_names,
 
 
 ```{r}
-#Merging DFs, then coerce to factor with NA as a level
-#NAs represent those who filled in one form but not the other
+# Merging DFs, then coerce to factor with NA as a level
+# NAs included as a factor level: 
+# They represent those who filled in one form but not the other
 assn_3_combined_df <- full_join(act_6_new_df, assn_2_new_DF, by = "id") %>%
                         mutate(act6_clusters = factor(assn_3_cluster_act6, exclude = NULL),
                                assn2_clusters = factor(assn_3_cluster_assn2, exclude = NULL)
                                ) %>%
                         select(id, act6_clusters, assn2_clusters)
+```
 
-#Plot. The bar plot will tell us how many people in class act 6 cluster 1 are in assn 2 cluster 1,
+```{r}
+#Bar Plot. The bar plot will tell us how many people in class act 6 cluster 1 are in assn 2 cluster 1,
 # class act 6 cluster 1 x assn 2 cluster 2, and so on...
 ggplot(assn_3_combined_df, aes(x = act6_clusters, fill = assn2_clusters)) + 
   geom_bar(position = position_dodge(preserve = "single")) +
-  labs(x = "Assignment 6 clusters",
+  labs(x = "Activity 6 clusters",
        y = "Number of people",
+       title = "Cluster Overlaps",
        fill = "Assingment 2 Clusters",
        caption = "NAs represent those who filled in one form but not the other")
-  
+
+assn_3_summary <- assn_3_combined_df %>% group_by(act6_clusters, assn2_clusters) %>%
+                      summarise("Freq" = n())
+
+#Mosaic plot.
+ggplot(assn_3_summary) + 
+  geom_mosaic(aes(weight = Freq, x = product(act6_clusters), fill = assn2_clusters)) +
+  labs(x = "Activity 6 clusters",
+       y = "Assignment 2 clusters",
+       title = "Cluster Overlaps",
+       fill = "Assingment 2 Clusters",
+       caption = "NAs represent those who filled in one form but not the other")
 ```
 
+```{r}
+
+
+
+
+
+
+
+```
 
 ## Please render your code as an .html file using knitr and Pull Resquest both your .Rmd file and .html files to the Assignment 3 repository.
 
