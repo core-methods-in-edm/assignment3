@@ -142,8 +142,7 @@ ggplot(K6, aes(x=week)) +
 ```
 
 What patterns do you see in the plot?
-
-
+The obvious difference between two groups. One engages more in week 1, 3, and 5, and the other one engages more in week 2 and 4.
 
 It would be useful to determine how many people are in each cluster. We can do this easily with dplyr.
 
@@ -155,7 +154,7 @@ K7 <- K4 %>%
 ```
 
 Look at the number of people in each cluster, now repeat this process for 3 rather than 2 clusters. Which cluster grouping do you think is more informative? Write your answer below:
-
+3 clusters. There are overlaps between three clusters. The 3 patterns are not similar. We can see three different groups of people engaging in different weeks. 
 
 
 ```{r}
