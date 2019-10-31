@@ -1,5 +1,5 @@
 ---
-title: 'Assignment 3: K Means Clustering'
+title: 'Assignment_3: K Means Clustering'
 ---
 
 In this assignment we will be applying the K-means clustering algorithm we looked at in class. At the following link you can find a description of K-means:
