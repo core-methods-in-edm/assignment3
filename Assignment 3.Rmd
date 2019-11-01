@@ -37,6 +37,7 @@ We will remove people with missing values for this assignment, but keep in mind 
 ```{r}
 
 K3 <- na.omit(K2) 
+
 #This command create a data frame with only those people with no missing values. It "omits" all rows with missing values, also known as a "listwise deletion". EG - It runs down the list deleting rows as it goes.
 
 ```
@@ -44,7 +45,7 @@ K3 <- na.omit(K2)
 Another pre-processing step used in K-means is to standardize the values so that they have the same range. We do this because we want to treat each week as equally important - if we do not standardise then the week with the largest range will have the greatest impact on which clusters are formed. We standardise the values by using the "scale()" command.
 
 ```{r}
-K3 <- scale(K3)
+K3 <- as.data.frame(scale(K3))
 ```
 
 
@@ -76,7 +77,7 @@ K4 <- data.frame(K3, fit$cluster)
 
 #Have a look at the K4 dataframe. Lets change the names of the variables to make it more convenient with the names() command.
 
-names(K4) <- c("week1", "week2", "week3", "week4", "week5", "cluster")
+names(K4) <- c("1", "2", "3", "4", "5", "cluster")
 
 ```
 
@@ -87,14 +88,14 @@ First lets use tidyr to convert from wide to long format.
 library(tidyr)
 library(dplyr)
 
-K5 <- tidyr::gather(K4, "week", "kmean", week1:week5)
+K5 <- tidyr::gather(K4, "week", "kmean", 1:5)
 ```
 
 Now lets use dplyr to average our motivation values by week and by cluster.
 
 ```{r}
 
-K6 <- K5 %>% group_by(cluster, week) %>% summarise(mean(K5$kmean))
+K6 <- K5 %>% group_by(cluster, week) %>% summarise(mean(kmean))
 
 ```
 
@@ -112,9 +113,10 @@ Likewise, since "cluster" is not numeric but rather a categorical label we want 
 
 ```{r}
 
-K6$week <- 
+K6$week <- as.numeric(as.character(K6$week))
 
-K6$cluster <- 
+K6$cluster <- as.factor(K6$cluster)
+names(K6) <- c("cluster","week","avg")
 
 ```
 
@@ -126,8 +128,11 @@ Now we can plot our line plot using the ggplot command, "ggplot()".
 - Finally we are going to clean up our axes labels: xlab("Week") & ylab("Average Motivation")
 
 ```{r}
+library(ggplot2)
 
-
+ggplot(K6, aes(x= week, y = avg, color = cluster))+
+    geom_line() + ylab("Average Motivation") + xlab("Week")
+    
 ```
 
 What patterns do you see in the plot?
@@ -137,18 +142,119 @@ What patterns do you see in the plot?
 It would be useful to determine how many people are in each cluster. We can do this easily with dplyr.
 
 ```{r}
-K7 <-
+
+K7 <- K5
+K7$count <- 1
+K7 <- K7 %>% group_by(cluster, week) %>% summarise(sum(count))
+
 ```
 
 Look at the number of people in each cluster, now repeat this process for 3 rather than 2 clusters. Which cluster grouping do you think is more informative? Write your answer below:
+
+```{r}
+fit1 <- kmeans(K3, 3)
+K8 <- data.frame(K3, fit1$cluster)
+names(K8) <- c("1", "2", "3", "4", "5", "cluster")
+K9 <- tidyr::gather(K8, "week", "kmean", 1:5)
+K10 <- K9 %>% group_by(cluster, week) %>% summarise(mean(kmean))
+K10$week <- as.numeric(as.character(K10$week))
+K10$cluster <- as.factor(K10$cluster)
+names(K10) <- c("cluster","week","avg")
+ggplot(K10, aes(x= week, y = avg, color = cluster))+
+    geom_line() + ylab("Average Motivation") + xlab("Week")
+```
+
 
 ##Part II
 
 Using the data collected for Assignment 2 (which classes students were in), cluster the students, then redraw the graph of the class but color the students according the cluster they are in.
 
+```{r}
+##read data
+class <- as.data.frame(read.csv("hudk4050-classes.csv", header = TRUE))
+class <- dplyr::select(class, Q8, Q9, Q1, Q3, Q4, Q5, Q6, Q7)
+names(class) <- c("First Name","Last Name", "Class 1", "Class 2", "Class 3", "Class 4", "Class 5", "Class 6")
+class <- class[-c(1,2,36),]
+class <- tidyr::unite(class, "student", 1:2, sep = " ")
+
+##get matrix(people network)
+AM <- tidyr::gather(class, "order", "name",2:7)
+AM <- AM[, -2]
+AM <- filter(AM, !AM$name == "")
+AM$name <- gsub(" |-", "", AM$name)
+AM <- filter(AM, !AM$name == "HUDK4050")
+AM$count <- 1
+AM <- tidyr::spread(AM, name, count, fill = 0)
+
+pn <- AM
+rownames(pn) <- AM$student
+pn <- pn[,-1]
+t1 <- t(pn)
+t2 <- as.matrix(pn)
+network <- t2 %*% t1
+diag(network) <- NA
+
+## K-mode
+A2 <- tidyr::gather(class, "order", "name", 2:7)
+A2$name <- gsub(" |-", "", A2$name)
+A2 <- A2[,-2]
+A2 <- filter(A2, !A2$name == "")
+A2$take <- "Yes"
+A2 <- tidyr::spread(A2, name, take, fill = "No")
+
+km <- kmodes(A2, 4, iter.max = 5, weighted = FALSE)
+class$cluster <- km$cluster
+
+##redraw graph
+library(igraph)
+g <- graph_from_adjacency_matrix(network)
+plot(g,layout=layout.fruchterman.reingold, vertex.size = 3, vertex.label.dist = 1, vertex.color = class$cluster, vertex.label.color = class$cluster, vertex.label.cex=0.5, edge.arrow.size = 0.4, edge.arrow.width = 0.4)
+
+```
+
+
 ##Part III
 
 In class activity 6 you clustered students in the class by the answers to a questionaire. Create a visualization that shows the overlap between these clusters and the clusters generated in part II.
+
+```{r}
+## activity 6 cluster
+DF1 <- read.csv("HUDK405019-clustering.csv", header = TRUE)
+DF1 <- tidyr::unite(DF1, Name, First.Name, Last.Name, sep = " ")
+rownames(DF1) <- DF1$Name
+DF1 <- DF1[,-1]
+colnames(DF1) <- c("month", "siblings", "sport", "miles", "Android", "movies", "pets", "people", "cook", "class", "state", "city", "latitude", "longitude")
+DF1$miles <- gsub("[[:alpha:]]", "", DF1$miles)
+DF2 <- as.data.frame(lapply(DF1[, 1:11], gsub, pattern="[[:alpha:]]", replacement = NA), row.names = rownames(DF1))
+DF2$miles <- gsub(",", "", DF2$miles)
+DF2 <- na.omit(DF2)
+DF3 <- DF2
+DF2 <- DF2 %>% mutate_all(as.character) %>% mutate_all(as.numeric)
+DF2 <- as.data.frame(scale(DF2))
+fit3 <- kmeans(DF2, 4) 
+DF4 <- data.frame(DF2, fit3$cluster)
+DF3$cluster <- DF4$fit3.cluster
+```
+
+```{r}
+## visualize
+library(vcd)
+stu1 <- select(class, student, cluster)
+stu2 <- select(DF3, cluster)
+stu2$student <- row.names(stu2)
+stu2 <-  select(stu2, student, cluster)
+rownames(stu2) <- NULL
+library(stringr)
+stu2$student <- str_to_upper(stu2$student)
+stu1$student <- str_to_upper(stu1$student)
+stu1$student <- gsub("  ", " ", stu1$student)
+stu2$student <- gsub("  ", " ", stu2$student)
+stu <- merge(stu1, stu2, by = "student", all = TRUE)
+
+mosaic( ~cluster.x + cluster.y, data = stu, main = "Comparison", shade = TRUE, legend = TRUE)
+```
+
+
 
 ## Please render your code as an .html file using knitr and Pull Resquest both your .Rmd file and .html files to the Assignment 3 repository.
 
