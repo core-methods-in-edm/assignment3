@@ -30,7 +30,7 @@ The algorithm will treat each row as a value belonging to a person, so we need t
 
 ```{r}
 
-K2 <- select(K1, c(2:6))
+K2 <- dplyr::select(K1, c(2:6))
 
 ```
 
@@ -73,7 +73,7 @@ Also, we need to choose the number of clusters we think are in the data. We will
 
 ```{r}
 
-fit <- kmeans(K3, 2)
+fit <- kmeans(K3, 3)
 
 #We have created an object called "fit" that contains all the details of our clustering including which observations belong to each cluster.
 
@@ -158,6 +158,12 @@ K7 <- K6 %>% count(cluster)
 ```
 
 Look at the number of people in each cluster, now repeat this process for 3 rather than 2 clusters. Which cluster grouping do you think is more informative? Write your answer below:
+
+```{r}
+#I think 2 clusters are more informative. Because it is clear to see the pattern that one group of people had higher motivation, on average, than other cluster. Whereas it is hard to interpret the data and pattern while using 3 clusters. 
+
+```
+
 
 ##Part II
 
@@ -302,6 +308,8 @@ B2<- mutate(B2, name2 = tolower(B2$name2))
 
 B1$cluster2<- B2$cluster2[match(B1$name, B2$name2)]
 
+#create student ID
+B1$ID<- 1:50
 
 #draw it!
 library(ggplot2)
@@ -321,6 +329,18 @@ ggplot() +
 #Therefore, there is an overlap map of clusters in class activity 6 and the cluster in assignment 2(partII). 
 
 
+#Second graph
+ggplot() +
+      #cluster from assn2
+      geom_point(data=B1, aes(x=B1$ID, y=B1$cluster2,color = as.factor(B1$cluster2)), size = 5) +
+      #cluster from Class_activity 6
+      geom_point(data=B1, aes(x=B1$ID, y=B1$clusterA,color = as.factor(B1$clusterA)), shape = 2, size = 7)+
+      scale_y_continuous(sec.axis = sec_axis(~.*1, name = "ClusterA"))
+
+#HOW TO READ THE 2nd GRAPH
+#I assigned each person an ID(y-axis). Then graph them in terms of which clusters they are in for two different files(Assginment2 or class_activity 6)
+#The circles are the clusters in assginment2 and the triangles are the clusters in class activity 6. 
+#Therefore, we can see the overlaps between two clusters. 
 
 ```
 
