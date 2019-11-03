@@ -1,0 +1,91 @@
+---
+title: "Assginment 3"
+author: "yixiao"
+date: "2019/11/3"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(tidyr)
+library(dplyr)
+K1 <- read.csv("Class_Motivation.csv", header=TRUE)
+K2 <- K1 %>% select(motivation1:motivation5)
+K3 <- na.omit(K2)
+
+K3 <- scale(K3)
+fit <- kmeans(K3, 2)
+fit$cluster
+K4 <- data.frame(K3, fit$cluster)
+names(K4) <- c("1", "2", "3", "4", "5", "cluster")
+K5 <- K4 %>% gather(Week,"Motivation_Score",1:5)
+
+K6 <- K5 %>% group_by(Week, cluster) %>% mutate(Average = mean(Motivation_Score))
+K6$Week <- as.numeric(K6$Week)
+K6$cluster <- as.factor(K6$cluster)
+library(ggplot2)
+ggplot(K6, aes(x=Week, y=Average, color=cluster)) + 
+  geom_line() + labs(x="Week", y="Average Motivation")
+K7 <- K6 %>% group_by(cluster) %>% count(cluster)
+fit <- kmeans(K3, 3)
+fit$cluster
+K8 <- data.frame(K3, fit$cluster)
+names(K8) <- c("1", "2", "3", "4", "5", "cluster")
+K9 <- K8 %>% gather(Week,"Motivation_Score",1:5)
+K10 <- K9 %>% group_by(Week, cluster) %>% mutate(Average = mean(Motivation_Score))
+K10$Week <- as.numeric(K10$Week)
+K10$cluster <- as.factor(K10$cluster)
+ggplot(K10, aes(x=Week, y=Average, color=cluster)) + 
+  geom_line() + labs(x="Week", y="Average Motivation")
+K11 <- K10 %>% group_by(cluster) %>% count(cluster)
+```
+
+##Part II
+
+```{r}
+library(igraph)
+cluster_A2 <- read.csv("hudk4050-classes.csv", header=TRUE)
+cluster_A2 <- cluster_A2[-c(34),]
+A1 <- cluster_A2%>%gather(class_number,class_title,Class.1:Class.6,-First.Name,-Last.Name) %>%
+   filter(class_title !="") %>%
+  dplyr::select(First.Name, class_title)
+A1$class_title <- gsub(' ', '', A1$class_title)
+A1$class_title <- gsub('&', '', A1$class_title)
+A1 <- A1 %>% filter(class_title != "HUDK4050")
+A2 <- A1 %>% mutate(count = 1) %>%
+  spread(class_title, count)
+rownames(A2) <- A2$First.Name
+A2 <- data.matrix(A2[,-1])
+A2[is.na(A2)] <- 0
+A3 <- A2 %*% t(A2)
+diag(A3) <- 0
+```
+
+
+```{r}
+
+library(klaR)
+fit <- kmodes(A3,5,iter.max=10,weighted=FALSE)
+g <- graph.adjacency(A3, mode="undirected")
+plot(g, vertex.color = fit$cluster, vertex.size = 15, vertex.label.cex = 0.4)
+V1 <- fit$cluster
+```
+
+
+
+##Part III
+
+In class activity 6 you clustered students in the class by the answers to a questionaire. Create a visualization that shows the overlap between these clusters and the clusters generated in part II.
+
+```{r}
+
+library(vcd)
+DF1 <- read.csv("HUDK405019-clustering.csv", header = TRUE)
+rownames(DF1) <- DF1$First.Name
+DF1$First.Name = NULL
+DF1$Last.Name = NULL
+
+
+```
+
+
+## Please render your code as an .html file using knitr and Pull Resquest both your .Rmd file and .html files to the Assignment 3 repository.
