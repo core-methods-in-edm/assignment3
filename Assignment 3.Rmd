@@ -1,5 +1,5 @@
 ---
-title: "Assignment 3: K Means Clustering"
+title: 'Assignment 3: K Means Clustering'
 ---
 
 In this assignment we will be applying the K-means clustering algorithm we looked at in class. At the following link you can find a description of K-means:
@@ -7,14 +7,10 @@ In this assignment we will be applying the K-means clustering algorithm we looke
 https://www.cs.uic.edu/~wilkinson/Applets/cluster.html
 
 
-```{r}
-library()
-```
-
 Now, upload the file "Class_Motivation.csv" from the Assignment 3 Repository as a data frame called "K1""
 ```{r}
 
-K1 <- read.csv(...)
+K1 <- read.csv("Class_Motivation.csv")
 
 ```
 
@@ -26,13 +22,14 @@ The algorithm will treat each row as a value belonging to a person, so we need t
 
 ```{r}
 
-K2 <- 
+K2 <- data.frame(K1)
+K2 <- K2 [, -1]
 
 ```
 
 It is important to think about the meaning of missing values when clustering. We could treat them as having meaning or we could remove those people who have them. Neither option is ideal. What problems do you foresee if we recode or remove these values? Write your answers below:
 
-
+There are many NAs in the data, so if we remove these NAs, we will lose much information; another option is to recode the NAs based on either mean, median, mode or other criteria. The way we deal with the NAs can affect our final results.
 
 We will remove people with missing values for this assignment, but keep in mind the issues that you have identified.
 
@@ -47,7 +44,7 @@ Another pre-processing step used in K-means is to standardize the values so that
 
 ```{r}
 
-K3 <- 
+K3 <- scale(K3)
 
 ```
 
@@ -66,20 +63,23 @@ Also, we need to choose the number of clusters we think are in the data. We will
 
 ```{r}
 
-fit <- 
+fit <- kmeans(K3, 2)
 
 #We have created an object called "fit" that contains all the details of our clustering including which observations belong to each cluster.
 
+
 #We can access the list of clusters by typing "fit$cluster", the top row corresponds to the original order the rows were in. Notice we have deleted some rows.
 
-
+fit$cluster
 
 #We can also attach these clusters to the original dataframe by using the "data.frame" command to create a new data frame called K4.
 
-K4
+K4 <- data.frame(fit$cluster)
+K4 <- cbind(K3, K4)
 
 #Have a look at the K4 dataframe. Lets change the names of the variables to make it more convenient with the names() command.
 
+names(K4) <- c("1", "2", "3", "4", "5", "cluster")
 
 ```
 
@@ -87,15 +87,17 @@ Now we need to visualize the clusters we have created. To do so we want to play 
 
 First lets use tidyr to convert from wide to long format.
 ```{r}
+library(tidyr)
+library(dplyr)
 
-K5 <- 
+K5 <- gather(K4, week, motivation_value, 1:5, factor_key = T)
 ```
 
 Now lets use dplyr to average our motivation values by week and by cluster.
 
 ```{r}
 
-K6 <- 
+K6 <- K5 %>% group_by(cluster, week) %>% summarize (avg = mean(motivation_value), na.rm = T)
 
 ```
 
@@ -113,9 +115,9 @@ Likewise, since "cluster" is not numeric but rather a categorical label we want 
 
 ```{r}
 
-K6$week <- 
+K6$week <- as.numeric(K6$week)
 
-K6$cluster <- 
+K6$cluster <- as.factor(K6$cluster)
 
 ```
 
@@ -127,29 +129,87 @@ Now we can plot our line plot using the ggplot command, "ggplot()".
 - Finally we are going to clean up our axes labels: xlab("Week") & ylab("Average Motivation")
 
 ```{r}
-
+library(ggplot2)
+ggplot(K6, aes(x = week, y = avg, col = cluster)) + geom_point() + labs(x = "week", y = "Average Motivation")
 
 ```
 
 What patterns do you see in the plot?
 
-
+On average, people in cluster 1 tend to have higher motivation than those in cluster 2. In addition, people in cluster 1 change bigger than cluster 2.
 
 It would be useful to determine how many people are in each cluster. We can do this easily with dplyr.
 
 ```{r}
-K7 <- 
+K7 <- K4 %>% count(cluster)
 ```
 
 Look at the number of people in each cluster, now repeat this process for 3 rather than 2 clusters. Which cluster grouping do you think is more informative? Write your answer below:
+
+```{r}
+set.seed(1120)
+fit2 <- kmeans (K3, 3)
+K4_3 <- data.frame(fit2$cluster)
+K4_3 <- cbind(K3, K4_3)
+names(K4_3) <- c("1","2","3","4","5","cluster")
+K5_3 <- gather(K4_3, week, motivation_value, 1:5, factor_key = T)
+K6_3 <- K5_3 %>% group_by(cluster, week) %>% summarize(avg = mean(motivation_value, na.rm = T))
+K6_3$week <- as.numeric (K6_3$week)
+ggplot(K6_3, aes(x = week, y = avg, col = cluster)) + geom_point() + labs(x = "week", y = "Average Motivation")
+K7_3 <- K4_3 %>% count(cluster)
+K7_3
+# I think three clusters may be more informative, because we can further see the people with motivation at a medium level.
+```
+
+
 
 ##Part II
 
 Using the data collected for Assignment 2 (which classes students were in), cluster the students, then redraw the graph of the class but color the students according the cluster they are in.
 
+```{r}
+H1 <- read.csv("C:/Users/Yue Ma/Desktop/2019 Fall/Courses/Core methods in educational data mining/hudk4050-classes.csv", header = T)
+library(igraph)
+library(klaR)
+H1 <- H1[-c(34),]
+H2 <- H1 %>%gather(class_number,class_title,Class.1:Class.6,-First.Name,-Last.Name) %>% filter(class_title !="") %>% dplyr::select(First.Name, class_title)
+H2$class_title <- gsub(' ', '', H2$class_title)
+H2$class_title <- gsub('&', '', H2$class_title)
+H2 <- H2 %>% filter(class_title != "HUDK4050")
+H3 <- H2 %>% mutate(count = 1) %>%
+  spread(class_title, count)
+rownames(H3) <- H3$First.Name
+H3 <- data.matrix(H3[,-1])
+H3[is.na(H3)] <- 0
+H4 <- H3 %*% t(H3)
+diag(H4) <- 0
+fit <- kmodes(H4,5,iter.max=10,weighted=FALSE)
+g <- graph.adjacency(H4, mode="undirected")
+plot(g, vertex.color = fit$cluster, vertex.size = 15, vertex.label.cex = 0.4)
+V1 <- fit$cluster
+```
+
+
 ##Part III
 
 In class activity 6 you clustered students in the class by the answers to a questionaire. Create a visualization that shows the overlap between these clusters and the clusters generated in part II.
+
+```{r}
+library(vcd)
+D1 <- read.csv("C:/Users/Yue Ma/Desktop/2019 Fall/Courses/Core methods in educational data mining/HUDK405019-clustering.csv", header = TRUE)
+rownames(D1) <- D1$First.Name
+D1$First.Name = NULL
+D1$Last.Name = NULL
+D2 <- D1 %>% mutate_all(as.character) %>% mutate_all(as.numeric) %>%
+  dplyr::select(-c(What.city.town.did.you.grow.up.in.:What.is.the.longitude.of.the.city.town.you.grew.up.in.))
+D2[is.na(D2)] = 0 
+D2 <- scale(D2)
+fit <- kmeans(D2, 5) 
+V2 <-fit$cluster
+V <- structable(V1~V2)
+mosaic(V)
+```
+
 
 ## Please render your code as an .html file using knitr and Pull Resquest both your .Rmd file and .html files to the Assignment 3 repository.
 
