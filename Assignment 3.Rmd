@@ -1,15 +1,11 @@
 ---
-title: "Assignment 3: K Means Clustering"
+title: 'Assignment 3: K Means Clustering'
 ---
 
 In this assignment we will be applying the K-means clustering algorithm we looked at in class. At the following link you can find a description of K-means:
 
 https://www.cs.uic.edu/~wilkinson/Applets/cluster.html
 
-
-```{r}
-library()
-```
 
 Now, upload the file "Class_Motivation.csv" from the Assignment 3 Repository as a data frame called "K1""
 ```{r}
@@ -172,16 +168,48 @@ K7_3
 Using the data collected for Assignment 2 (which classes students were in), cluster the students, then redraw the graph of the class but color the students according the cluster they are in.
 
 ```{r}
-D1 <- read.csv("C:/Users/Yue Ma/Desktop/2019 Fall/Courses/Core methods in educational data mining/hudk4050-classes.csv", header = T)
-
-D1 <- unite(D1, Name, "Last.Name", "First.Name", sep = " ", remove = TRUE)
-
-
+H1 <- read.csv("C:/Users/Yue Ma/Desktop/2019 Fall/Courses/Core methods in educational data mining/hudk4050-classes.csv", header = T)
+library(igraph)
+library(klaR)
+H1 <- H1[-c(34),]
+H2 <- H1 %>%gather(class_number,class_title,Class.1:Class.6,-First.Name,-Last.Name) %>% filter(class_title !="") %>% dplyr::select(First.Name, class_title)
+H2$class_title <- gsub(' ', '', H2$class_title)
+H2$class_title <- gsub('&', '', H2$class_title)
+H2 <- H2 %>% filter(class_title != "HUDK4050")
+H3 <- H2 %>% mutate(count = 1) %>%
+  spread(class_title, count)
+rownames(H3) <- H3$First.Name
+H3 <- data.matrix(H3[,-1])
+H3[is.na(H3)] <- 0
+H4 <- H3 %*% t(H3)
+diag(H4) <- 0
+fit <- kmodes(H4,5,iter.max=10,weighted=FALSE)
+g <- graph.adjacency(H4, mode="undirected")
+plot(g, vertex.color = fit$cluster, vertex.size = 15, vertex.label.cex = 0.4)
+V1 <- fit$cluster
+```
 
 
 ##Part III
 
 In class activity 6 you clustered students in the class by the answers to a questionaire. Create a visualization that shows the overlap between these clusters and the clusters generated in part II.
+
+```{r}
+library(vcd)
+D1 <- read.csv("C:/Users/Yue Ma/Desktop/2019 Fall/Courses/Core methods in educational data mining/HUDK405019-clustering.csv", header = TRUE)
+rownames(D1) <- D1$First.Name
+D1$First.Name = NULL
+D1$Last.Name = NULL
+D2 <- D1 %>% mutate_all(as.character) %>% mutate_all(as.numeric) %>%
+  dplyr::select(-c(What.city.town.did.you.grow.up.in.:What.is.the.longitude.of.the.city.town.you.grew.up.in.))
+D2[is.na(D2)] = 0 
+D2 <- scale(D2)
+fit <- kmeans(D2, 5) 
+V2 <-fit$cluster
+V <- structable(V1~V2)
+mosaic(V)
+```
+
 
 ## Please render your code as an .html file using knitr and Pull Resquest both your .Rmd file and .html files to the Assignment 3 repository.
 
