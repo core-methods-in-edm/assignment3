@@ -245,7 +245,7 @@ DF2 <- as.data.frame(scale(DF2))
  
 #Replace missing values with average score EG - zero
 DF2 <- DF2 %>% mutate_all(funs(ifelse(is.na(.) == TRUE, 0, .)))
-fit3 <- kmeans(DF2, 2) 
+fit3 <- kmodes(DF2, 2) 
 fit3$cluster
 P6DF <- data.frame(DF1,fit3$cluster)
 P6DF <- dplyr::select(P6DF,-Last.Name)
@@ -254,7 +254,10 @@ combineDF <- full_join(A2DF,P6DF,by = "FirstName")
 combineDF <- combineDF %>% mutate(fit2.cluster = factor(fit2.cluster, exclude = NULL),fit3.cluster = factor(fit3.cluster, exclude = NULL)) %>% dplyr::select(FirstName,fit2.cluster,fit3.cluster)
 
 combineSummary <- combineDF %>% group_by(fit2.cluster,fit3.cluster) %>% summarise("Freq" = n())
-
+combineSummary
 ggplot(combineSummary)+geom_mosaic(aes(weight = Freq, x = product(fit2.cluster),fill=fit3.cluster))+ labs(x = "Acitivity 6 cluster", y = "Assignment 2 cluster",title = "overlaps")
+
+P1 <- structable(combineSummary$fit3.cluster ~ combineSummary$fit2.cluster)
+
 
 ```
