@@ -14,7 +14,7 @@ library(ggplot2)
 
 Now, upload the file "Class_Motivation.csv" from the Assignment 3 Repository as a data frame called "K1""
 ```{r}
-K1 <- read.csv(...)
+K1 <- read.csv("Class_Motivation.csv")
 ```
 
 This file contains the self-reported motivation scores for a class over five weeks. We are going to look for patterns in motivation over this time and sort people into clusters based on those patterns.
