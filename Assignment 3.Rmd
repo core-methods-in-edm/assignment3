@@ -8,13 +8,15 @@ https://www.cs.uic.edu/~wilkinson/Applets/cluster.html
 
 
 ```{r}
-library()
+library(ggplot2)
+library(dplyr)
+library(tidyr)
 ```
 
 Now, upload the file "Class_Motivation.csv" from the Assignment 3 Repository as a data frame called "K1""
 ```{r}
 
-K1 <- read.csv(...)
+K1 <- read.csv("Class_Motivation.csv", header = TRUE)
 
 ```
 
@@ -26,13 +28,13 @@ The algorithm will treat each row as a value belonging to a person, so we need t
 
 ```{r}
 
-K2 <- 
+K2 <- select(K1, motivation1, motivation2, motivation3, motivation4, motivation5)
 
 ```
 
 It is important to think about the meaning of missing values when clustering. We could treat them as having meaning or we could remove those people who have them. Neither option is ideal. What problems do you foresee if we recode or remove these values? Write your answers below:
 
-
+Missing values might mean that our questions are biased, and only certain groups can sufficiently supply answers. For example, race questions are often biased against persons of multiple races. Removing or recoding missing values means we might be omitting data from groups whose answers might significantly impact our results and analysis.
 
 We will remove people with missing values for this assignment, but keep in mind the issues that you have identified.
 
@@ -47,7 +49,7 @@ Another pre-processing step used in K-means is to standardize the values so that
 
 ```{r}
 
-K3 <- 
+K3 <- scale(K3)
 
 ```
 
@@ -66,21 +68,21 @@ Also, we need to choose the number of clusters we think are in the data. We will
 
 ```{r}
 
-fit <- 
+fit <- kmeans(K3, 2) 
 
 #We have created an object called "fit" that contains all the details of our clustering including which observations belong to each cluster.
 
 #We can access the list of clusters by typing "fit$cluster", the top row corresponds to the original order the rows were in. Notice we have deleted some rows.
 
-
+fit$cluster
 
 #We can also attach these clusters to the original dataframe by using the "data.frame" command to create a new data frame called K4.
 
-K4
+K4 <- data.frame(K3, fit$cluster)
 
 #Have a look at the K4 dataframe. Lets change the names of the variables to make it more convenient with the names() command.
 
-
+K4
 ```
 
 Now we need to visualize the clusters we have created. To do so we want to play with the structure of our data. What would be most useful would be if we could visualize average motivation by cluster, by week. To do this we will need to convert our data from wide to long format. Remember your old friends tidyr and dplyr!
@@ -88,15 +90,18 @@ Now we need to visualize the clusters we have created. To do so we want to play 
 First lets use tidyr to convert from wide to long format.
 ```{r}
 
-K5 <- 
+K5 <- gather(K4, week, value, -fit.cluster)
 ```
 
 Now lets use dplyr to average our motivation values by week and by cluster.
 
 ```{r}
 
-K6 <- 
+K6 <- tbl_df(K5)
 
+K6 <- group_by(K6, week, fit.cluster)
+
+K6 <- summarize(K6, mean = value)
 ```
 
 Now it's time to do some visualization: 
