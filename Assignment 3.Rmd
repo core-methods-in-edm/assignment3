@@ -310,15 +310,35 @@ df_9$longitude <- sub("°.*$","", df_9$longitude)
 df_9 <- df_9 %>% mutate_all(funs(as.numeric(.)))
 
 
-fit3<-kmeans(df_8,3)
+fit3<-kmeans(df_8,4)
 
 fit3$cluster
 
-df_10<-data.frame(df_8,df_9,fit3$cluster)
-
-
+#graph created in activity 6
 library(ggplot2)
-ggplot(df_10, aes(longitude, lattitude, color = as.factor(fit3.cluster))) + geom_point(size = 3)
+ggplot(df_10, aes(longitude, lattitude, color = as.factor(fit3.cluster))) +
+  geom_point(size = 3)
+
+#combining two cluster together
+df_10<-data.frame(df_8,df_9,fit3$cluster)
+Full.Name<-toupper(row.names(df_6))
+df_10<-data.frame(Full.Name,df_10)
+df_11<-inner_join(df_10,df1,by="Full.Name")
+df_11$Full.Name<-as.factor(1:36)
+
+
+#overlaying two ggplots
+#diamond:cluster 1 based on questionare
+#filled circle:cluster2 based on social network
+ggplot(df_11,aes(x=Full.Name,y=fit3.cluster,color=as.factor(fit3.cluster)))+
+  geom_point(size=5,pch=5)+
+  geom_point(data=df_11,aes(x=Full.Name,y=fit2.cluster,color=as.factor(fit2.cluster)),size=5,pch=19)+
+  xlab("Students")+
+  ylab("Clusters")+
+  labs(color='Diamond:Cluster1;Circle:Cluster2')
+
+
+
 ```
 
 ## Please render your code as an .html file using knitr and Pull Resquest both your .Rmd file and .html files to the Assignment 3 repository.
