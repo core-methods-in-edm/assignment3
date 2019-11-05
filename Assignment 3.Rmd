@@ -8,146 +8,157 @@ https://www.cs.uic.edu/~wilkinson/Applets/cluster.html
 
 
 ```{r}
-library()
+library(tidyverse)
+library(tidyr)
+library(tidyselect)
+library(dplyr)
+library(cluster)
+library(factoextra)
+library(klaR)
+library(igraph)
+library(ggplot2)
+
+# ARTEMAS WANG ASSIGNMENT 3 SUBMISSION 
 ```
 
-Now, upload the file "Class_Motivation.csv" from the Assignment 3 Repository as a data frame called "K1""
+# Part I
 ```{r}
 
-K1 <- read.csv(...)
 
-```
-
-This file contains the self-reported motivation scores for a class over five weeks. We are going to look for patterns in motivation over this time and sort people into clusters based on those patterns.
-
-But before we do that, we will need to manipulate the data frame into a structure that can be analyzed by our clustering algorithm.
-
-The algorithm will treat each row as a value belonging to a person, so we need to remove the id variable.
-
-```{r}
-
-K2 <- 
-
-```
-
-It is important to think about the meaning of missing values when clustering. We could treat them as having meaning or we could remove those people who have them. Neither option is ideal. What problems do you foresee if we recode or remove these values? Write your answers below:
-
-
-
-We will remove people with missing values for this assignment, but keep in mind the issues that you have identified.
-
-
-```{r}
-
-K3 <- na.omit(K2) #This command create a data frame with only those people with no missing values. It "omits" all rows with missing values, also known as a "listwise deletion". EG - It runs down the list deleting rows as it goes.
-
-```
-
-Another pre-processing step used in K-means is to standardize the values so that they have the same range. We do this because we want to treat each week as equally important - if we do not standardise then the week with the largest range will have the greatest impact on which clusters are formed. We standardise the values by using the "scale()" command.
-
-```{r}
-
+K1 <- Class_Motivation
+K2 <- K1[c(0,-1)] # select all columns but the first one (id variable)
+K3 <- na.omit(K2)
 K3 <- scale(K3)
+str(K3)
 
-```
+set.seed(123)
+kmeans(K3, 2)
+fit <- kmeans(K3, 3) # kmeans(df, # of clusters)
+fit # 9 available components, including cluster
+fit$cluster
 
-
-Now we will run the K-means clustering algorithm we talked about in class. 
-1) The algorithm starts by randomly choosing some starting values 
-2) Associates all observations near to those values with them
-3) Calculates the mean of those clusters of values
-4) Selects the observation closest to the mean of the cluster
-5) Re-associates all observations closest to this observation
-6) Continues this process until the clusters are no longer changing
-
-Notice that in this case we have 5 variables and in class we only had 2. It is impossible to vizualise this process with 5 variables.
-
-Also, we need to choose the number of clusters we think are in the data. We will start with 2.
-
-```{r}
-
-fit <- 
-
-#We have created an object called "fit" that contains all the details of our clustering including which observations belong to each cluster.
-
-#We can access the list of clusters by typing "fit$cluster", the top row corresponds to the original order the rows were in. Notice we have deleted some rows.
-
-
-
-#We can also attach these clusters to the original dataframe by using the "data.frame" command to create a new data frame called K4.
-
+K4 <- data.frame(fit$cluster,K3)
+names(K4) <- c('Cluster','1','2','3','4','5') # the names need to be numbers. 
 K4
 
-#Have a look at the K4 dataframe. Lets change the names of the variables to make it more convenient with the names() command.
+# names_to needs to be numbers to change to as.numeric.
+K5 <- K4 %>% pivot_longer(-Cluster, names_to = 'Weeks', values_to = 'Motivation') 
+K5 
+#K5 <- gather(K4, 'Cluster','Week', 2:6) %>% group_by(Week, Cluster)
+
+# Find the average score for motivation
+K6 <- K5 %>% group_by(Cluster, Weeks) %>% summarize(avg_score = mean(Motivation))
+K6
+
+# Change weeks to numeric and cluster as factors. 
+K6$Week1 <- as.numeric(K6$Weeks)
+K6$Cluster <- as.factor(K6$Cluster)
+
+# Visualize the Cluster in line and scatterplot
+ggplot(K6, aes(K6$Week1, K6$avg_score)) +
+  geom_line(aes(color = K6$Cluster))
+
+# ggplot(K6, aes(K6$Week1, K6$avg_score)) +
+#   geom_point(aes(color = K6$Cluster))
+
+K7 <- length(K6$Cluster)
+K7
 
 
 ```
 
-Now we need to visualize the clusters we have created. To do so we want to play with the structure of our data. What would be most useful would be if we could visualize average motivation by cluster, by week. To do this we will need to convert our data from wide to long format. Remember your old friends tidyr and dplyr!
-
-First lets use tidyr to convert from wide to long format.
-```{r}
-
-K5 <- 
-```
-
-Now lets use dplyr to average our motivation values by week and by cluster.
-
-```{r}
-
-K6 <- 
-
-```
-
-Now it's time to do some visualization: 
-
-https://www.cs.uic.edu/~wilkinson/TheGrammarOfGraphics/GOG.html
-
-And you can see the range of available graphics in ggplot here:
-
-http://ggplot2.tidyverse.org/reference/index.html
-
-We are going to create a line plot similar to the one created in the school dropout paper we looked at in class (Bowers, 2010). It will have motivation on the Y-axis and weeks on the X-axis. To do this we will want our weeks variables to be treated as a number, but because it was created from a variable name it is currently being treated as a character variable. You can see this if you click on the arrow on the left of K6 in the Data pane. Week is designated by "chr". To convert it to numeric, we use the as.numeric command. 
-
-Likewise, since "cluster" is not numeric but rather a categorical label we want to convert it from an "integer" format to a "factor" format so that ggplot does not treat it as a number. We can do this with the as.factor() command.
-
-```{r}
-
-K6$week <- 
-
-K6$cluster <- 
-
-```
-
-Now we can plot our line plot using the ggplot command, "ggplot()".
-
-- The first argument in a ggplot is the dataframe we are using: K6
-- Next is what is called an aesthetic (aes), the aesthetic tells ggplot which variables to use and how to use them. Here we are using the variables "week" and "avg" on the x and y axes and we are going color these variables using the "cluster" variable
-- Then we are going to tell ggplot which type of plot we want to use by specifiying a "geom()", in this case a line plot: geom_line()
-- Finally we are going to clean up our axes labels: xlab("Week") & ylab("Average Motivation")
-
-```{r}
-
-
-```
-
-What patterns do you see in the plot?
-
-It would be useful to determine how many people are in each cluster. We can do this easily with dplyr.
-
-```{r}
-K7 <- 
-```
 
 Look at the number of people in each cluster, now repeat this process for 3 rather than 2 clusters. Which cluster grouping do you think is more informative? Write your answer below:
 
-Once you have done this, save both of your plots to the Assignment 5 file.
-
 ##Part II
 
-Now, try to do the same for the data collected in class. Create two sets of clusters, the answers to the questions and regions where people grew up. 
+```{r}
+
+DF1 <- hudk4050_classes
+head(DF1)
+# Merge First.name and Last.name variables to create unique ID, puts two columns into 1 column
+DF1 <- unite(DF1, Name, `Last Name`, `First Name`, sep = " ", remove = TRUE)
+
+# Reshape data to create a "course" variable (you will get a warning because there are missing cells)
+DF2 <- gather(DF1, course.label, course, `Class 1`, `Class 2`, `Class 3`, `Class 4`, `Class 5`, 'Class 6', 
+              na.rm = TRUE, convert = FALSE)
+
+# Remove rows indicating HUDK4050 because all students are in this course and it will overwhelm the graph
+DF2 <- filter(DF2, course > 0, course != "HUDK4050")
+
+# Remove the "course.label" variable
+DF2 <- dplyr::select(DF2, Name, course)
+
+# Add a variable to be used to count the courses
+DF2$Count <- 1
+
+# Reshape the data to create a person x class matrix
+DF3 <- spread(DF2, course, Count)
+
+# This was a bit of a trick, for the matrix command to work the row names 
+# needed to changed from an indice (1,2,3,etc) to the student names 
+row.names(DF3) <- DF3$Name
+DF3$Name <- NULL
+DF3 <- ifelse(is.na(DF3), 0, 1) 
+
+set.seed(100)
+part2 <- kmodes(DF3, 3) # kmeans(df, # of clusters)
+part2 # 9 available components, including cluster
+part2$cluster
+
+#Convert the data from data frame format to matrix format so it can be transposed
+DF4 <- as.matrix(DF3)
+
+#Transpose matrix to produce a person x person matrix
+DF5 <- DF4 %*% t(DF4)
+
+# set.seed(100)
+# kmeans(DF5, 4)
+# part2 <- kmeans(DF5, 4) # kmeans(df, # of clusters)
+# part2 # 9 available components, including cluster
+# part2$cluster
+# DF5
+
+g <- graph.adjacency(DF5, mode= "undirected")
+
+plot(g, layout=layout.fruchterman.reingold, vertex.size=3, vertex.color=part2$cluster, margin = -0.4, edge.arrow.size = 0.4)
+
+```
+
+
+Using the data collected for Assignment 2 (which classes students were in), cluster the students, then redraw the graph of the class but color the students according the cluster they are in.
 
 ##Part III
 
-Create a visualization that shows the overlap between the two groups of clusters you created in part III.
+```{r}
+
+library(ggplot2)
+survey <- HUDK405018_cluster
+colnames(survey) #ResponseID, Q1_1
+S1 <- survey %>% dplyr::select(9,18) 
+
+addingrows <- data.frame("ResponseId" = 48:52, "Q1_1" = c('Beijing','Shanghai','Beijing','Shanghai','Beijing'))
+addingrows
+S2 <- rbind(S1, addingrows)
+
+as.factor(S2$Q1_1)
+as.factor(S2$ResponseId)
+
+set.seed(100)
+survey2 <- kmodes(S2, 3) # kmeans(df, # of clusters)
+survey2$cluster
+survey2
+length(part2$cluster) # 52 people in class
+length(survey2$cluster) # 47/52 people in class
+
+ggplot(S2) +
+  geom_jitter(aes(survey2$cluster, part2$cluster), color = part2$cluster)
+
+
+```
+
+
+In class activity 6 you clustered students in the class by the answers to a questionaire. Create a visualization that shows the overlap between these clusters and the clusters generated in part II.
+
+## Please render your code as an .html file using knitr and Pull Resquest both your .Rmd file and .html files to the Assignment 3 repository.
 
