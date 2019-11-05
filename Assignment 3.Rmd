@@ -8,14 +8,18 @@ https://www.cs.uic.edu/~wilkinson/Applets/cluster.html
 
 
 ```{r}
-library()
+install.packages("klaR")
+library("cluster")
+library("dplyr")
+library("klaR")
+library("tidyverse")
 ```
 
 Now, upload the file "Class_Motivation.csv" from the Assignment 3 Repository as a data frame called "K1""
 ```{r}
 
-K1 <- read.csv(...)
-
+K1 <- read.csv("~/Desktop/2019fall/core methods in edm/assignment3/Class_Motivation.csv", header=TRUE)
+K1
 ```
 
 This file contains the self-reported motivation scores for a class over five weeks. We are going to look for patterns in motivation over this time and sort people into clusters based on those patterns.
@@ -26,7 +30,8 @@ The algorithm will treat each row as a value belonging to a person, so we need t
 
 ```{r}
 
-K2 <- 
+	K2 <- dplyr::select(K1, 2:6)
+K2
 
 ```
 
@@ -40,6 +45,7 @@ We will remove people with missing values for this assignment, but keep in mind 
 ```{r}
 
 K3 <- na.omit(K2) #This command create a data frame with only those people with no missing values. It "omits" all rows with missing values, also known as a "listwise deletion". EG - It runs down the list deleting rows as it goes.
+K3
 
 ```
 
@@ -47,7 +53,8 @@ Another pre-processing step used in K-means is to standardize the values so that
 
 ```{r}
 
-K3 <- 
+K3 <-scale(K3)
+K3
 
 ```
 
@@ -66,7 +73,8 @@ Also, we need to choose the number of clusters we think are in the data. We will
 
 ```{r}
 
-fit <- 
+fit <- kmeans(K3,2)
+fit
 
 #We have created an object called "fit" that contains all the details of our clustering including which observations belong to each cluster.
 
@@ -76,10 +84,17 @@ fit <-
 
 #We can also attach these clusters to the original dataframe by using the "data.frame" command to create a new data frame called K4.
 
+K4<-data.frame(K3,fit$cluster)
 K4
 
 #Have a look at the K4 dataframe. Lets change the names of the variables to make it more convenient with the names() command.
-
+names(K4)[names(K4) == "fit.cluster"] <- "cluster"
+names(K4)[names(K4) == "motivation1"] <- "1"
+names(K4)[names(K4) == "motivation2"] <- "2"
+names(K4)[names(K4) == "motivation3"] <- "3"
+names(K4)[names(K4) == "motivation4"] <- "4"
+names(K4)[names(K4) == "motivation5"] <- "5"
+K4
 
 ```
 
@@ -88,14 +103,20 @@ Now we need to visualize the clusters we have created. To do so we want to play 
 First lets use tidyr to convert from wide to long format.
 ```{r}
 
-K5 <- 
+K5 <- (gather(K4, "week","motivation", 1:5))
+K5[, 'week'] <- as.factor(K5[, 'week'])
+
+K5<-data.frame(K5)
+K5
 ```
 
 Now lets use dplyr to average our motivation values by week and by cluster.
 
 ```{r}
-
-K6 <- 
+###BY CLUSTER
+K6 <- K5 %>% group_by(week,cluster)
+K6<- summarise(K6,cluster_mean= mean(motivation))
+K6
 
 ```
 
@@ -113,9 +134,10 @@ Likewise, since "cluster" is not numeric but rather a categorical label we want 
 
 ```{r}
 
-K6$week <- 
+K6$week  <- as_factor(K6$week)
 
-K6$cluster <- 
+K6$cluster <- as.factor(K6$cluster)
+K6
 
 ```
 
@@ -129,27 +151,165 @@ Now we can plot our line plot using the ggplot command, "ggplot()".
 ```{r}
 
 
+
+
+plot5 <- ggplot(K6, aes(week, cluster_mean, group = cluster)) +
+         geom_point() +
+         geom_line() +
+         labs(x = "Week", y = "Average Motivation", 
+              title = "Clustering plot")
+plot5
 ```
 
 What patterns do you see in the plot?
 
-
+We saw two clusters of the average motivation. One is generally higher and another is lower.
 
 It would be useful to determine how many people are in each cluster. We can do this easily with dplyr.
 
 ```{r}
-K7 <- 
+K7 <- dplyr::count(K4, cluster)
+K7
+
 ```
 
 Look at the number of people in each cluster, now repeat this process for 3 rather than 2 clusters. Which cluster grouping do you think is more informative? Write your answer below:
+```{r}
+fit <- kmeans(K3,3)
+fit
+K4<-data.frame(K3,fit$cluster)
+K4
+names(K4)[names(K4) == "fit.cluster"] <- "cluster"
+names(K4)[names(K4) == "motivation1"] <- "1"
+names(K4)[names(K4) == "motivation2"] <- "2"
+names(K4)[names(K4) == "motivation3"] <- "3"
+names(K4)[names(K4) == "motivation4"] <- "4"
+names(K4)[names(K4) == "motivation5"] <- "5"
+K4
+K5 <- (gather(K4, "week","motivation", 1:5))
+K5[, 'week'] <- as.factor(K5[, 'week'])
+
+K5<-data.frame(K5)
+K5
+K6 <- K5 %>% group_by(week,cluster)
+K6<- summarise(K6,cluster_mean= mean(motivation))
+K6
+
+K6$week  <- as_factor(K6$week)
+
+K6$cluster <- as.factor(K6$cluster)
+K6
+plot5 <- ggplot(K6, aes(week, cluster_mean, group = cluster)) +
+         geom_point() +
+         geom_line() +
+         labs(x = "Week", y = "Average Motivation", 
+              title = "Clustering plot")
+plot5
+K7 <- dplyr::count(K4, cluster)
+K7
+```
 
 ##Part II
 
 Using the data collected for Assignment 2 (which classes students were in), cluster the students, then redraw the graph of the class but color the students according the cluster they are in.
+```{r}
+
+raw_data <- read.csv("~/Desktop/2019fall/core methods in edm/assignment2/assignment 1015/hudk4050-classes.csv")
+#select useful columns
+#install.packages("tidyverse")#,repos = "http://cran.us.r-project.org")
+#install.packages("tidyr")#,repos = "http://cran.us.r-project.org")
+library(tidyr)
+#install.packages("dplyr")#,repos = "http://cran.us.r-project.org")
+data_new<-unite(raw_data, Name, "First.Name","Last.Name", sep = " ")
+data_new
+rownames(data_new) <- data_new$Name
+class <- data_new %>% select(Student_name = 'Name',
+                              Class1 = 'Class.1',
+                              Class2 = 'Class.2',
+                              Class3 = 'Class.3',
+                              Class4 = 'Class.4',
+                              Class5 = 'Class.5',
+                              Class6 = 'Class.6')
+class
+#make the students with courses. 
+person_class <- class %>%
+  tibble::rowid_to_column() %>% 
+  gather(key = class,
+         value = course_num,
+         c(Class1, Class2, Class3, Class4, Class5, Class6), -Student_name) %>%
+  select(Student_name, course_num) %>%
+  filter(!is.na(course_num)) %>%
+  arrange(Student_name)
+  
+#clean the data
+#I found that the course numbers are typed in, thus, the course codes are not in the same format. We need to have some steps to work on cleaning
+#The first step is to make sure the foundational formats are same, such that, there is a blank between department name and number. 
+person_class$course_num <- gsub(pattern = " ",
+                                     replacement = "",
+                                     x = person_class$course_num)
+#Some student didn't provide the department name in the course code. We will remove that record.
+person_class <- person_class %>%
+  filter(Student_name != "ZIMO")
+#Some other replacements of formatting
+person_class$course_num <- gsub(pattern = "QMSS",
+                                     replacement = "G",
+                                     x = person_class$course_num)
+person_class$course_num <- gsub(pattern = "QMSS-",
+                                     replacement = "",
+                                     x = person_class$course_num)
+person_class$course_num <- gsub(pattern = "GG",
+                                     replacement = "G",
+                                     x = person_class$course_num)
+person_class$course_num <- gsub(pattern = "GR",
+                                     replacement = "G",
+                                     x = person_class$course_num)
+#Since all of us are taking the same course as HUDK 4050. So everyone was linked. In order to have a more obvious looking. We will filter out the HUDK 4050 records.
+person_class<- person_class %>%
+  filter(course_num  != "HUDK4050")
+#Yah! It seems that we have a cleaned data now!😄🎉
+inclass<-ifelse(person_class$course_num=="",person_class$inclass<-0,person_class$inclass<-1)
+DF<-person_class[!person_class$course_num=="",]
+DF<-spread(DF,course_num,inclass,fill=0)
+```
+```{r}
+library(klaR)
+library(igraph)
+#Now,it's the time to build the matrix. 
+person_class_data<-subset(DF,select= -Student_name)
+#create matrix
+person_class_matrix<-as.matrix(DF)
+row.names(person_class_matrix)<-DF$Student_name
+person_class_matrix<-person_class_matrix[,-1]
+person_class_matrix<-apply(person_class_matrix,2,as.numeric)
+class_person_matrix<-t(person_class_matrix)
+row.names(person_class_matrix)<-DF$Student_name
+person_person_matrix <- person_class_matrix%*%class_person_matrix
+#Change the diagonals to NA becasue they won't connect to themselves
+diag(x = person_person_matrix) <- NA
+fit_person_class_matrix<-kmodes(person_class_matrix,4)
+fit_person_class_matrix
+person_person_graph <- graph_from_adjacency_matrix(person_person_matrix, mode = "undirected")
+plot.igraph(person_person_graph,
+            layout = layout.fruchterman.reingold,
+            vertex.size = 7,
+            vertex.label.cex =0.5 ,
+            vertex.label = DF$Student_name,
+            vertex.label.dist=1.5,
+            vertex.color=fit_person_class_matrix$cluster)
+
+```
+
+
 
 ##Part III
 
 In class activity 6 you clustered students in the class by the answers to a questionaire. Create a visualization that shows the overlap between these clusters and the clusters generated in part II.
+```{r}
+#install.packages("vcd")
+library(vcd)
+P1 <- structable(cluster$cluster ~ cluster_lat_lon$cluster)
+mosaic(P1, shade=TRUE, legend=TRUE) 
 
+```
 ## Please render your code as an .html file using knitr and Pull Resquest both your .Rmd file and .html files to the Assignment 3 repository.
 
