@@ -1,5 +1,5 @@
 ---
-title: "Assignment 3: K Means Clustering"
+title: 'Assignment 3: K Means Clustering'
 ---
 
 In this assignment we will be applying the K-means clustering algorithm we looked at in class. At the following link you can find a description of K-means:
@@ -8,13 +8,14 @@ https://www.cs.uic.edu/~wilkinson/Applets/cluster.html
 
 
 ```{r}
-library()
+library(tidyr)
+library(dplyr)
 ```
 
 Now, upload the file "Class_Motivation.csv" from the Assignment 3 Repository as a data frame called "K1""
 ```{r}
 
-K1 <- read.csv(...)
+K1 <- read.csv("Class_Motivation.csv", header = TRUE)
 
 ```
 
@@ -26,13 +27,14 @@ The algorithm will treat each row as a value belonging to a person, so we need t
 
 ```{r}
 
-K2 <- 
+K2 <- K1[,-1]
 
 ```
 
 It is important to think about the meaning of missing values when clustering. We could treat them as having meaning or we could remove those people who have them. Neither option is ideal. What problems do you foresee if we recode or remove these values? Write your answers below:
 
-
+If we remove the NA values, the sample size will become smaller and there might be severe information loss.
+If we recode the NA values, the value is determined subjectivly, the outcome will be baised.
 
 We will remove people with missing values for this assignment, but keep in mind the issues that you have identified.
 
@@ -47,7 +49,7 @@ Another pre-processing step used in K-means is to standardize the values so that
 
 ```{r}
 
-K3 <- 
+K3 <- scale(K3)
 
 ```
 
@@ -66,7 +68,7 @@ Also, we need to choose the number of clusters we think are in the data. We will
 
 ```{r}
 
-fit <- 
+fit <- kmeans(K3, 2)
 
 #We have created an object called "fit" that contains all the details of our clustering including which observations belong to each cluster.
 
@@ -76,10 +78,10 @@ fit <-
 
 #We can also attach these clusters to the original dataframe by using the "data.frame" command to create a new data frame called K4.
 
-K4
+K4 <- data.frame(K3, fit$cluster)
 
 #Have a look at the K4 dataframe. Lets change the names of the variables to make it more convenient with the names() command.
-
+names(K4) <- c("1","2","3","4","5","cluster_2")
 
 ```
 
@@ -88,15 +90,14 @@ Now we need to visualize the clusters we have created. To do so we want to play 
 First lets use tidyr to convert from wide to long format.
 ```{r}
 
-K5 <- 
+K5 <- gather(K4, week, value, 1:5)
 ```
 
 Now lets use dplyr to average our motivation values by week and by cluster.
 
 ```{r}
-
-K6 <- 
-
+K6 <- K5 %>% group_by(cluster_2,week)
+K6 <- summarize(K6, avg = mean(value))
 ```
 
 Now it's time to do some visualization: 
@@ -113,9 +114,9 @@ Likewise, since "cluster" is not numeric but rather a categorical label we want 
 
 ```{r}
 
-K6$week <- 
+K6$week <- as.numeric(K6$week)
 
-K6$cluster <- 
+K6$cluster_2 <- as.factor(K6$cluster_2)
 
 ```
 
@@ -127,29 +128,125 @@ Now we can plot our line plot using the ggplot command, "ggplot()".
 - Finally we are going to clean up our axes labels: xlab("Week") & ylab("Average Motivation")
 
 ```{r}
-
+library(ggplot2)
+ggplot(K6, aes(x = week, y = avg, color = cluster_2))+ geom_line() +xlab("Week") +ylab("Average Motivation")
 
 ```
 
 What patterns do you see in the plot?
-
+Two clusters have different trends on the motivation.
+For cluster 1, motivation first increases, than decreases. In week 3, it regains the upward trend. Overall, the motivation is increasing.
+For cluster 2, it begins with higher motivation, first decreases and then increases. In week 3, it continues to decrease and stops below 0 on week 5. Overall, the motivation is decreasing.
 
 
 It would be useful to determine how many people are in each cluster. We can do this easily with dplyr.
 
 ```{r}
-K7 <- 
+K7 <- count(K4,cluster_2)
+K7
 ```
 
 Look at the number of people in each cluster, now repeat this process for 3 rather than 2 clusters. Which cluster grouping do you think is more informative? Write your answer below:
 
-##Part II
+```{r}
+fit2 <- kmeans(K3, 3)
+K4_2 <- data.frame(K3, fit2$cluster)
+names(K4_2) <- c("1","2","3","4","5","cluster_3")
+K5_2 <- gather(K4_2, week, value, 1:5)
+K6_2 <- K5_2 %>% group_by(cluster_3,week)
+K6_2 <- summarize(K6_2, avg = mean(value))
+K6_2$week <- as.numeric(K6_2$week)
+K6_2$cluster_3 <- as.factor(K6_2$cluster_3)
+ggplot(K6_2, aes(x = week, y = avg, color = cluster_3))+ geom_line() +xlab("Week") +ylab("Average Motivation")
+K7_2 <- count(K4_2,cluster_3)
+K7_2
+```
+3-clusters is more informative. The green one is a high-motivated group with smaller variance and positive average value. Red and Blue both have zig zag trends,  Red has a higher variance and blue's is smaller. Compared to the 2-cluster, it only contains two trends(upward and downward), cluster-3 is more informative.
+
+
+## Part II
 
 Using the data collected for Assignment 2 (which classes students were in), cluster the students, then redraw the graph of the class but color the students according the cluster they are in.
+```{r}
+# Read person-class dataframe and person-person dataframe from assignment 2
+library(igraph)
+p2p <- read.csv("person-person.csv",header = TRUE)
+rownames(p2p) <- (p2p[,1])
+p2p <- p2p[,-1]
+p2p <- as.data.frame(scale(p2p))
+fit_p2p<- kmeans(p2p, 3)
+p2p_mat <- as.matrix(p2p)
+g_p2p <- graph.adjacency(p2p_mat ,mode="undirected",diag=FALSE)
+plot(g_p2p, layout=layout.fruchterman.reingold, vertex.color=fit_p2p$cluster)
+```
 
-##Part III
+Kmeans clustering uses person to person matrix, indicating people who has the same classes will be clustered into same group.
+
+## Part III
 
 In class activity 6 you clustered students in the class by the answers to a questionaire. Create a visualization that shows the overlap between these clusters and the clusters generated in part II.
 
-## Please render your code as an .html file using knitr and Pull Resquest both your .Rmd file and .html files to the Assignment 3 repository.
+```{r}
+library(stringr)
+# read file = "HUDK405019-clustering.csv" provided in class activity 6
+
+data <- read.csv("HUDK405019-clustering.csv", header = TRUE)
+
+data <- data %>% unite("Name",c(1:2),sep = " ",remove = c(1&2) )
+
+#Filter person whose answer is no related to the question
+data <- filter(data, Name != "MENGJIE XU" & Name !="cassie Liu" & Name != "Artemas Wang")
+#data <- data[,-1]
+
+#Regular expression on longitude and latitude 
+geo <- data[,14:15]
+geo <- data.frame(lapply(geo, gsub, pattern="[[:alpha:]]", replacement="")) 
+geo <- data.frame(lapply(geo, gsub, pattern="°", replacement="."))
+geo <- data.frame(lapply(geo, gsub, pattern="'", replacement=".")) 
+geo <- data.frame(lapply(geo, gsub, pattern='"', replacement=".")) 
+geo <- data.frame(lapply(geo, gsub, pattern=',', replacement=""))
+geo1 <-  as.data.frame(lapply(geo,FUN=(function (x, pattern){
+  m<-regexpr(pattern,x)
+  regmatches(x,m,invert=FALSE)}
+  ),pattern=("[^\\.]*")))
+geo2 <- geo1 %>% mutate_all(as.character) %>% mutate_all(as.numeric)
+data[,14:15] <- geo2
+data$How.many.miles.do.you.travel.from.home.to.TC. <- gsub(data$How.many.miles.do.you.travel.from.home.to.TC., pattern="[[:alpha:]]", replacement="")
+data$How.many.miles.do.you.travel.from.home.to.TC. <- gsub(data$How.many.miles.do.you.travel.from.home.to.TC., pattern=",", replacement="")
+data2<- data %>% mutate_all(as.character) %>% mutate_all(as.numeric)
+data3 <- data2[,colSums(is.na(data2))<nrow(data2)]
+row.names(data3)<- data$Name
+data4 <- as.data.frame(scale(data3))
+data4 <- na.omit(data4)
+
+```
+
+
+```{r}
+# kmeans clustering
+fit3 <- kmeans(data4,3)
+
+#Merge two cluster outcome together
+c_survey <- data.frame(fit3$cluster)
+c_class <- data.frame(fit_p2p$cluster)
+rownames(c_class) <- toupper(rownames(c_class))
+rownames(c_survey) <- toupper(rownames(c_survey))
+c_survey$Name <- rownames(c_survey)
+c_class$Name <- rownames(c_class)
+c_class$Name <- gsub(c_class$Name, pattern="  ", replacement=" ")
+c_survey$Name <- gsub(c_survey$Name, pattern="  ", replacement=" ")
+c_all <- inner_join(c_survey,c_class, by= "Name")
+```
+
+
+```{r}
+library(vcd)
+P1 <- structable(c_all$fit_p2p.cluster ~ c_all$fit3.cluster)
+mosaic(P1, shade=TRUE, legend=TRUE) 
+ 
+```
+
+The largest area in the mosiac plot indicates the largest overlapp part in both clusters.
+
+### Please render your code as an .html file using knitr and Pull Resquest both your .Rmd file and .html files to the Assignment 3 repository.
 
