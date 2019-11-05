@@ -1,5 +1,6 @@
 ---
-title: "Assignment 3: K Means Clustering"
+title: 'Assignment 3: K Means Clustering'
+output: pdf_document
 ---
 
 In this assignment we will be applying the K-means clustering algorithm we looked at in class. At the following link you can find a description of K-means:
@@ -307,11 +308,11 @@ plot.igraph(person_person_graph,
 
 In class activity 6 you clustered students in the class by the answers to a questionaire. Create a visualization that shows the overlap between these clusters and the clusters generated in part II.
 ```{r}
+#install.packages(("ggmosaic"),repos = "http://cran.us.r-project.org")
+library(vcd)
+library(grid)
+library(ggmosaic)
 
-# Data Management
-
-library(tidyr)
-library(dplyr)
 #Load data
 
 DF1 <- read.csv("~/Desktop/2019fall/core methods in edm/assignment3-20191105/HUDK405019-clustering.csv", header=TRUE)
@@ -363,6 +364,8 @@ DF4 <- data.frame(DF2, DF3, fit$cluster)
 cluster_com<-as.data.frame(cbind(fit$cluster,fit_person_class_matrix$ cluster))
 colnames(cluster_com)<-c("Activity 6 Cluster", "Assignment 2 Cluster")
 vcd::mosaic(table(cluster_com),shade=TRUE,legend=TRUE)
+
+
 
 ```
 ## Please render your code as an .html file using knitr and Pull Resquest both your .Rmd file and .html files to the Assignment 3 repository.
