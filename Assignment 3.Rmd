@@ -1,5 +1,5 @@
 ---
-title: "Assignment 3: K Means Clustering"
+title: 'Assignment 3: K Means Clustering'
 ---
 
 In this assignment we will be applying the K-means clustering algorithm we looked at in class. At the following link you can find a description of K-means:
@@ -8,13 +8,14 @@ https://www.cs.uic.edu/~wilkinson/Applets/cluster.html
 
 
 ```{r}
-library()
+library(tidyverse)
+library(cluster)
 ```
 
 Now, upload the file "Class_Motivation.csv" from the Assignment 3 Repository as a data frame called "K1""
 ```{r}
 
-K1 <- read.csv(...)
+K1 <- read.csv("Class_Motivation.csv", header=TRUE)
 
 ```
 
@@ -26,13 +27,13 @@ The algorithm will treat each row as a value belonging to a person, so we need t
 
 ```{r}
 
-K2 <- 
+K2 <- subset(K1, select = -(id))
 
 ```
 
 It is important to think about the meaning of missing values when clustering. We could treat them as having meaning or we could remove those people who have them. Neither option is ideal. What problems do you foresee if we recode or remove these values? Write your answers below:
 
-
+Excluding missing values or replacing them with the mean can lead to loss of information or biased conclusions.It depend on the problem we are looking at and what we are trying to analyse.
 
 We will remove people with missing values for this assignment, but keep in mind the issues that you have identified.
 
@@ -47,7 +48,7 @@ Another pre-processing step used in K-means is to standardize the values so that
 
 ```{r}
 
-K3 <- 
+K3 <- scale(K3)
 
 ```
 
@@ -66,21 +67,21 @@ Also, we need to choose the number of clusters we think are in the data. We will
 
 ```{r}
 
-fit <- 
+fit <- kmeans(K3, 3)
 
 #We have created an object called "fit" that contains all the details of our clustering including which observations belong to each cluster.
 
 #We can access the list of clusters by typing "fit$cluster", the top row corresponds to the original order the rows were in. Notice we have deleted some rows.
 
-
+fit$cluster
 
 #We can also attach these clusters to the original dataframe by using the "data.frame" command to create a new data frame called K4.
 
-K4
+K4 <- data.frame(K3,fit$cluster)
 
 #Have a look at the K4 dataframe. Lets change the names of the variables to make it more convenient with the names() command.
 
-
+names(K4) <-  c("1", "2", "3", "4", "5", "Cluster")
 ```
 
 Now we need to visualize the clusters we have created. To do so we want to play with the structure of our data. What would be most useful would be if we could visualize average motivation by cluster, by week. To do this we will need to convert our data from wide to long format. Remember your old friends tidyr and dplyr!
@@ -88,14 +89,16 @@ Now we need to visualize the clusters we have created. To do so we want to play 
 First lets use tidyr to convert from wide to long format.
 ```{r}
 
-K5 <- 
+K5 <- gather(K4, Week, Motivation_Score, 1:5)
 ```
 
 Now lets use dplyr to average our motivation values by week and by cluster.
 
 ```{r}
 
-K6 <- 
+K6 <- group_by(K5, Week, Cluster)
+K6 <- summarize(K6, mean=mean(Motivation_Score))
+   
 
 ```
 
@@ -113,9 +116,9 @@ Likewise, since "cluster" is not numeric but rather a categorical label we want 
 
 ```{r}
 
-K6$week <- 
+K6$Week <- as.numeric(K6$Week)
 
-K6$cluster <- 
+K6$Cluster <- as.factor(K6$Cluster)
 
 ```
 
@@ -127,29 +130,112 @@ Now we can plot our line plot using the ggplot command, "ggplot()".
 - Finally we are going to clean up our axes labels: xlab("Week") & ylab("Average Motivation")
 
 ```{r}
-
+ggplot(K6, aes(x=Week, y=mean, group=Cluster, color=Cluster)) +
+  geom_line() +
+  xlab("Week") +
+  ylab("Average Motivation")
 
 ```
 
 What patterns do you see in the plot?
 
-
+The plot shows that the first cluster demonstrated lower level of motivation that the second in five weeks span.
 
 It would be useful to determine how many people are in each cluster. We can do this easily with dplyr.
 
 ```{r}
-K7 <- 
+K7 <- K6 %>% count(Cluster)
 ```
 
 Look at the number of people in each cluster, now repeat this process for 3 rather than 2 clusters. Which cluster grouping do you think is more informative? Write your answer below:
-
+Grouping into three clusters seems more informative as it helps to identify the group of students, who need special attention. 
 ##Part II
 
 Using the data collected for Assignment 2 (which classes students were in), cluster the students, then redraw the graph of the class but color the students according the cluster they are in.
+```{r}
+
+setwd("/Users/Admin/Desktop/Core methods in edM")
+D1 <- read_csv('hudk4050-classes.csv')
+
+D1 <- tidyr::unite(D1, Name, `Last Name`, `First Name`, sep = " ", remove = TRUE)
+D2 <- tidyr::gather(D1, course.label, course, `Class 1`, `Class 2`, `Class 3`, `Class 4`, `Class 5`, 'Class 6', na.rm = TRUE, convert = FALSE)
+D2 <- dplyr::select(D2, Name, course)
+D2 <- dplyr::filter(D2, course > 0, course != "HUDK4050")
+D2 <- dplyr::select(D2, Name, course)
+D2 <- dplyr::filter(D2, course > 0, course != "HUDK4050")
+D2$Count <- 1
+D3 <- tidyr::spread(D2, course, Count)
+
+row.names(D3) <- D3$Name
+D3$Name <- NULL
+D3 <- ifelse(is.na(D3), 0, 1)
+library(klaR)
+cl <- kmodes(D3,5,iter.max = 10, weighted=FALSE)
+cl$cluster
+D3a <- data.frame(D3,cl$cluster)
+
+D4 <- as.matrix(D3)
+D5 <- D4 %*% t(D4)
+diag(D5) <- NA
+
+
+```
+#Graphing
+```{r}
+library(igraph)
+g <- graph.adjacency(D5,mode="undirected")
+plot(g,layout=layout.fruchterman.reingold, vertex.size=3, vertex.color=D3a$cl.cluster)
+```
+
 
 ##Part III
 
 In class activity 6 you clustered students in the class by the answers to a questionaire. Create a visualization that shows the overlap between these clusters and the clusters generated in part II.
+
+```{r}
+library(cluster)
+DF1 <- read.csv("HUDK405019-clustering.csv", header = TRUE)
+DF1 <- unite(DF1, "Name", c("First.Name", "Last.Name"), sep = ".")
+row.names(DF1) <- DF1$Name
+DF1$Name <- NULL
+DF2 <- dplyr::select(DF1, 1:11)
+DF2 <- DF2 %>% mutate_all(funs(gsub("[a-zA-Z]", "", .)))
+DF2 <- DF2 %>% mutate_all(funs(as.numeric(.)))
+DF2 <- as.data.frame(scale(DF2))
+DF2 <- DF2 %>% mutate_all(funs(ifelse(is.na(.) == TRUE, 0, .)))
+DF2 <- fit <- kmeans(DF2, 3) 
+DF3 <- dplyr::select(DF1, 13:14)
+names(DF3) <- c("lattitude", "longitude")
+DF3 <- DF3 %>% mutate_all(funs(gsub("[a-zA-Z]", "", .)))
+DF3 <- DF3 %>% mutate_all(funs(sub("[?]", "", .)))
+DF3$lattitude <- sub(",.*$","", DF3$lattitude) 
+DF3$lattitude <- sub("°.*$","", DF3$lattitude)
+DF3$longitude <- gsub(".*,","",DF3$longitude)
+DF3$longitude <- sub("°.*$","", DF3$longitude)
+install.packages("plotrix")
+library(plotrix)
+cluster.overplot(x=DF3, y=D3a)
+
+
+
+```
+```
+ 
+#Replace missing values with average score EG - zero
+
+```
+```{r}
+
+```
+
+# Find lattitudes & longitudes for cities
+```{r}
+
+
+
+
+```{r}
+
 
 ## Please render your code as an .html file using knitr and Pull Resquest both your .Rmd file and .html files to the Assignment 3 repository.
 
