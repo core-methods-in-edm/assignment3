@@ -1,5 +1,5 @@
 ---
-title: "Assignment 3: K Means Clustering"
+title: 'Assignment 3: K Means Clustering'
 ---
 
 In this assignment we will be applying the K-means clustering algorithm we looked at in class. At the following link you can find a description of K-means:
@@ -9,12 +9,21 @@ https://www.cs.uic.edu/~wilkinson/Applets/cluster.html
 
 ```{r}
 library()
+library (tidyr)
+library(dplyr)
+#install.packages("tidyverse")
+library(tidyverse)
+
+
+
+#set.seed(3)
 ```
 
 Now, upload the file "Class_Motivation.csv" from the Assignment 3 Repository as a data frame called "K1""
 ```{r}
 
-K1 <- read.csv(...)
+K1 <- read.csv("Class_Motivation.csv")
+#install.packages("klaR")
 
 ```
 
@@ -26,7 +35,8 @@ The algorithm will treat each row as a value belonging to a person, so we need t
 
 ```{r}
 
-K2 <- 
+K2 <- K1[,-1]
+#taking all columns and removing the first column. 
 
 ```
 
@@ -47,7 +57,7 @@ Another pre-processing step used in K-means is to standardize the values so that
 
 ```{r}
 
-K3 <- 
+K3 <- scale(K3)
 
 ```
 
@@ -66,20 +76,24 @@ Also, we need to choose the number of clusters we think are in the data. We will
 
 ```{r}
 
-fit <- 
+fit <- kmeans (K3, 3) 
+#grouping 2 clusters from K3
 
 #We have created an object called "fit" that contains all the details of our clustering including which observations belong to each cluster.
 
 #We can access the list of clusters by typing "fit$cluster", the top row corresponds to the original order the rows were in. Notice we have deleted some rows.
 
 
+fit$cluster
+
+#fit <-- list the clusters 
 
 #We can also attach these clusters to the original dataframe by using the "data.frame" command to create a new data frame called K4.
 
-K4
+K4 <- data.frame(K3,fit$cluster) 
 
 #Have a look at the K4 dataframe. Lets change the names of the variables to make it more convenient with the names() command.
-
+names(K4)<- c("1","2", "3", "4", "5", "Cluster")
 
 ```
 
@@ -88,15 +102,16 @@ Now we need to visualize the clusters we have created. To do so we want to play 
 First lets use tidyr to convert from wide to long format.
 ```{r}
 
-K5 <- 
+K5 <- gather(K4, Week, Motivation_Score, "1","2","3","4","5")
 ```
 
 Now lets use dplyr to average our motivation values by week and by cluster.
 
 ```{r}
+#group by, summarize, and average 
+K5.5 <- group_by(K5, Week, Cluster)
 
-K6 <- 
-
+K6 <-summarise(K5.5,mean=mean(Motivation_Score))
 ```
 
 Now it's time to do some visualization: 
@@ -113,9 +128,9 @@ Likewise, since "cluster" is not numeric but rather a categorical label we want 
 
 ```{r}
 
-K6$week <- 
+K6$week <- as.numeric(K6$Week)
 
-K6$cluster <- 
+K6$cluster <- as.factor(K6$Cluster)
 
 ```
 
@@ -127,29 +142,106 @@ Now we can plot our line plot using the ggplot command, "ggplot()".
 - Finally we are going to clean up our axes labels: xlab("Week") & ylab("Average Motivation")
 
 ```{r}
-
+ggplot(K6, aes (x=week, y=mean, group=Cluster))+
+geom_line()
 
 ```
 
 What patterns do you see in the plot?
 
+```{r}
+#From the graph, you can see that week 1 and 3 display higher motivation. In comparison, week 2, 4, and 5 have low rate of motivation. 
+```
 
 
 It would be useful to determine how many people are in each cluster. We can do this easily with dplyr.
 
 ```{r}
-K7 <- 
+K7 <- K6 %>% count(Cluster)
 ```
 
 Look at the number of people in each cluster, now repeat this process for 3 rather than 2 clusters. Which cluster grouping do you think is more informative? Write your answer below:
+```{r}
+#Grouping by 2 clusters is significantly more informative than grouping by 3. It is visually pleasing and the differences are easily identifiable. 
+```
+
 
 ##Part II
 
 Using the data collected for Assignment 2 (which classes students were in), cluster the students, then redraw the graph of the class but color the students according the cluster they are in.
+```{r}
+
+library("igraph")
+classdata <- read.csv("hudk4050-classes.csv",header=TRUE, na.strings = "")
+
+classdata2 <- classdata%>%gather(classtype, coursename, Class.1, Class.2, Class.3, Class.4, Class.5, Class.6) %>% dplyr::select(-c(classtype)) %>% filter(First.Name != "ZIMO")
+
+#dylyr:: calling dyplr for this line. 
+
+classdata3 <- classdata2%>%unite(Name,First.Name,Last.Name,sep = "_")
+
+classdata3$coursename <- gsub(" ", "", classdata3$coursename)
+
+classdata3$count <-1
+classdata3 <- classdata3 %>% filter(coursename != "HUDK4050")
+classdata4 <- classdata3 %>% spread(coursename, count)
+row.names(classdata4) <- classdata4$Name
+classdata4$Name <- NULL
+classdata4 <- ifelse (is.na(classdata4), 0, 1)
+
+classmatrix <- as.matrix(classdata4)
+classmatrixa  <- t(classmatrix) 
+classmatrix2 <- classmatrix%*%classmatrixa
+diag(classmatrix2) <- NA
+
+classgraph <- graph.adjacency(classmatrix2, mode = "undirected")
+
+plot(classgraph,layout=layout.fruchterman.reingold, vertex.size=5)
+
+degree(classgraph)
+betweenness(classgraph)
+
+which.max(degree(classgraph))
+which.max(betweenness(classgraph))
+
+library(klaR)
+fit2 <- kmodes (classdata3, 2) 
+
+fit2$cluster
+
+
+
+```
+
 
 ##Part III
 
 In class activity 6 you clustered students in the class by the answers to a questionaire. Create a visualization that shows the overlap between these clusters and the clusters generated in part II.
 
 ## Please render your code as an .html file using knitr and Pull Resquest both your .Rmd file and .html files to the Assignment 3 repository.
+```{r}
+
+
+DF1 <- read.csv("HUDK405019-clustering.csv")
+
+DF1 <- unite(DF1, "Name", c("First.Name","Last.Name"), sep =" ")
+
+row.names (DF1) <-DF1$Name
+DF1$Name <- NULL
+
+DF2 <- DF1[1:11]
+DF2 <- DF2 %>% mutate_all(funs(gsub("[a-zA-Z]", " ", .)))
+DF2 <- DF2 %>% mutate_all(funs(as.numeric(.)))
+DF2 <- as.data.frame (scale(DF2))
+
+DF2 <- DF2 %>% mutate_all(funs(ifelse(is.na(.) == TRUE, 0, .)))
+
+fit3 <- kmeans(DF2, 2)
+fit3$cluster
+
+
+
+
+
+```
 
