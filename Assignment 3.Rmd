@@ -66,7 +66,7 @@ Also, we need to choose the number of clusters we think are in the data. We will
 ```{r}
 library(klaR)
 
-fit <- kmeans(K3,2)
+fit <- kmeans(K3,3)
 
 #We have created an object called "fit" that contains all the details of our clustering including which observations belong to each cluster.
 
@@ -138,15 +138,16 @@ ggplot(K6,aes(week, avg_motivation, colour = cluster)) + geom_line() + xlab("Wee
 
 What patterns do you see in the plot?
 
-The pattern of motivation in cluster 1 is the inverse of the pattern for cluster 2.
+#The pattern of motivation in cluster 1 is the roughly inverse of the pattern for cluster 2.
 
 It would be useful to determine how many people are in each cluster. We can do this easily with dplyr.
 
 ```{r}
-K7 <- 
+K7 <- data.frame(K6, fit$size)
 ```
 
 Look at the number of people in each cluster, now repeat this process for 3 rather than 2 clusters. Which cluster grouping do you think is more informative? Write your answer below:
+#Group 3 is more important because it has the most people. There are relatively few in groups 1 and 2.  
 
 ##Part II
 
