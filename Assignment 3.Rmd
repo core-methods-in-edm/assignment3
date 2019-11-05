@@ -8,7 +8,7 @@ https://www.cs.uic.edu/~wilkinson/Applets/cluster.html
 
 
 ```{r}
-install.packages("klaR")
+install.packages(("klaR"),repos = "http://cran.us.r-project.org")
 library("cluster")
 library("dplyr")
 library("klaR")
@@ -216,14 +216,15 @@ Using the data collected for Assignment 2 (which classes students were in), clus
 
 raw_data <- read.csv("~/Desktop/2019fall/core methods in edm/assignment2/assignment 1015/hudk4050-classes.csv")
 #select useful columns
-#install.packages("tidyverse")#,repos = "http://cran.us.r-project.org")
-#install.packages("tidyr")#,repos = "http://cran.us.r-project.org")
+install.packages(("tidyverse"),repos = "http://cran.us.r-project.org")
+install.packages(("tidyr"),repos = "http://cran.us.r-project.org")
 library(tidyr)
-#install.packages("dplyr")#,repos = "http://cran.us.r-project.org")
+install.packages(("dplyr"),repos = "http://cran.us.r-project.org")
 data_new<-unite(raw_data, Name, "First.Name","Last.Name", sep = " ")
 data_new
 rownames(data_new) <- data_new$Name
-class <- data_new %>% select(Student_name = 'Name',
+class <- data_new %>% 
+  dplyr::select(Student_name = 'Name',
                               Class1 = 'Class.1',
                               Class2 = 'Class.2',
                               Class3 = 'Class.3',
@@ -237,7 +238,7 @@ person_class <- class %>%
   gather(key = class,
          value = course_num,
          c(Class1, Class2, Class3, Class4, Class5, Class6), -Student_name) %>%
-  select(Student_name, course_num) %>%
+  dplyr::select(Student_name, course_num) %>%
   filter(!is.na(course_num)) %>%
   arrange(Student_name)
   
@@ -269,7 +270,8 @@ person_class<- person_class %>%
 #Yah! It seems that we have a cleaned data now!😄🎉
 inclass<-ifelse(person_class$course_num=="",person_class$inclass<-0,person_class$inclass<-1)
 DF<-person_class[!person_class$course_num=="",]
-DF<-spread(DF,course_num,inclass,fill=0)
+DF<-DF%>%
+  tidyr::spread(course_num,inclass,fill=0)
 ```
 ```{r}
 library(klaR)
@@ -286,8 +288,8 @@ row.names(person_class_matrix)<-DF$Student_name
 person_person_matrix <- person_class_matrix%*%class_person_matrix
 #Change the diagonals to NA becasue they won't connect to themselves
 diag(x = person_person_matrix) <- NA
-fit_person_class_matrix<-kmodes(person_class_matrix,4)
-fit_person_class_matrix
+fit_person_class_matrix<-kmodes(person_class_matrix,2)
+fit_person_class_matrix$ cluster
 person_person_graph <- graph_from_adjacency_matrix(person_person_matrix, mode = "undirected")
 plot.igraph(person_person_graph,
             layout = layout.fruchterman.reingold,
@@ -313,79 +315,54 @@ library(dplyr)
 #Load data
 
 DF1 <- read.csv("~/Desktop/2019fall/core methods in edm/assignment3-20191105/HUDK405019-clustering.csv", header=TRUE)
+# Data Management
 
-DF1[, 3] <- gsub("[[:alpha:]]", "", DF1[, 3])
-DF1[, 6] <- gsub("[[:alpha:]]", "", DF1[, 6])
-DF1[, 7] <- gsub("[[:alpha:]]", "", DF1[, 7])
-DF1[, 3] <- as.numeric(DF1[, 3])
-DF1[, 6] <- as.numeric(DF1[, 6])
-DF1[, 7] <- as.numeric(DF1[, 7])
-DF1[, 15] <- as.character(DF1[, 15])
-DF1[, 16] <- as.character(DF1[, 16])
-rev <- grep("E", DF1[, 15])
-a <- NULL
-b <- NULL
-for (i in rev) {
-  a = DF1[i, 15]
-  b = DF1[i, 16]
-  DF1[i, 15] <- b
-  DF1[i, 16] <- a
-}
-for (j in c(15:16)){
-  for (i in 1:nrow(DF1))
-  { if (grepl("\\D", DF1[i,j]))
-  { psn <- as.numeric(regexpr("\\D", DF1[i,j]))
-    DF1[i,j] <- substr(DF1[i,j], 1, psn-1)}}
-}
-DF1[, 15] <- as.numeric(DF1[, 15])
-DF1[, 16] <- as.numeric(DF1[, 16])
-DF1 <- na.omit(DF1)
-DF1[, 15] <- as.character(DF1[, 15])
-DF1[, 16] <- as.character(DF1[, 16])
-#Convert the index numbers of the data fram into the student names.
-DF2 <- unite(DF1, "First.Name", "Last.Name", col = name, sep = "_")
-row.names(DF2) = DF2$name
-DF2$name <- NULL
-# Wrangle data using dplyr to include only the numerical values.
-select_if(DF2, is.numeric)
-names(select_if(DF2, is.numeric))
-DF3 <- dplyr::select(DF2, "How.many.months.have.you.lived.in.New.York.City.", "How.many.siblings..brothers.sisters..do.you.have.",  "How.many.times.do.you.play.sport.each.week.", "How.many.miles.do.you.travel.from.home.to.TC.", "Estimate.how.many.of.your.friends.own.Android.phones",  "How.many.movies.have.you.seen.in.the.cinema.this.year.", "How.many.pets.have.you.owned.in.your.life.",  "How.many.people.have.you.met.for.the.first.time.this.year.",   "How.many.time.do.you.cook.for.yourself.each.week.", "How.many.classes.are.you.taking.this.semester.")
+library(tidyr)
+library(dplyr)
+#Load data
+#Convert the index numbers of the data frame into the student names.
+DF1 <- unite(DF1, "Name", c("First.Name", "Last.Name"), sep = ".")
+row.names(DF1) <- DF1$Name
+DF1$Name <- NULL
+#Wrangle data using dplyr to include only the numerical values.
+#Remove location variables
+DF2 <- DF1%>%
+  dplyr::select( 1:11)
+#Remove any characters
+DF2 <- DF2 %>% mutate_all(funs(gsub("[a-zA-Z]", "", .)))
+#Convert all variables to numeric
+DF2 <- DF2 %>% mutate_all(funs(as.numeric(.)))
 #Scale the data so that no variable has undue influence
-DF3 <- scale(DF3)
-# Start with 4 clusters
-fit3 <- kmeans(DF3, 4) 
-fit3$cluster
-K34 <- data.frame(DF3, fit3$cluster)
-names(K34) <- c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "cluster") 
-# Visualize clusters overlap:
-# Combining data for location:
-DF4 <- data.frame(K34, DF1[15])
-DF5 <- data.frame(DF4, DF1[16])
-colnames(DF5) <- c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "cluster", "la", "lo")
-# Match two sets of data so that each element is in both dataset
-DF35 <- DF5[row.names(DF5) %in% row.names(DC), ]
-DC36 <- DC[row.names(DC) %in% row.names(DF35), ]
-DF35$name <- rownames(DF35)
-DC36$name <- rownames(DC36)
-# Begin to plot
-# First Choice: mosaic
-#install.packages("vcd")
-library(vcd)
-Cluster_Region <-DF35$cluster
-Cluster_Classes <-DC36$cluster
+DF2 <- as.data.frame(scale(DF2))
+ 
+#Replace missing values with average score EG - zero
+DF2 <- DF2 %>% mutate_all(funs(ifelse(is.na(.) == TRUE, 0, .)))
 
-###I don't know from here 
-A1 <- structable(Cluster_Region ~ Cluster_Classes)
-mosaic(A1, shade = TRUE, legend = TRUE)
-# Second Choice: ggplot using pch and col to represent different clusters
-B1 <- cbind(DF35$cluster, DC36$cluster, DF35$name)
-colnames(B1) = c("DF35.cluster", "DC36.cluster", "name")
-B1 <- as.data.frame(B1)
-ggplot(B1, aes(name, DF35.cluster, color = as.factor(DF35.cluster), shape = as.factor(DC36.cluster))) +
-  geom_point(size = 3) +
-  xlab("Name") + 
-  ylab("Cluster") + 
-  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+DF3 <- DF1%>%
+  dplyr::select( 13:14)
+#Change names for convenience
+names(DF3) <- c("lattitude", "longitude")
+#Remove any characters and common punctuation
+DF3 <- DF3 %>% mutate_all(funs(gsub("[a-zA-Z]", "", .)))
+DF3 <- DF3 %>% mutate_all(funs(sub("[?]", "", .)))
+#Remove anything after the first non-numeric character in lattitude
+DF3$lattitude <- sub(",.*$","", DF3$lattitude) 
+DF3$lattitude <- sub("°.*$","", DF3$lattitude)
+#Remove anything before the first non-numeric character in longitude
+DF3$longitude <- gsub(".*,","",DF3$longitude)
+DF3$longitude <- sub("°.*$","", DF3$longitude)
+#Convert all variables to numeric
+DF3 <- DF3 %>% mutate_all(funs(as.numeric(.)))
+
+fit <- kmeans(DF2, 2) 
+
+fit$cluster
+
+DF4 <- data.frame(DF2, DF3, fit$cluster)
+
+cluster_com<-as.data.frame(cbind(fit$cluster,fit_person_class_matrix$ cluster))
+colnames(cluster_com)<-c("Activity 6 Cluster", "Assignment 2 Cluster")
+vcd::mosaic(table(cluster_com),shade=TRUE,legend=TRUE)
 
 ```
 ## Please render your code as an .html file using knitr and Pull Resquest both your .Rmd file and .html files to the Assignment 3 repository.
