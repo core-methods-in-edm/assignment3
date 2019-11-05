@@ -1,5 +1,7 @@
 ---
-title: "Assignment 3: K Means Clustering"
+title: 'Assignment 3: K Means Clustering'
+author: "Joellyn Heng"
+date: "5 November 2019"
 ---
 
 In this assignment we will be applying the K-means clustering algorithm we looked at in class. At the following link you can find a description of K-means:
@@ -7,14 +9,17 @@ In this assignment we will be applying the K-means clustering algorithm we looke
 https://www.cs.uic.edu/~wilkinson/Applets/cluster.html
 
 
-```{r}
-library()
+```{r setup, include=FALSE}
+library(tidyr)
+library(dplyr)
+library(klaR)
+library(igraph)
 ```
 
-Now, upload the file "Class_Motivation.csv" from the Assignment 3 Repository as a data frame called "K1""
+Now, upload the file "Class_Motivation.csv" from the Assignment 3 Repository as a data frame called "K1".
 ```{r}
 
-K1 <- read.csv(...)
+K1 <- read.csv("Class_Motivation.csv")
 
 ```
 
@@ -26,13 +31,16 @@ The algorithm will treat each row as a value belonging to a person, so we need t
 
 ```{r}
 
-K2 <- 
+K2 <- K1 %>%
+  dplyr::select(-id)
 
 ```
 
 It is important to think about the meaning of missing values when clustering. We could treat them as having meaning or we could remove those people who have them. Neither option is ideal. What problems do you foresee if we recode or remove these values? Write your answers below:
 
+*The likelihood that data is missing at random is low. Most often, the missing values are either dependent on the hypothetical value (i.e. the higher values are missing because respondents with that feature do not want to reveal it) or dependent on another variable's value (e.g. respondents with particular variable do not want to reveal it). Hence, removing missing values result in biased estimates and parameters.* 
 
+*Recoding values could be better than removing them entirely. However different imputation methods may result in different problems too. For example, the most straightforward method of using mean, median or mode may reduce the variance in the dataset, whereas using linear regression may result in over-fitting and reduced standard error.*
 
 We will remove people with missing values for this assignment, but keep in mind the issues that you have identified.
 
@@ -47,7 +55,9 @@ Another pre-processing step used in K-means is to standardize the values so that
 
 ```{r}
 
-K3 <- 
+K3 <- scale(K3)
+# scale (i.e. standardize)  consists of transforming the variables such that they have mean zero and standard deviation one
+# Question: does that mean that scale() looks at the values across each column? What happens if the column is about motivation from 1-10, but students have values that are min=1 and max=3 - scale wouldn't be able to detect that the actual max is 10?
 
 ```
 
@@ -66,20 +76,22 @@ Also, we need to choose the number of clusters we think are in the data. We will
 
 ```{r}
 
-fit <- 
+fit <- kmeans(K3, 2) 
 
 #We have created an object called "fit" that contains all the details of our clustering including which observations belong to each cluster.
 
 #We can access the list of clusters by typing "fit$cluster", the top row corresponds to the original order the rows were in. Notice we have deleted some rows.
 
-
+fit$cluster
 
 #We can also attach these clusters to the original dataframe by using the "data.frame" command to create a new data frame called K4.
 
-K4
+
+K4 <- data.frame(K3, fit$cluster)
 
 #Have a look at the K4 dataframe. Lets change the names of the variables to make it more convenient with the names() command.
 
+names(K4) <- c("1", "2", "3", "4", "5", "cluster")
 
 ```
 
@@ -88,14 +100,19 @@ Now we need to visualize the clusters we have created. To do so we want to play 
 First lets use tidyr to convert from wide to long format.
 ```{r}
 
-K5 <- 
+K5 <- K4 %>%
+  gather(WeekNo, Motivation, 1:5) %>%
+  arrange(cluster)
+  
 ```
 
 Now lets use dplyr to average our motivation values by week and by cluster.
 
 ```{r}
 
-K6 <- 
+K6 <- K5 %>%
+  group_by(cluster, WeekNo) %>%
+  summarise(mean(Motivation))
 
 ```
 
@@ -113,9 +130,11 @@ Likewise, since "cluster" is not numeric but rather a categorical label we want 
 
 ```{r}
 
-K6$week <- 
+K6$WeekNo <- as.numeric(K6$WeekNo)
 
-K6$cluster <- 
+K6$cluster <- as.factor(K6$cluster)
+
+names(K6) <- c("Cluster", "WeekNo","AveMotivation")
 
 ```
 
@@ -127,29 +146,192 @@ Now we can plot our line plot using the ggplot command, "ggplot()".
 - Finally we are going to clean up our axes labels: xlab("Week") & ylab("Average Motivation")
 
 ```{r}
-
+library(ggplot2)
+ggplot(K6, aes(x=WeekNo, y=AveMotivation, color=K6$Cluster)) + geom_line() +xlab("Week") + ylab("Average Motivation") 
 
 ```
 
 What patterns do you see in the plot?
 
+*Cluster 1 and 2 are moving in opposite directions in average motivation levels across the 5 weeks, with the trend lines mirroring each other.*
 
 
 It would be useful to determine how many people are in each cluster. We can do this easily with dplyr.
 
 ```{r}
-K7 <- 
+
+K4$count <- 1
+
+K7 <- K4 %>%
+  group_by(fit$cluster) %>%
+  summarise(sum(count)) 
+
+K7
+
 ```
 
 Look at the number of people in each cluster, now repeat this process for 3 rather than 2 clusters. Which cluster grouping do you think is more informative? Write your answer below:
+
+```{r repeat for 3 clusters}
+
+fit_ <- kmeans(K3, 3) 
+
+fit_$cluster
+
+K4_ <- data.frame(K3, fit_$cluster)
+
+#Have a look at the K4 dataframe. Lets change the names of the variables to make it more convenient with the names() command.
+
+names(K4_) <- c("1", "2", "3", "4", "5", "cluster")
+
+K5_ <- K4_ %>%
+  gather(WeekNo, Motivation, 1:5) %>%
+  arrange(cluster)
+
+K6_ <- K5_ %>%
+  group_by(cluster, WeekNo) %>%
+  summarise(mean(Motivation))
+
+K6_$WeekNo <- as.numeric(K6_$WeekNo)
+
+K6_$cluster <- as.factor(K6_$cluster)
+
+names(K6_) <- c("Cluster", "WeekNo", "AveMotivation")
+
+ggplot(K6_, aes(x=WeekNo, y=AveMotivation, color=K6_$Cluster)) + geom_line() +xlab("Week") + ylab("Average Motivation") 
+
+K4_$count <- 1
+
+K7_ <- K4_ %>%
+  group_by(cluster) %>%
+  summarise(sum(count)) 
+
+```
+
+*I think this cluster grouping is more informative than the other, as we can see 3 clusters having average motivation levels at varying levels and direction across the 5 weeks. Reducing it to 2 clusters may reduce the variability in motivation  at the individual student level.*
 
 ##Part II
 
 Using the data collected for Assignment 2 (which classes students were in), cluster the students, then redraw the graph of the class but color the students according the cluster they are in.
 
+```{r from assignment2}
+
+DF_class <- read.csv("Data/hudk4050-classes.csv")
+#why is it sometimes I have to type "dplyr::"? Shows error for select() if I don't.
+
+DF_class <- DF_class %>%
+  dplyr::select("First_N" = Q8, "Last_N" = Q9, "UNI" = Q10, "Class 1" = Q1, "Class 2" = Q3, "Class 3" = Q4, "Class 4" = Q5, "Class 5" = Q6, "Class 6" = Q7) %>%
+  unite(Name, First_N, Last_N, sep = " ")
+
+DF_class <- DF_class[-c(1,2), ]
+
+for (i in 3:8){
+  DF_class[,i] <- gsub( " ", "", DF_class[,i]) 
+}
+
+DF_class[DF_class=="4050"] <- "HUDK4050"
+DF_class[DF_class=="4125"] <- "HUDM4125"
+DF_class[DF_class=="QMSS-5072"] <- "QMSS5072"
+DF_class[DF_class=="5126"] <- "HUDM5126"
+DF_class[DF_class== c("G5067", "QMSSGR5067")] <- "QMSS5067"
+DF_class[DF_class=="G5072"] <- "QMSS5072"
+DF_class[DF_class=="HUDK4050"] <- ""
+
+
+DF_class <- gather(DF_class, ClassNo, Classes, 3:8)
+DF_class <- DF_class[order(DF_class$Name),]
+
+DF_class <- DF_class[!(DF_class$Classes == ""), ] %>%
+  dplyr::select(Name, Classes)
+
+DF_class$attend <- 1
+
+DF_class <- DF_class %>%
+  spread(Classes, attend) 
+
+DF_class[is.na(DF_class)] <- 0
+
+DF_class$Name <- toupper(DF_class$Name)
+
+rownames(DF_class) <- DF_class$Name
+
+DF_class <- DF_class %>%
+  dplyr::select(-Name)
+
+DF_class_matrix <- as.matrix(DF_class)
+adj_matrix <- DF_class_matrix %*% t(DF_class_matrix)
+diag(adj_matrix) <- NA
+
+```
+
+```{r kmodes clustering and graphing, warning= FALSE}
+
+fit2 <- kmodes(DF_class, 5)
+fit2$cluster
+
+g <- graph.adjacency(adj_matrix,mode="undirected")
+
+plot(g,layout=layout.fruchterman.reingold, vertex.size=8, vertex.color=fit2$cluster)
+
+```
+
 ##Part III
 
 In class activity 6 you clustered students in the class by the answers to a questionaire. Create a visualization that shows the overlap between these clusters and the clusters generated in part II.
 
-## Please render your code as an .html file using knitr and Pull Resquest both your .Rmd file and .html files to the Assignment 3 repository.
+```{r from assignment 2, warning=FALSE}
+
+#Load data
+DF1 <- read.csv("Data/HUDK405019-clustering.csv", header = TRUE)
+
+#Convert the index numbers of the data frame into the student names.
+
+DF1 <- unite(DF1, "Name", c("First.Name", "Last.Name"), sep = " ")
+
+DF1$Name <- toupper(DF1$Name)
+
+row.names(DF1) <- DF1$Name 
+
+DF1$Name <- NULL
+
+#Wrangle data using dplyr to include only the numerical values.
+
+#Remove location variables
+DF2 <- dplyr::select(DF1, 1:11)
+
+#Remove any characters
+DF2 <- DF2 %>% mutate_all(funs(gsub("[a-zA-Z]", "", .)))
+
+#Convert all variables to numeric
+DF2 <- DF2 %>% mutate_all(funs(as.numeric(.)))
+
+#Scale the data so that no variable has undue influence
+DF2 <- as.data.frame(scale(DF2))
+ 
+#Replace missing values with average score EG - zero
+DF2 <- DF2 %>% mutate_all(funs(ifelse(is.na(.) == TRUE, 0, .)))
+
+fit3 <- kmodes(DF2, 5)
+
+```
+
+```{r}
+
+#Find the students that filled up both surveys. Turns out there are only 32.
+commonstuds <- intersect(rownames(DF1), rownames(DF_class))
+
+DF_class_2 <- DF_class[commonstuds,]
+DF1_2 <- DF1[commonstuds,]
+
+fit4 <- kmodes(DF_class_2, 5)
+fit5 <- kmodes(DF1_2, 5)
+
+overlap <- data.frame(row.names(DF_class_2), fit4$cluster, fit5$cluster)
+row.names(overlap) <- overlap$row.names.DF_class_2.
+overlap$row.names.DF_class_2. <- NULL
+overlap$overlap <- ifelse(overlap$fit4.cluster == overlap$fit5.cluster, 1, 0 )
+
+overlap
+
+```
 
