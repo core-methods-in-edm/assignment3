@@ -1,5 +1,5 @@
 ---
-title: "Assignment 3: K Means Clustering"
+title: 'Assignment 3: K Means Clustering'
 ---
 
 In this assignment we will be applying the K-means clustering algorithm we looked at in class. At the following link you can find a description of K-means:
@@ -8,13 +8,15 @@ https://www.cs.uic.edu/~wilkinson/Applets/cluster.html
 
 
 ```{r}
-library()
+#install.packages("klaR")
+library(klaR)
+set.seed(123)
 ```
 
 Now, upload the file "Class_Motivation.csv" from the Assignment 3 Repository as a data frame called "K1""
 ```{r}
 
-K1 <- read.csv(...)
+K1 <- read.csv("Class_Motivation.csv")
 
 ```
 
@@ -25,14 +27,17 @@ But before we do that, we will need to manipulate the data frame into a structur
 The algorithm will treat each row as a value belonging to a person, so we need to remove the id variable.
 
 ```{r}
+#install.packages("tidyverse")
+library(tidyr)
+library(dplyr)
 
-K2 <- 
+K2 <-dplyr::select(K1,c(2:6))
 
 ```
 
 It is important to think about the meaning of missing values when clustering. We could treat them as having meaning or we could remove those people who have them. Neither option is ideal. What problems do you foresee if we recode or remove these values? Write your answers below:
 
-
+It will affect the how to generate the cluster. 
 
 We will remove people with missing values for this assignment, but keep in mind the issues that you have identified.
 
@@ -47,7 +52,7 @@ Another pre-processing step used in K-means is to standardize the values so that
 
 ```{r}
 
-K3 <- 
+K3 <-scale(K3)
 
 ```
 
@@ -66,20 +71,20 @@ Also, we need to choose the number of clusters we think are in the data. We will
 
 ```{r}
 
-fit <- 
+fit <-kmeans(K3,3)
 
 #We have created an object called "fit" that contains all the details of our clustering including which observations belong to each cluster.
 
 #We can access the list of clusters by typing "fit$cluster", the top row corresponds to the original order the rows were in. Notice we have deleted some rows.
 
-
+fit$cluster
 
 #We can also attach these clusters to the original dataframe by using the "data.frame" command to create a new data frame called K4.
 
-K4
+K4<-data.frame(K3,fit$cluster)
 
 #Have a look at the K4 dataframe. Lets change the names of the variables to make it more convenient with the names() command.
-
+colnames(K4)<-c("week1","week2","week3","week4","week5","cluster")
 
 ```
 
@@ -88,14 +93,18 @@ Now we need to visualize the clusters we have created. To do so we want to play 
 First lets use tidyr to convert from wide to long format.
 ```{r}
 
-K5 <- 
+K5 <-gather(K4,week,motivation,1:5) 
+K5$week <- as.factor(K5$week)
+K5<-data.frame(K5)
+is.data.frame(K5)
 ```
 
 Now lets use dplyr to average our motivation values by week and by cluster.
 
 ```{r}
 
-K6 <- 
+K6 <-K5%>%group_by(week,cluster)%>%summarise(mean=mean(motivation))
+#K7<-K5%>%group_by(cluster)%>%summarise(mean=mean(motivation))
 
 ```
 
@@ -113,9 +122,9 @@ Likewise, since "cluster" is not numeric but rather a categorical label we want 
 
 ```{r}
 
-K6$week <- 
+K6$week <-as.factor(K6$week) 
 
-K6$cluster <- 
+K6$cluster <-as.factor(K6$cluster) 
 
 ```
 
@@ -127,29 +136,189 @@ Now we can plot our line plot using the ggplot command, "ggplot()".
 - Finally we are going to clean up our axes labels: xlab("Week") & ylab("Average Motivation")
 
 ```{r}
-
-
+#install.packages("ggplot2")
+library(ggplot2)
+plot<-ggplot(K6,aes(x=week,y=mean,color=cluster,group=cluster))+geom_line()+xlab("Week")+ylab("Average Motivation")
+plot
 ```
 
 What patterns do you see in the plot?
 
-
+cluster 1 has the positive motivation while cluster 2 has negative motivation.
 
 It would be useful to determine how many people are in each cluster. We can do this easily with dplyr.
 
 ```{r}
-K7 <- 
+K7 <-dplyr::count(K4,cluster) 
 ```
 
 Look at the number of people in each cluster, now repeat this process for 3 rather than 2 clusters. Which cluster grouping do you think is more informative? Write your answer below:
 
+I believe is 2 clusters. Because if we do three cluster, cluster 1 & 2 has overlap for week 4 & 5 (cluster 1 mean go straight down and cluster 2 mean goes up) and it doesn't make sense to me.
 ##Part II
 
 Using the data collected for Assignment 2 (which classes students were in), cluster the students, then redraw the graph of the class but color the students according the cluster they are in.
+```{r}
+hudk4050.classes <- read.csv("hudk4050-classes.txt", header=FALSE)
+data<-dplyr::select(hudk4050.classes,V20,V21,V22,V23,V24,V25,V26)
+data <- data.frame(lapply(data, function(x) {
+                     gsub(" ", "", x)
+     }))
+data<-data[-c(1,2,3),]
+library(tidyr)
+library(dplyr)
+Name<-data[,1]
+#data[,1]<-c(1:53)
+colnames(data)<-c("Name","Class 1","Class 2","Class 3","Class 4","Class 5","Class 6")
+row.names(data)<-Name
+data<-data.frame(lapply(data,gsub,pattern="@.*",replacement="")) #one person write down the email, has to delete everyting after @
+#install.packages("klaR")
+
+#install.packages("igraph")
+library(igraph)
+
+library(klaR)
+kmode<-kmodes(data,4,iter.max=10,weighted=FALSE)
+cluster1<-kmode$cluster
+
+data<-data[-c(1,2,3),]
+Name<-data[,1]
+#data[,1]<-c(1:53)
+colnames(data)<-c("Name","Class 1","Class 2","Class 3","Class 4","Class 5","Class 6")
+datatran<-gather(data,"Class Number","ClassName",2:7)
+datatran<-datatran[,-2] #remove col class number
+datatran<-filter(datatran,ClassName> 0,ClassName!="HUDK4050")
+datatran$count<-1
+dataaa<-spread(datatran,ClassName,count,fill=0)
+#row.names(dataaa)<-Name
+dataaa<-dataaa[,-1]
+datafinal<-as.matrix(dataaa)
+adj<-datafinal %*%t(datafinal)
+diag(adj)<-0
+g <- graph.adjacency(adj,mode="undirected")
+plot(g,layout=layout.fruchterman.reingold, vertex.size=5, vertex.color=cluster1,margin=0.01)
+#create Dataframe that only contain name and cluster
+fullname<-dplyr::select(hudk4050.classes,V18,V19) #select name (in order to have a space between first and last name, has to run after gsub)
+fullname<-tidyr::unite(fullname,name,"V18","V19",sep=" ") 
+fullname<-fullname[-c(1,2,3),]
+datacluster1<-data.frame(fullname,cluster1)
+colnames(datacluster1)<-c("name","cluster1")
+#rownames(datacluster1)<-datacluster1$fullname #name into index
+#datacluster1<-select(datacluster1,"cluster1")
+
+```
+
 
 ##Part III
 
 In class activity 6 you clustered students in the class by the answers to a questionaire. Create a visualization that shows the overlap between these clusters and the clusters generated in part II.
+```{r}
+#Load data
+DF1 <-read.csv("~/Desktop/hudk4050/class activity/HUDK405019-clustering.csv", stringsAsFactors=FALSE)
+
+#Convert the index numbers of the data frame into the student names.
+#install.packages("tidyverse")
+library(dplyr)
+library(tidyr)
+DF1<-unite(DF1,name,"First.Name","Last.Name",sep=" ") 
+row.names(DF1)<-DF1$name
+colnames(DF1)<-c(1:15)
+
+#Wrangle data using dplyr to include only the numerical values.
+DF2<-dplyr::select(DF1,c(2:12)) #rename
+
+DF2<-data.frame(lapply(DF2, gsub, pattern="\\D", replacement="")) #convert non digit to nothing
+DF2<-lapply(DF2, as.character) #need to convert to character first before numeric
+
+#levels(DF3)[levels(DF3)==""] <- NA
+#DF3[which(DF3=="")]<-0
+
+#DF2<-lapply(DF2, as.numeric)
+
+for (i in 1:11){
+  a<-length(DF2[[i]])
+  for (j in 1:a){
+    if (DF2[[i]][j]==""){
+      DF2[[i]][j]<-0
+      b<-mean(as.numeric(DF2[[i]]))
+      DF2[[i]][j]<-b
+    }
+  }
+}
+
+#DF2%>%mutate_all(as.character)%>%mutate_all(as.numeric)
+
+DF2<-data.frame(DF2)
+indx <- sapply(DF2, is.factor)
+DF2[indx] <- lapply(DF2[indx], function(x) as.numeric(as.character(x))) #convert to numeric
+
+colnames(DF2)<-c("month live in NYC","# siblings","# sport each week","distance to TC","#friend on phone","# movies","#pet own","#people met this year","#cook","#class taking","#states traveled")
+
+#numberic??????? easy way to convert whole graph to numeric
+#Scale the data so that no variable has undue influence
+
+DF2 <- scale(DF2)
+ 
+```
+
+
+
+```{r}
+#install.packages("ggplot2")
+library(ggplot2)
+fit <- kmeans(DF2, 4) 
+
+#We have created an object called "fit" that contains all the details of our clustering including which observations belong to each cluster.
+
+#We can access the list of clusters by typing "fit$cluster", the top row corresponds to the original order the rows were in. Notice we have deleted some rows.
+
+cluster2<-fit$cluster
+
+#We can also attach these clusters to tje original dataframe by using the "data.frame" command to create a new data frame called K4.
+
+DF3 <- data.frame(DF2,cluster2)
+
+#Have a look at the DF3 dataframe. Lets change the names of the variables to make it more convenient with the names() command.
+
+names(DF3) <- c("1", "2", "3", "4", "5","6","7","8","9","10","11","cluster2")
+row.names(DF3)<-DF1$"1"
+datacluster2<-dplyr::select(DF3,"cluster2") #only want name & cluster easy to combine
+name1<-DF1$"1"
+datacluster2<-data.frame(name1,datacluster2)
+#convert to upper case alphabet
+datacluster1[,1]<-toupper(datacluster1[,1])
+datacluster2[,1]<-toupper(datacluster2[,1])
+#inner join the table by name (delete the name that do not match)
+CC<-dplyr::inner_join(datacluster1,datacluster2,by=c("name"="name1"))
+graph<-table(CC$cluster1,CC$cluster2)
+CC$cluster2<-as.numeric(CC$cluster2) #convert to numeric
+CC$studentID<-c(1:33)
+#cluster 1 scatterplot+cluster2 scatterplot show the overlap
+#g1<-ggplot()+geom_point(data=CC,aes(x=CC$studentID,y=CC$cluster1,pch=16),size=5)+
+  #geom_point(data=CC,aes(x=CC$studentID,y=CC$cluster2,pch=6),size=5)+
+ # scale_shape_identity()
+  #scale_fill_discrete(breaks=c("red"))
+# in order to make the plot depend on cluster, I will gather data in order to make the plot categorize by cluster
+CC1<-CC%>%select(-name)%>%gather(cluster_type, cluster, 1:2, -studentID)
+#plot the cluster
+ggplot(data=CC1, aes(x=studentID, y=cluster, color=cluster_type, shape=cluster_type))+
+  geom_point(size=5)
+
+#try another way!
+#install.packages("vcd")
+library(vcd)
+mosaicplot(graph, color=c(2,3,4,6))
+#+scale_shape_identity()
+#c() stands for concatonate and it creates a vector of anything, in this case a vector of names.
+```
+```{r}
+#compare two cluster tried several methods
+#adj.rand.index(cluster1,cluster2)
+#HeatmapPlot(cluster1,cluster2)
+#doesn't work?
+
+```
+
 
 ## Please render your code as an .html file using knitr and Pull Resquest both your .Rmd file and .html files to the Assignment 3 repository.
 
