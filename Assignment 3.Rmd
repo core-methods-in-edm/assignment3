@@ -305,10 +305,87 @@ plot.igraph(person_person_graph,
 
 In class activity 6 you clustered students in the class by the answers to a questionaire. Create a visualization that shows the overlap between these clusters and the clusters generated in part II.
 ```{r}
+
+# Data Management
+
+library(tidyr)
+library(dplyr)
+#Load data
+
+DF1 <- read.csv("~/Desktop/2019fall/core methods in edm/assignment3-20191105/HUDK405019-clustering.csv", header=TRUE)
+
+DF1[, 3] <- gsub("[[:alpha:]]", "", DF1[, 3])
+DF1[, 6] <- gsub("[[:alpha:]]", "", DF1[, 6])
+DF1[, 7] <- gsub("[[:alpha:]]", "", DF1[, 7])
+DF1[, 3] <- as.numeric(DF1[, 3])
+DF1[, 6] <- as.numeric(DF1[, 6])
+DF1[, 7] <- as.numeric(DF1[, 7])
+DF1[, 15] <- as.character(DF1[, 15])
+DF1[, 16] <- as.character(DF1[, 16])
+rev <- grep("E", DF1[, 15])
+a <- NULL
+b <- NULL
+for (i in rev) {
+  a = DF1[i, 15]
+  b = DF1[i, 16]
+  DF1[i, 15] <- b
+  DF1[i, 16] <- a
+}
+for (j in c(15:16)){
+  for (i in 1:nrow(DF1))
+  { if (grepl("\\D", DF1[i,j]))
+  { psn <- as.numeric(regexpr("\\D", DF1[i,j]))
+    DF1[i,j] <- substr(DF1[i,j], 1, psn-1)}}
+}
+DF1[, 15] <- as.numeric(DF1[, 15])
+DF1[, 16] <- as.numeric(DF1[, 16])
+DF1 <- na.omit(DF1)
+DF1[, 15] <- as.character(DF1[, 15])
+DF1[, 16] <- as.character(DF1[, 16])
+#Convert the index numbers of the data fram into the student names.
+DF2 <- unite(DF1, "First.Name", "Last.Name", col = name, sep = "_")
+row.names(DF2) = DF2$name
+DF2$name <- NULL
+# Wrangle data using dplyr to include only the numerical values.
+select_if(DF2, is.numeric)
+names(select_if(DF2, is.numeric))
+DF3 <- dplyr::select(DF2, "How.many.months.have.you.lived.in.New.York.City.", "How.many.siblings..brothers.sisters..do.you.have.",  "How.many.times.do.you.play.sport.each.week.", "How.many.miles.do.you.travel.from.home.to.TC.", "Estimate.how.many.of.your.friends.own.Android.phones",  "How.many.movies.have.you.seen.in.the.cinema.this.year.", "How.many.pets.have.you.owned.in.your.life.",  "How.many.people.have.you.met.for.the.first.time.this.year.",   "How.many.time.do.you.cook.for.yourself.each.week.", "How.many.classes.are.you.taking.this.semester.")
+#Scale the data so that no variable has undue influence
+DF3 <- scale(DF3)
+# Start with 4 clusters
+fit3 <- kmeans(DF3, 4) 
+fit3$cluster
+K34 <- data.frame(DF3, fit3$cluster)
+names(K34) <- c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "cluster") 
+# Visualize clusters overlap:
+# Combining data for location:
+DF4 <- data.frame(K34, DF1[15])
+DF5 <- data.frame(DF4, DF1[16])
+colnames(DF5) <- c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "cluster", "la", "lo")
+# Match two sets of data so that each element is in both dataset
+DF35 <- DF5[row.names(DF5) %in% row.names(DC), ]
+DC36 <- DC[row.names(DC) %in% row.names(DF35), ]
+DF35$name <- rownames(DF35)
+DC36$name <- rownames(DC36)
+# Begin to plot
+# First Choice: mosaic
 #install.packages("vcd")
 library(vcd)
-P1 <- structable(cluster$cluster ~ cluster_lat_lon$cluster)
-mosaic(P1, shade=TRUE, legend=TRUE) 
+Cluster_Region <-DF35$cluster
+Cluster_Classes <-DC36$cluster
+
+###I don't know from here 
+A1 <- structable(Cluster_Region ~ Cluster_Classes)
+mosaic(A1, shade = TRUE, legend = TRUE)
+# Second Choice: ggplot using pch and col to represent different clusters
+B1 <- cbind(DF35$cluster, DC36$cluster, DF35$name)
+colnames(B1) = c("DF35.cluster", "DC36.cluster", "name")
+B1 <- as.data.frame(B1)
+ggplot(B1, aes(name, DF35.cluster, color = as.factor(DF35.cluster), shape = as.factor(DC36.cluster))) +
+  geom_point(size = 3) +
+  xlab("Name") + 
+  ylab("Cluster") + 
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
 
 ```
 ## Please render your code as an .html file using knitr and Pull Resquest both your .Rmd file and .html files to the Assignment 3 repository.
