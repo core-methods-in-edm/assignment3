@@ -1,20 +1,16 @@
 ---
 title: "Assignment 3: K Means Clustering"
+#Allison Teevan
 ---
 
 In this assignment we will be applying the K-means clustering algorithm we looked at in class. At the following link you can find a description of K-means:
 
 https://www.cs.uic.edu/~wilkinson/Applets/cluster.html
 
-
-```{r}
-library()
-```
-
 Now, upload the file "Class_Motivation.csv" from the Assignment 3 Repository as a data frame called "K1""
 ```{r}
 
-K1 <- read.csv(...)
+K1 <- read.csv("Class_Motivation.csv")
 
 ```
 
@@ -25,14 +21,16 @@ But before we do that, we will need to manipulate the data frame into a structur
 The algorithm will treat each row as a value belonging to a person, so we need to remove the id variable.
 
 ```{r}
+library(tidyverse)
 
-K2 <- 
+#remove ID variable 
+K2 <- K1 %>% select(2:6)
 
 ```
 
 It is important to think about the meaning of missing values when clustering. We could treat them as having meaning or we could remove those people who have them. Neither option is ideal. What problems do you foresee if we recode or remove these values? Write your answers below:
 
-
+#Removing people with missing values removes other valid data that we could otherwise include. If we treat the missing values as having meaning (ex. assign them the average score), we are assigning value to something that we do not know the value of.
 
 We will remove people with missing values for this assignment, but keep in mind the issues that you have identified.
 
@@ -46,7 +44,7 @@ K3 <- na.omit(K2) #This command create a data frame with only those people with 
 Another pre-processing step used in K-means is to standardize the values so that they have the same range. We do this because we want to treat each week as equally important - if we do not standardise then the week with the largest range will have the greatest impact on which clusters are formed. We standardise the values by using the "scale()" command.
 
 ```{r}
-
+#standardize the values
 K3 <- scale(K3)
 
 ```
@@ -66,20 +64,20 @@ Also, we need to choose the number of clusters we think are in the data. We will
 
 ```{r}
 
-fit <- 
+fit <- kmeans(K3,2)
 
 #We have created an object called "fit" that contains all the details of our clustering including which observations belong to each cluster.
 
 #We can access the list of clusters by typing "fit$cluster", the top row corresponds to the original order the rows were in. Notice we have deleted some rows.
 
-
+fit$cluster
 
 #We can also attach these clusters to the original dataframe by using the "data.frame" command to create a new data frame called K4.
 
-K4
+K4 <- data.frame(K3, fit$cluster)
 
-#Have a look at the K4 dataframe. Lets change the names of the variables to make it more convenient with the names() command.
-
+#Have a look at the K4 dataframe. Let's change the names of the variables to make it more convenient with the names() command.
+names(K4) <- c("1", "2", "3", "4", "5", "cluster") 
 
 ```
 
@@ -88,14 +86,15 @@ Now we need to visualize the clusters we have created. To do so we want to play 
 First lets use tidyr to convert from wide to long format.
 ```{r}
 
-K5 <- 
+K5 <- K4 %>% gather("week","motivation",1:5)
+
 ```
 
 Now lets use dplyr to average our motivation values by week and by cluster.
 
 ```{r}
 
-K6 <- 
+K6 <- K5 %>% group_by(week, cluster) %>% summarize(avg = mean(motivation))
 
 ```
 
@@ -112,42 +111,261 @@ We are going to create a line plot similar to the one created in the school drop
 Likewise, since "cluster" is not numeric but rather a categorical label we want to convert it from an "integer" format to a "factor" format so that ggplot does not treat it as a number. We can do this with the as.factor() command.
 
 ```{r}
+library(ggplot2)
 
-K6$week <- 
+K6$week <- as.numeric(K6$week)
 
-K6$cluster <- 
+K6$cluster <- as.character(K6$cluster)
 
 ```
 
 Now we can plot our line plot using the ggplot command, "ggplot()".
 
 - The first argument in a ggplot is the dataframe we are using: K6
-- Next is what is called an aesthetic (aes), the aesthetic tells ggplot which variables to use and how to use them. Here we are using the variables "week" and "avg" on the x and y axes and we are going color these variables using the "cluster" variable
+- Next is what is called an aesthetic (aes), the aesthetic tells ggplot which variables to use and how to use them. Here we are using the variables "week" and "avg" on the x and y axes and we are going to color these variables using the "cluster" variable
 - Then we are going to tell ggplot which type of plot we want to use by specifiying a "geom()", in this case a line plot: geom_line()
 - Finally we are going to clean up our axes labels: xlab("Week") & ylab("Average Motivation")
 
 ```{r}
 
+ggplot(K6, aes(week, avg, color = cluster)) + geom_line() + xlab("Week") + ylab("Average Motivation")
 
 ```
 
 What patterns do you see in the plot?
+#the plots are W and M shaped. Motivation varies up and down week by week.
 
 It would be useful to determine how many people are in each cluster. We can do this easily with dplyr.
 
 ```{r}
-K7 <- 
+library(dplyr)
+K7 <- count(K4, cluster)
 ```
 
 Look at the number of people in each cluster, now repeat this process for 3 rather than 2 clusters. Which cluster grouping do you think is more informative? Write your answer below:
+#I think 3 clusters is more informative because it shows a third trend that is missing from the 2 cluster graph. Two of the cluster trends differ significantly in week 4 and 5.
+
+```{r}
+
+fit <- kmeans(K3,3)
+K4 <- data.frame(K3, fit$cluster)
+names(K4) <- c("1", "2", "3", "4", "5", "cluster") 
+K5 <- K4 %>% gather("week","motivation",1:5)
+K6 <- K5 %>% group_by(week, cluster) %>% summarize(avg = mean(motivation))
+K6$week <- as.numeric(K6$week)
+K6$cluster <- as.character(K6$cluster)
+
+#plot using ggplot
+ggplot(K6, aes(week, avg, color = cluster)) + geom_line() + xlab("Week") + ylab("Average Motivation")
+
+#number of people in each cluster
+(K7 <- count(K4, cluster))
+
+```
 
 Once you have done this, save both of your plots to the Assignment 5 file.
 
-##Part II
+##########################################################################################
+##Part II ################################################################################
+##########################################################################################
 
-Now, try to do the same for the data collected in class. Create two sets of clusters, the answers to the questions and regions where people grew up. 
+Using the data collected for Assignment 2 (which classes students were in), cluster the students, then redraw the graph of the class but color the students according to the 3cluster they are in.
+
+```{r}
+library(tidyverse)
+library(ggplot2)
+
+rm(list = ls())
+data <- read.csv("hudk4050-classes.csv")
+
+#combine name to be full 
+data <- unite(data, "Name", c("First.Name", "Last.Name"), sep = "_")
+
+#remove spaces in names column 
+data$Name <- (gsub(" ", "", data$Name))
+#all uppercase
+data$Name <- toupper(data$Name)
+
+data2 <- gather(data, class_type, course_name, 2:7)
+
+#remove class_type and ID 
+data2$class_type <- NULL
+
+#remove spaces from course names 
+data2$course_name <- (gsub(" ", "", data2$course_name))
+
+#replace tricky entries
+data2$course_name <- (gsub("HUDK4050", "4050", data2$course_name))
+data2$course_name <- (gsub("4050", "HUDK4050", data2$course_name))
+data2$course_name <- (gsub("HUDMHUDK4050", "HUDM4050", data2$course_name))
+
+data2$course_name <- (gsub("HUDM4125", "4125", data2$course_name))
+data2$course_name <- (gsub("4125", "HUDM4125", data2$course_name))
+
+data2$course_name <- (gsub("HUDM5026", "5026", data2$course_name))
+data2$course_name <- (gsub("5026", "HUDM5026", data2$course_name))
+
+data2$course_name <- (gsub("HUDM5126", "5126", data2$course_name))
+data2$course_name <- (gsub("5126", "HUDM5126", data2$course_name))
+
+#remove duplicates
+data2 <- unique(data2)
+
+#remove HUDK4050 class for everyone
+data2 <-data2[(data2$course_name!="HUDK4050"),]
+
+#add column of 1s
+data2$count <- "1"
+
+#create new matrix how we want it
+data3 <- spread(data2, course_name, count)
+
+#add ID number to name list so we can match them later 
+data3$id2 <- seq(1,53,1)
+
+Final2 <- select(data3, 1, 61)
+
+#remove column of V1 (blank) and ID
+data3$V1 <- NULL
+data3$id2 <- NULL
+
+#replace NA with zero
+data3[is.na(data3)] <- 0
+#move full name to be row name
+row.names(data3) <- data3$Name
+data3$Name <- NULL
+
+```
+
+#create the clusters 
+```{r}
+fit2 <- kmeans(data3, 3)
+#I think there should be three clusters- those in Learning Analytics program, the Applied Stats program, and everyone else. People in the same program will be taking similar classes. 
+
+K4 <- data.frame(data3, fit2$cluster)
+
+#number of people in each cluster
+count(K4, fit2.cluster)
+
+Final2 <- data.frame(Final2, fit2$cluster)
+
+```
+
+
+```{r}
+#trying to multiply matrices to get matrix to plot 
+data3 <- as.data.frame(sapply(data3, as.numeric))
+data3 <- as.matrix((data3))
+data4 <- t(data3)
+
+data5 <- data3 %*% data4
+
+#add back names
+row.names(data5) <- Final2$Name
+colnames(data5) <- Final2$Name
+
+library(igraph)
+
+graph3 <- graph_from_adjacency_matrix(data5, weighted = TRUE,
+  diag = FALSE, add.colnames = NULL, add.rownames = NA)
+
+#plot graph
+plot(graph3,layout=layout.fruchterman.reingold,edge.arrow.size=0.01, vertex.color=K4$fit2.cluster)
+
+```
 
 ##Part III
 
-Create a visualization that shows the overlap between the two groups of clusters you created in part III.
+In class activity 6 you clustered students in the class by the answers to a questionaire. Create a visualization that shows the overlap between these clusters and the clusters generated in part II.
+
+```{r}
+#READ IN DATA FROM CLASS ACTIVITY 6
+
+#Load data
+DF1 <- read.csv("HUDK405019-clustering.csv", header = TRUE)
+
+#name manipulation
+DF1 <- unite(DF1, "Name", c("First.Name", "Last.Name"), sep = "_")
+#remove spaces in names column 
+DF1$Name <- (gsub(" ", "", DF1$Name))
+DF1$Name <- toupper(DF1$Name)
+
+#add ID for later
+DF1$id1 <- seq(1,50,1)
+
+Final1 <- select(DF1, 1, 16)
+
+row.names(DF1) <- DF1$Name
+DF1$Name <- NULL
+
+#Remove location variables
+DF2 <- select(DF1, 1:11)
+
+#Remove any characters
+DF2 <- DF2 %>% mutate_all(funs(gsub("[a-zA-Z]", "", .)))
+
+#Convert all variables to numeric
+DF2 <- DF2 %>% mutate_all(funs(as.numeric(.)))
+
+#Scale the data so that no variable has undue influence
+DF2 <- as.data.frame(scale(DF2))
+ 
+#Replace missing values with average score EG - zero
+DF2 <- DF2 %>% mutate_all(funs(ifelse(is.na(.) == TRUE, 0, .)))
+
+DF3 <- select(DF1, 13:14)
+#Change names for convenience
+names(DF3) <- c("lattitude", "longitude")
+
+#Remove any characters and common punctuation
+DF3 <- DF3 %>% mutate_all(funs(gsub("[a-zA-Z]", "", .)))
+DF3 <- DF3 %>% mutate_all(funs(sub("[?]", "", .)))
+
+#Remove anything after the first non-numeric character in lattitude
+DF3$lattitude <- sub(",.*$","", DF3$lattitude) 
+DF3$lattitude <- sub("°.*$","", DF3$lattitude)
+
+#Remove anything before the first non-numeric character in longitude
+DF3$longitude <- gsub(".*,","",DF3$longitude)
+DF3$longitude <- sub("°.*$","", DF3$longitude)
+
+#Convert all variables to numeric
+DF3 <- DF3 %>% mutate_all(funs(as.numeric(.)))
+
+#kmeans
+fit1 <- kmeans(DF2, 3) 
+Final1 <- data.frame(Final1, fit1$cluster)
+
+```
+
+
+```{r}
+#Note: fit1 is from Activity 6 and fit2 is from Assignment 2
+
+Final <- left_join(Final1,Final2, by = c("Name")) 
+
+#remove un-needed rows
+Final <- select(Final,Name,Cluster1=fit1.cluster,Cluster2 = fit2.cluster)
+
+#remove students who didn't answer both surveys
+Final <- Final[!(is.na(Final$Cluster1)),]
+Final <- Final[!(is.na(Final$Cluster2)),]
+```
+
+
+```{r}
+#install.packages("vcd")
+library(vcd)
+
+#create matrix counting number of students in each group pairing
+P1 <- structable(Final$Cluster1 ~ Final$Cluster2)
+P2 <- as.matrix(P1)
+
+#create heatmap
+#This shows how much overlap there are between the groups of clusters
+heatmap(P2)
+
+```
+
+## Please render your code as an .html file using knitr and Pull Request both your .Rmd file and .html files to the Assignment 3 repository.
 
