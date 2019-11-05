@@ -193,7 +193,7 @@ p + geom_line() +
 In class activity 6 you clustered students in the class by the answers to a questionaire. Create a visualization that shows the overlap between these clusters and the clusters generated in part II.
 
 ```{r}
-# Since I didn't save the result of our class activity 6, I will use "HUDK405018-cluster.csv" as my data, cluster the students by the time they spent on watching videos for fun, cooking, social media and social activities, and then show the overlap.
+# Since the data in class activity 6 is the data from class 2019, while the data in Part 2 is from class 2018, I am not sure how to show their overlap if they are collected from different people. Therefore, I will use "HUDK405018-cluster.csv" as my data, cluster the students by the time they spent on watching videos for fun, cooking, social media and social activities, and then show the overlap.
 
 B1 <- A3[,6:9]
 B2 <- scale(data.matrix(B1))
