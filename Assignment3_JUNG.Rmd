@@ -85,7 +85,6 @@ K4 <- data.frame(K3, fit$cluster)
 
 #Have a look at the K4 dataframe. Lets change the names of the variables to make it more convenient with the names() command.
 
-View(K4)
 names(K4) <- c("motivation1", "motivation2", "motivation3", "motivation4", "motivation5", "cluster")
 
 ```
