@@ -8,13 +8,15 @@ https://www.cs.uic.edu/~wilkinson/Applets/cluster.html
 
 
 ```{r}
-library()
+library(klaR)
+library(tidyverse)
+library(ggmosaic)
 ```
 
 Now, upload the file "Class_Motivation.csv" from the Assignment 3 Repository as a data frame called "K1""
 ```{r}
 
-K1 <- read.csv(...)
+K1 <- read.csv("Class_Motivation.csv")
 
 ```
 
@@ -26,7 +28,7 @@ The algorithm will treat each row as a value belonging to a person, so we need t
 
 ```{r}
 
-K2 <- 
+K2 <- select(K1,-id)
 
 ```
 
@@ -47,7 +49,7 @@ Another pre-processing step used in K-means is to standardize the values so that
 
 ```{r}
 
-K3 <- 
+K3 <- scale(K3)
 
 ```
 
@@ -66,20 +68,21 @@ Also, we need to choose the number of clusters we think are in the data. We will
 
 ```{r}
 
-fit <- 
+set.seed(4050)
+fit <- kmeans(K3,2)
 
 #We have created an object called "fit" that contains all the details of our clustering including which observations belong to each cluster.
 
 #We can access the list of clusters by typing "fit$cluster", the top row corresponds to the original order the rows were in. Notice we have deleted some rows.
 
-
+fit$cluster
 
 #We can also attach these clusters to the original dataframe by using the "data.frame" command to create a new data frame called K4.
 
-K4
+K4 <- data.frame(K3, fit$cluster)
 
 #Have a look at the K4 dataframe. Lets change the names of the variables to make it more convenient with the names() command.
-
+names(K4)<-c("1","2","3","4","5","cluster")
 
 ```
 
@@ -88,14 +91,17 @@ Now we need to visualize the clusters we have created. To do so we want to play 
 First lets use tidyr to convert from wide to long format.
 ```{r}
 
-K5 <- 
+K5 <- K4 %>% gather(key = week,
+                    value = motivation_score,
+                    c(1, 2, 3, 4, 5)
+                    )
 ```
 
 Now lets use dplyr to average our motivation values by week and by cluster.
 
 ```{r}
 
-K6 <- 
+K6 <- K5 %>% group_by(cluster, week) %>% summarise("mean_motivation" = mean(motivation_score))
 
 ```
 
@@ -113,9 +119,9 @@ Likewise, since "cluster" is not numeric but rather a categorical label we want 
 
 ```{r}
 
-K6$week <- 
+K6$week <- as.numeric(K6$week)
 
-K6$cluster <- 
+K6$cluster <- as.factor(K6$cluster)
 
 ```
 
@@ -128,7 +134,12 @@ Now we can plot our line plot using the ggplot command, "ggplot()".
 
 ```{r}
 
-
+ggplot(K6, aes(x = week, y = mean_motivation, colour = cluster)) + 
+  geom_line() +
+  labs(x = "week",
+       y = "Average Motivation",
+       title = "A Graph of Mean Motivation by Week of Two Clusters in the Class"
+       )
 ```
 
 What patterns do you see in the plot?
@@ -138,10 +149,44 @@ What patterns do you see in the plot?
 It would be useful to determine how many people are in each cluster. We can do this easily with dplyr.
 
 ```{r}
-K7 <- 
+K7 <- K4 %>% group_by (cluster) %>% summarise("count" = n())
 ```
 
 Look at the number of people in each cluster, now repeat this process for 3 rather than 2 clusters. Which cluster grouping do you think is more informative? Write your answer below:
+
+```{r}
+set.seed(4050)
+
+fit_3 <- kmeans(K3, 3)
+
+fit_3$cluster
+
+K4_3 <- data.frame(K3, fit_3$cluster)
+
+names(K4_3) <- c("1", "2", "3", "4", "5", "cluster")
+
+K5_3 <- K4_3 %>% gather(key = week,
+                        value = motivation_score,
+                        c(1, 2, 3, 4, 5)
+                        )
+
+K6_3 <- K5_3 %>% group_by (cluster, week) %>% summarise("mean_motivation" = mean(motivation_score))
+
+K6_3$week <- as.numeric(K6_3$week)
+
+K6_3$cluster <- as.factor(K6_3$cluster)
+
+ggplot(K6_3, aes(x = week, y = mean_motivation, colour = cluster)) +
+  geom_line() +
+  labs(x = "Week",
+       y = "Average Motivation",
+       title = "A Graph of Mean Motivation by Week of Two Clusters in the Class"
+       )
+```
+```{r}
+K7 <- K4_3 %>% group_by(cluster) %>% summarise("count" = n())
+```
+
 
 ##Part II
 
