@@ -8,13 +8,14 @@ https://www.cs.uic.edu/~wilkinson/Applets/cluster.html
 
 
 ```{r}
-library()
+library(tidyr)
+library(dplyr)
 ```
 
 Now, upload the file "Class_Motivation.csv" from the Assignment 3 Repository as a data frame called "K1""
 ```{r}
 
-K1 <- read.csv(...)
+K1 <- read.csv("~/tmp/assignment3/Class_Motivation.csv", header=FALSE, stringsAsFactors=FALSE)
 
 ```
 
@@ -26,7 +27,22 @@ The algorithm will treat each row as a value belonging to a person, so we need t
 
 ```{r}
 
-K2 <- 
+colnames(K1)<-K1[1,]
+
+K1 <-K1[2:nrow(K1),]
+
+
+for (i in 1:ncol(K1)) {
+  K1[,i]<-as.numeric(K1[,i])
+}
+
+K1 <- K1%>%
+  group_by(id)%>%
+  summarise_each(funs(mean))
+
+
+K2<-K1[,2:ncol(K1)]
+rownames(K2)<-K1$id
 
 ```
 
@@ -47,7 +63,7 @@ Another pre-processing step used in K-means is to standardize the values so that
 
 ```{r}
 
-K3 <- 
+K3 <- scale(K3)
 
 ```
 
@@ -66,20 +82,18 @@ Also, we need to choose the number of clusters we think are in the data. We will
 
 ```{r}
 
-fit <- 
+fit <- kmeans(K3,2)
 
 #We have created an object called "fit" that contains all the details of our clustering including which observations belong to each cluster.
 
 #We can access the list of clusters by typing "fit$cluster", the top row corresponds to the original order the rows were in. Notice we have deleted some rows.
 
-
-
 #We can also attach these clusters to the original dataframe by using the "data.frame" command to create a new data frame called K4.
 
-K4
+K4<- data.frame(cbind(K3, fit$cluster))
 
 #Have a look at the K4 dataframe. Lets change the names of the variables to make it more convenient with the names() command.
-
+colnames(K4)<-c("1", "2", "3", "4", "5", "Cluster")
 
 ```
 
@@ -88,14 +102,19 @@ Now we need to visualize the clusters we have created. To do so we want to play 
 First lets use tidyr to convert from wide to long format.
 ```{r}
 
-K5 <- 
+K5 <- K4%>%
+  gather("Week", value = "Motivation", 1:5)%>%
+  group_by(Week)
+
 ```
 
 Now lets use dplyr to average our motivation values by week and by cluster.
 
 ```{r}
 
-K6 <- 
+K6 <- K5%>%
+  group_by(Week, Cluster)%>%
+  summarise(mean = mean(Motivation))
 
 ```
 
@@ -113,43 +132,205 @@ Likewise, since "cluster" is not numeric but rather a categorical label we want 
 
 ```{r}
 
-K6$week <- 
+K6$Week <- as.numeric(K6$Week) 
 
-K6$cluster <- 
+K6$Cluster <- as.factor(K6$Cluster) 
 
 ```
 
 Now we can plot our line plot using the ggplot command, "ggplot()".
 
 - The first argument in a ggplot is the dataframe we are using: K6
-- Next is what is called an aesthetic (aes), the aesthetic tells ggplot which variables to use and how to use them. Here we are using the variables "week" and "avg" on the x and y axes and we are going color these variables using the "cluster" variable
+- Next is what is called an aesthetic (aes), the aesthetic tells ggplot which variables to use and how to use them. Here we are using the variables "week" and "avg" on the x and y axes and we are going to color these variables using the "cluster" variable
 - Then we are going to tell ggplot which type of plot we want to use by specifiying a "geom()", in this case a line plot: geom_line()
 - Finally we are going to clean up our axes labels: xlab("Week") & ylab("Average Motivation")
 
 ```{r}
+library(ggplot2)
 
+ggplot(K6,
+       aes(x=K6$Week,
+           y=K6$mean,
+           col= K6$Cluster,)
+       )+
+  geom_line()+
+  xlab("Week")+
+  ylab("Average Motivation")+
+  labs(colour ="Cluster")
+  
 
 ```
 
 What patterns do you see in the plot?
 
+Leonardo: It reminds me of a regression toward the mean; on the weeks where cluster 1 had less motivation than before, cluster 2 saw an increase, and vice versa. This continued from week 1 until the means of each cluster intersected on Week 5. Perhaps that speaks to the fact that low motivation students were more likely to feel encouraged as time passed and they developed the skills needed to succeed, while high motivation students struggle to maintain that same initial vigor over time.
 
 
 It would be useful to determine how many people are in each cluster. We can do this easily with dplyr.
 
 ```{r}
-K7 <- 
+K7 <- K4%>%
+  count(Cluster)
+
+# Cluster 1 has 7 people, Cluster 2 has 8.
+# Check in w/Charles; the fact is, you are working with only 15 values, which isn't a whole lot. While you did use a "mean" to reduce the number of redundant values during your initial tidyr, that may not have been justified, and the fact that you used na.omit is always questionable.
+
 ```
 
 Look at the number of people in each cluster, now repeat this process for 3 rather than 2 clusters. Which cluster grouping do you think is more informative? Write your answer below:
+
+```{r}
+fitA <- kmeans(K3,3)
+K4A<- data.frame(cbind(K3, fitA$cluster))
+colnames(K4A)<-c("1", "2", "3", "4", "5", "Cluster")
+K5A <- K4A%>%
+  gather("Week", value = "Motivation", 1:5)%>%
+  group_by(Week, Cluster)%>%
+  summarise(mean = mean(Motivation))
+K5A$Week <- as.numeric(K5A$Week) 
+K5A$Cluster <- as.factor(K5A$Cluster)
+library(ggplot2)
+ggplot(K5A,
+       aes(x=K5A$Week,
+           y=K5A$mean,
+           col= K5A$Cluster,)
+       )+
+  geom_line()+
+  xlab("Week")+
+  ylab("Average Motivation")+
+  labs(colour ="Cluster")
+k6A <- K4A%>%
+  count(Cluster)
+```
+
+Leonardo: The interesting thing about this arrangement is that 3 clusters reveals largely the same information, but it adds the behavior of a student who appeared to wildly oscillate in terms of overall participation. The fact that we omitted students that had NA's from the data also means that students with reduced participation were not represented in our analysis; this may have skewed upwards the trends contained within our data.
 
 ##Part II
 
 Using the data collected for Assignment 2 (which classes students were in), cluster the students, then redraw the graph of the class but color the students according the cluster they are in.
 
+```{r}
+
+library(igraph)
+library(dplyr)
+library(tidyr)
+
+cdf <- read.csv("~/tmp/assignment2/hudk4050-classes.csv", stringsAsFactors=FALSE, na.strings = c("", NA))
+
+cdf$Name<-paste(cdf$First.Name, cdf$Last.Name, sep = " ")       #pastes names together for easy use
+
+cdf<-cdf%>%                                                    #creates a new DF with desired date
+  gather(key = "Class", value = "ClassX", 3:8, na.rm=TRUE)%>%   #combines all classes into a column
+  dplyr::select(Name, Class=ClassX)%>%                                 #selects only the classes and user names
+  mutate(Present=1) %>% #attaches a value to a student being in a class
+  filter(Name != "ZIMO CHEN")
+
+for (i in 1:ncol(cdf)){
+  cdf[,i]<-gsub(pattern = "[GR \\-]", replacement = "", cdf[,i])
+}
+for (i in 1:ncol(cdf)){
+  cdf[,i]<-gsub(pattern = "HUDK4050", replacement = NA, cdf[,i])
+}
+for (i in 1:ncol(cdf)){
+  cdf[,i]<-gsub(pattern = "([A-z0-9&\\-]{8}).*", replacement = "\\1", cdf[,i])
+}
+cdf<-na.omit(cdf)
+
+cdf<- cdf%>%                                                  #creates adjacency matrix from cdf2
+  spread(key = "Class", value = "Present", 0)
+rownames(cdf)<-cdf$Name
+cdf<-cdf%>%
+  dplyr::select(-Name)
+cdf[]<-sapply(X=cdf, FUN=as.numeric)
+st2st<-as.matrix(cdf)%*%t(as.matrix(cdf))
+colnames(st2st)<-rownames(cdf)
+rownames(st2st)<-rownames(cdf)
+
+st2st<-scale(st2st)
+
+fit2<-kmeans(st2st,4)
+
+cdf$cluster<-as.numeric(fit2$cluster)
+
+for (i in 1:nrow(cdf)){
+  if(cdf$cluster[i]==1){
+    cdf$col[i]<-rgb(1,0,0,1)
+  }else if(cdf$cluster[i]==2){
+    cdf$col[i]<-rgb(0,1,0,1)
+  }else if(cdf$cluster[i]==3){
+    cdf$col[i]<-rgb(0,0,1,1)
+  }else{
+    cdf$col[i]<-rgb(1,0,1,1)
+  }
+}
+
+g2<- graph_from_adjacency_matrix(st2st, mode = "undirected", diag = FALSE, add.rownames = TRUE, weighted = TRUE)
+
+plot(g2, layout=layout_nicely, vertex.color = cdf$col)
+
+
+
+```
+
+
 ##Part III
 
 In class activity 6 you clustered students in the class by the answers to a questionaire. Create a visualization that shows the overlap between these clusters and the clusters generated in part II.
+
+```{r}
+
+# Mosaic Plot
+
+library(vcd)
+library(igraph)
+library(tidyr)
+library(dplyr)
+library(klaR)
+library(fpc)
+
+cdf <- read.csv("~/tmp/assignment2/hudk4050-classes.csv", stringsAsFactors=FALSE, na.strings = c("", NA))
+
+cdf$Name<-paste(cdf$First.Name, cdf$Last.Name, sep = " ")       #pastes names together for easy use
+
+cdf<-cdf %>%
+  filter(cdf$Name != "ZIMO CHEN")
+cdf<-cdf[,3:ncol(cdf)]
+
+rownames(cdf)<-cdf$Name
+cdf<-cdf %>%
+  dplyr::select(-Name)
+
+for (i in 1:ncol(cdf)){
+  cdf[,i]<-gsub(pattern = "[GR \\-]", replacement = "", cdf[,i])
+}
+for (i in 1:ncol(cdf)){
+  cdf[,i]<-gsub(pattern = "HUDK4050", replacement = NA, cdf[,i])
+}
+for (i in 1:ncol(cdf)){
+  cdf[,i]<-gsub(pattern = "([A-z0-9&\\-]{8}).*", replacement = "\\1", cdf[,i])
+}
+
+cdf<-cdf[c(1:9,12:52),]     #For the sake of the comparison, I also removed Allison Teevan, Yiyi, and Zimo
+
+cdf[is.na(cdf)]<- as.character(sample(1:100, length(cdf[is.na(cdf)]),replace = TRUE))
+
+fitM <- kmodes(cdf, 4)
+
+cdf$cluster<-fitM$cluster
+
+clusterD<-as.data.frame(cbind(fitM$cluster,fit2$cluster))
+colnames(clusterD)<-c("Kmode Cluster", "Kmean Cluster")
+
+vcd::mosaic(table(
+  clusterD))
+
+
+
+
+```
+
+Leonardo Restrepo: I suspect that the above visualization reflects several design decisions on my part. Most notably, when generating my Kmodes diagram, during my cleaning, I automatically filled all NA values with a "blank," or empty character atomic vector. In doing, so I was able to utilize the Kmodes function to cluster students on the basis of their responses. However, in doing so, I overrepresented the "no class" value, creating deeper linkages between students than were likely present. That is why the mosaic diagram is skewed upward. In an attempt to account for this, I had every NA replaced with a character vecter of  randomly sampled number between 1 and 100. This did somewhat increase the level of variation among my Kmode clusters, but only by a marginal degree. Cluster 1 is still overly larg, most likely because we had a couple of students who were outliers by way of the number of classes that they took. Of the two clustering techniques, it is likely that KMeans generated a more accurate sorting of students on the basis of their entries.
+
 
 ## Please render your code as an .html file using knitr and Pull Resquest both your .Rmd file and .html files to the Assignment 3 repository.
 
