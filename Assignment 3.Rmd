@@ -8,17 +8,23 @@ https://www.cs.uic.edu/~wilkinson/Applets/cluster.html
 
 
 ```{r}
-library()
-```
+#loding all the work
+library(klaR)
+library(dplyr)
+library(tidyverse)
+library(tidyr)
+library(ggplot2)
 
-Now, upload the file "Class_Motivation.csv" from the Assignment 3 Repository as a data frame called "K1""
-```{r}
+#Now, upload the file "Class_Motivation.csv" from the Assignment 3 Repository as a data frame called "K1""
 
-K1 <- read.csv(...)
+K1 <- read.csv("Class_Motivation.csv")
 
 ```
 
 This file contains the self-reported motivation scores for a class over five weeks. We are going to look for patterns in motivation over this time and sort people into clusters based on those patterns.
+
+
+
 
 But before we do that, we will need to manipulate the data frame into a structure that can be analyzed by our clustering algorithm.
 
@@ -26,7 +32,8 @@ The algorithm will treat each row as a value belonging to a person, so we need t
 
 ```{r}
 
-K2 <- 
+K2 <-dplyr::select(K1,-id)
+
 
 ```
 
@@ -47,7 +54,7 @@ Another pre-processing step used in K-means is to standardize the values so that
 
 ```{r}
 
-K3 <- 
+K3 <- scale(K3)
 
 ```
 
@@ -65,20 +72,23 @@ Notice that in this case we have 5 variables and in class we only had 2. It is i
 Also, we need to choose the number of clusters we think are in the data. We will start with 2.
 
 ```{r}
+set.seed(4050)
 
-fit <- 
+fit <- kmeans(K3,2)
 
 #We have created an object called "fit" that contains all the details of our clustering including which observations belong to each cluster.
 
 #We can access the list of clusters by typing "fit$cluster", the top row corresponds to the original order the rows were in. Notice we have deleted some rows.
 
-
+fit$cluster
 
 #We can also attach these clusters to the original dataframe by using the "data.frame" command to create a new data frame called K4.
 
-K4
+K4<- data.frame(K3, fit$cluster)
 
 #Have a look at the K4 dataframe. Lets change the names of the variables to make it more convenient with the names() command.
+
+names(K4) <- c("1", "2", "3", "4", "5", "cluster")
 
 
 ```
@@ -88,14 +98,15 @@ Now we need to visualize the clusters we have created. To do so we want to play 
 First lets use tidyr to convert from wide to long format.
 ```{r}
 
-K5 <- 
+K5 <-K4 %>% gather(key = week, value = motivation_grade, c(1,2,3,4,5))
 ```
 
 Now lets use dplyr to average our motivation values by week and by cluster.
 
 ```{r}
 
-K6 <- 
+K6 <- K5 %>% group_by(cluster,week)
+K6 <- summarise(K6, avg = mean(motivation_grade))
 
 ```
 
@@ -113,9 +124,9 @@ Likewise, since "cluster" is not numeric but rather a categorical label we want 
 
 ```{r}
 
-K6$week <- 
+K6$week <- as.numeric(K6$week)
 
-K6$cluster <- 
+K6$cluster <- as.factor(K6$cluster)
 
 ```
 
@@ -127,6 +138,8 @@ Now we can plot our line plot using the ggplot command, "ggplot()".
 - Finally we are going to clean up our axes labels: xlab("Week") & ylab("Average Motivation")
 
 ```{r}
+ggplot(K6, aes(week, avg, colour = cluster)) + geom_line() + 
+  labs(x= "Amount of Week", y="Average Motivation", title = "MEAN MOTIVATION BY WEEK")
 
 
 ```
@@ -138,18 +151,143 @@ What patterns do you see in the plot?
 It would be useful to determine how many people are in each cluster. We can do this easily with dplyr.
 
 ```{r}
-K7 <- 
+K7 <- K4 %>% group_by(cluster) %>% summarise("count"=n())
+
 ```
 
 Look at the number of people in each cluster, now repeat this process for 3 rather than 2 clusters. Which cluster grouping do you think is more informative? Write your answer below:
+```{r}
+set.seed(4050)
+#same with the last session
+fit_number3<-kmeans(K3,3)
+
+# shows the fit3$cluster
+fit_number3$cluster
+
+K4_number3<-data.frame(K3,fit_number3$cluster)
+
+names(K4_number3)<-c("1", "2", "3", "4", "5", "cluster")
+
+K5_number3 <-K4_number3 %>% gather(key = week, value = motivation_grade, c(1,2,3,4,5))
+
+K6_number3 <- K5_number3 %>% group_by(cluster,week)
+K6_number3 <- summarise(K6_number3, avg = mean(motivation_grade))
+
+K6_number3$week <- as.numeric(K6_number3$week)
+
+K6_number3$cluster <- as.factor(K6_number3$cluster)
+
+ggplot(K6_number3, aes(week, avg, colour = cluster)) + geom_line() + 
+  labs(x= "Amount of Week", y="Average Motivation", title = "MEAN MOTIVATION BY WEEK")
+
+#all the steps follow the above step
+
+
+```
+the step we use to determine the amount of people in the cluster.
+```{r}
+K7 <- K4_number3 %>% group_by(cluster) %>% summarise("count"=n())
+```
+
+
 
 ##Part II
 
 Using the data collected for Assignment 2 (which classes students were in), cluster the students, then redraw the graph of the class but color the students according the cluster they are in.
+```{r}
+#First we should get the library on tidyverse
+
+library(tidyverse)
+
+#Then read the csv., name it.
+
+D1 <- read.csv("hudk4050-ASS2.csv", header=TRUE)
+
+#Get data frame be a square
+
+D1 <- as.data.frame(D1)
+
+
+
+# then loading the data we created in ass 2
+#We need to filter the information make a sam e mode
+# I pasted my previous version I made, it didn't go through it.So I changed a new method to make them matrix 
+D1 <- unite(D1, Name, "First.Name", "Last.Name", sep=" ")
+
+#gather the information 
+
+D2 <- gather(D1,Class.number, Class.Name, -Name)
+
+#filter the information 
+
+D2 <- filter(D2, Class.Name >0)
+D2 <- filter(D2, D2$Class.Name !="HUDK 4050")
+D2 <- D2[,-2]
+f1 <- function(a)
+{ gsub(" ", "", a)}
+D2 <- lapply(D2,f1)
+D2$count <- 1
+#fixing all the information in the D2 chart 
+D2$Class.Name <- gsub(pattern = "QMSS-",
+                                     replacement = "",
+                                     x = D2$Class.Name)
+D2$Class.Name <- gsub(pattern = "QMSS",
+                                     replacement = "G",
+                                     x = D2$Class.Name)
+D2$Class.Name <- gsub(pattern = "GG",
+                                     replacement = "G",
+                                     x = D2$Class.Name)
+D2$Class.Name <- gsub(pattern = "GR",
+                                     replacement = "G",
+                                     x = D2$Class.Name)
+
+# Then make the D2 has same data frame and list
+D2 <- as.data.frame.list(D2)
+D3 <- spread(D2, Class.Name, count, fill = 0 )
+D3$id <- seq(1,52,1) 
+D3 <- D3[,-57]
+row.names(D3) <- D3$Name
+D3 <- D3[,-1]
+#Set a seed and make the kmeans 
+set.seed(4050)
+
+#then we can cluster the how many student in the class
+
+fit2<-kmeans(D3, 4) 
+fit2$cluster
+as.data.frame(fit2$cluster)
+D4<- data.frame(D3, cluster = fit2$cluster)
+# then we count the students
+#Make the make D3 AND D5 as a matrix
+D5 <- count(D4, cluster)
+D3 <- as.matrix(D3)
+D6 <- D3 %*% t(D3)
+
+#Then we have to make graph 
+
+library(igraph)
+graph_cluster <- graph_from_adjacency_matrix(D6, weighted = TRUE,
+  diag = FALSE, add.colnames = NULL, add.rownames = NA)
+plot(graph2, layout=layout.fruchterman.reingold, edge.arrow.size=1 , vertex.color=D4$cluster)
+
+```
+
 
 ##Part III
 
 In class activity 6 you clustered students in the class by the answers to a questionaire. Create a visualization that shows the overlap between these clusters and the clusters generated in part II.
+```{r}
+Class_gather_matrix$Name <- str_to_upper(Class_gather_matrix$Name) %>% str_remove_all("[[:space:]]")
+
+Part2_gather_matrix<- data.frame(Class_gather_matrix,class_fit$cluster) %>% rename("Part3_cluster"=class_fit.cluster)
+
+A2<-read.csv("HUDK405019-clustering.csv")
+
+A3 <- str_to_upper(A2) %>% str_remove_all("[[:space:]]")
+
+A4 <-kmeans(A3,2)
+
+```
 
 ## Please render your code as an .html file using knitr and Pull Resquest both your .Rmd file and .html files to the Assignment 3 repository.
 
