@@ -223,9 +223,9 @@ XX <- fit2$cluster
 data.frame(X)
 data.frame(XX)
 
-#cbind did work 
+#cbind did not work 
 
-install.packages("vcd")
+
 library(vcd)
 
 XXX<-structable(X~XX,direction = NULL, split_vertical = FALSE)
@@ -234,4 +234,10 @@ mosaic(XXX,shade=TRUE, legend=TRUE)
 ```
 
 ## Please render your code as an .html file using knitr and Pull Resquest both your .Rmd file and .html files to the Assignment 3 repository.
+```{r}
+#when I tried to knit, error message occurred: "error in contrib.url(repos, "source"): trying to use CRAN without setting a mirror calls: <Anonymous> ... withVisible -> eval -> install.packages -> contrib.url Execution halted"
 
+#I searched it online and tried the following, but none of them worked
+install.packages('plyr', repos = "http://cran.us.r-project.org")
+install.packages(contrib.url)
+```
