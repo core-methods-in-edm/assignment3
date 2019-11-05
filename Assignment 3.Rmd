@@ -27,8 +27,7 @@ K2 <- K1[, -1]
 ```
 
 It is important to think about the meaning of missing values when clustering. We could treat them as having meaning or we could remove those people who have them. Neither option is ideal. What problems do you foresee if we recode or remove these values? Write your answers below:
-
-
+A: On the one hand, if we just remove all the NA from the data, it could make the sample data with too many missing values almost meaningless. On the other hand, if we recode NA, for example, through calculating the mean or median of the data, though it is simple, it could become a bias/deviation, inducing a misunderstanding of the outcomes/analysis of the data.
 
 
 We will remove people with missing values for this assignment, but keep in mind the issues that you have identified.
@@ -136,7 +135,7 @@ ggplot(K6, aes(x= week, y = avg, color = cluster))+
 ```
 
 What patterns do you see in the plot?
-
+A:The pattern of cluster 1 is totally different from the pattern of cluster 2. First, the average motivation of each week of the cluster 1 is higher than it of cluster 2. Second, whereas the average motivation of cluster 1 tends to rise at week 2 and week 4, the average motivation of cluster 2 tends to decline in the same week. Third, the changings of the average motivation of cluster 1 are relatively gently than the changings of cluster 2. 
 
 
 It would be useful to determine how many people are in each cluster. We can do this easily with dplyr.
@@ -150,6 +149,9 @@ K7 <- K7 %>% group_by(cluster, week) %>% summarise(sum(count))
 ```
 
 Look at the number of people in each cluster, now repeat this process for 3 rather than 2 clusters. Which cluster grouping do you think is more informative? Write your answer below:
+A: Personally, the later one, which including 3 clusters, is more informative. 
+
+
 
 ```{r}
 fit1 <- kmeans(K3, 3)
@@ -253,8 +255,6 @@ stu <- merge(stu1, stu2, by = "student", all = TRUE)
 
 mosaic( ~cluster.x + cluster.y, data = stu, main = "Comparison", shade = TRUE, legend = TRUE)
 ```
-
-
 
 ## Please render your code as an .html file using knitr and Pull Resquest both your .Rmd file and .html files to the Assignment 3 repository.
 
