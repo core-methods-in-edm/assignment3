@@ -20,9 +20,7 @@ library(tidyverse)
 
 Now, upload the file "Class_Motivation.csv" from the Assignment 3 Repository as a data frame called "K1""
 ```{r}
-
 K1 <- read.csv("~/Desktop/master fall/hudk4050/assignment3/Class_Motivation.csv")
-
 ```
 
 This file contains the self-reported motivation scores for a class over five weeks. We are going to look for patterns in motivation over this time and sort people into clusters based on those patterns.
@@ -43,15 +41,12 @@ We will remove people with missing values for this assignment, but keep in mind 
 
 
 ```{r}
-
 K3 <- na.omit(K2) #This command create a data frame with only those people with no missing values. It "omits" all rows with missing values, also known as a "listwise deletion". EG - It runs down the list deleting rows as it goes.
-
 ```
 
 Another pre-processing step used in K-means is to standardize the values so that they have the same range. We do this because we want to treat each week as equally important - if we do not standardise then the week with the largest range will have the greatest impact on which clusters are formed. We standardise the values by using the "scale()" command.
 
 ```{r}
-
 K3 <- scale(K3)
 ```
 
@@ -69,39 +64,26 @@ Notice that in this case we have 5 variables and in class we only had 2. It is i
 Also, we need to choose the number of clusters we think are in the data. We will start with 2.
 
 ```{r}
-
 fit <- kmeans(K3, 2) 
-
 #We have created an object called "fit" that contains all the details of our clustering including which observations belong to each cluster.
-
 #We can access the list of clusters by typing "fit$cluster", the top row corresponds to the original order the rows were in. Notice we have deleted some rows.
-
 fit$cluster
-
 #We can also attach these clusters to the original dataframe by using the "data.frame" command to create a new data frame called K4.
-
 K4 <- data.frame(K3, fit$cluster)
-
 #Have a look at the K4 dataframe. Lets change the names of the variables to make it more convenient with the names() command.
-
 names(K4) <- c("1","2","3","4","5","cluster")
-
-
 ```
 
 Now we need to visualize the clusters we have created. To do so we want to play with the structure of our data. What would be most useful would be if we could visualize average motivation by cluster, by week. To do this we will need to convert our data from wide to long format. Remember your old friends tidyr and dplyr!
 
 First lets use tidyr to convert from wide to long format.
 ```{r}
-
 K5 <- gather(K4, "week", "motivation", 1:5)
-
 ```
 
 Now lets use dplyr to average our motivation values by week and by cluster.
 
 ```{r}
-
 K6 <- K5 %>% group_by(week,cluster)
 K6 <- summarise(K6, avg = mean(motivation))
 ```
@@ -132,7 +114,6 @@ Now we can plot our line plot using the ggplot command, "ggplot()".
 
 ```{r}
 library(tidyverse)
-
 ggplot(K6, aes(week, avg, colour =cluster))+geom_line() + xlab("Week") + ylab("Average Motivation")
 ```
 
@@ -232,7 +213,6 @@ A2DF <- data.frame(D4,fit2$cluster)
 DF1 <- read.csv("~/Desktop/master fall/hudk4050/assignment3/HUDK405019-clustering.csv")
 DF1 <- data.frame(DF1)
 DF1$First.Name <- str_to_lower(DF1$First.Name) %>% str_remove_all("[[:space:]]")
-
 #Wrangle data using dplyr to include only the numerical values.
 #Remove location variables
 DF2 <- dplyr::select(DF1, 3:13)
@@ -245,19 +225,16 @@ DF2 <- as.data.frame(scale(DF2))
  
 #Replace missing values with average score EG - zero
 DF2 <- DF2 %>% mutate_all(funs(ifelse(is.na(.) == TRUE, 0, .)))
-fit3 <- kmodes(DF2, 2) 
+set.seed(1)
+fit3 <- kmeans(DF2, 2) 
 fit3$cluster
 P6DF <- data.frame(DF1,fit3$cluster)
 P6DF <- dplyr::select(P6DF,-Last.Name)
 names(P6DF) <- c("FirstName","Q1","Q2","Q3","Q4","Q5","Q6","Q7","Q8","Q9","Q10","Q11","Q12","Q13","Q14","fit3.cluster")
 combineDF <- full_join(A2DF,P6DF,by = "FirstName")
 combineDF <- combineDF %>% mutate(fit2.cluster = factor(fit2.cluster, exclude = NULL),fit3.cluster = factor(fit3.cluster, exclude = NULL)) %>% dplyr::select(FirstName,fit2.cluster,fit3.cluster)
-
 combineSummary <- combineDF %>% group_by(fit2.cluster,fit3.cluster) %>% summarise("Freq" = n())
 combineSummary
 ggplot(combineSummary)+geom_mosaic(aes(weight = Freq, x = product(fit2.cluster),fill=fit3.cluster))+ labs(x = "Acitivity 6 cluster", y = "Assignment 2 cluster",title = "overlaps")
-
 P1 <- structable(combineSummary$fit3.cluster ~ combineSummary$fit2.cluster)
-
-
 ```
