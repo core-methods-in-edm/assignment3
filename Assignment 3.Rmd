@@ -223,7 +223,7 @@ names(DF_overlap) <- c("Name", "ClusterQuestionnaire", "ClusterClass")
 DF_overlap$ClusterQuestionnaire <- as.factor(DF_overlap$ClusterQuestionnaire)
 DF_overlap$ClusterClass <- as.factor(DF_overlap$ClusterClass)
 
-ggplot(DF_overlap, aes(x = Name, y = ClusterQuestionnaire, colour = DF_overlap$ClusterClass)) + geom_point(size = 3) + scale_x_discrete()
+ggplot(DF_overlap, aes(x = Name, y = ClusterQuestionnaire, colour = ClusterClass)) + geom_point(size = 3) + scale_x_discrete()
 
 ```
 
