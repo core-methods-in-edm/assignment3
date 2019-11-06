@@ -268,7 +268,7 @@ D6 <- D3 %*% t(D3)
 library(igraph)
 graph_cluster <- graph_from_adjacency_matrix(D6, weighted = TRUE,
   diag = FALSE, add.colnames = NULL, add.rownames = NA)
-plot(graph2, layout=layout.fruchterman.reingold, edge.arrow.size=1 , vertex.color=D4$cluster)
+plot(graph_cluster, layout=layout.fruchterman.reingold, edge.arrow.size=1 , vertex.color=D4$cluster)
 
 ```
 
@@ -276,16 +276,6 @@ plot(graph2, layout=layout.fruchterman.reingold, edge.arrow.size=1 , vertex.colo
 ##Part III
 
 In class activity 6 you clustered students in the class by the answers to a questionaire. Create a visualization that shows the overlap between these clusters and the clusters generated in part II.
-```{r}
-Class_gather_matrix$Name <- str_to_upper(Class_gather_matrix$Name) %>% str_remove_all("[[:space:]]")
-
-Part2_gather_matrix<- data.frame(Class_gather_matrix,class_fit$cluster) %>% rename("Part3_cluster"=class_fit.cluster)
-
-A2<-read.csv("HUDK405019-clustering.csv")
-
-A3 <- str_to_upper(A2) %>% str_remove_all("[[:space:]]")
-
-A4 <-kmeans(A3,2)
 
 ```
 
