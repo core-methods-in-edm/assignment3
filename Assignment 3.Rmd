@@ -27,7 +27,8 @@ library(igraph)
 
 ## Part I  
 ### Pre-process data  
-Now, upload the file "Class_Motivation.csv" from the Assignment 3 Repository as a data frame called "K1""
+
+Now, upload the file "Class_Motivation.csv" from the Assignment 3 Repository as a data frame called "K1".
 ```{r}
 # load data
 K1 <- read.csv("Class_Motivation.csv")
