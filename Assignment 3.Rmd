@@ -1,85 +1,96 @@
 ---
 title: "Assignment 3: K Means Clustering"
+author: "Minruo Wang"
+date: "10/31/2019"
+output: 
+  html_document:
+    toc: true
 ---
 
-In this assignment we will be applying the K-means clustering algorithm we looked at in class. At the following link you can find a description of K-means:
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
 
-https://www.cs.uic.edu/~wilkinson/Applets/cluster.html
+In this assignment we will be applying the K-means clustering algorithm we looked at in class. At the following link you can find a description of K-means:  
+
+https://www.cs.uic.edu/~wilkinson/Applets/cluster.html  
 
 
 ```{r}
-library()
+# load packages
+library(dplyr)
+library(tidyr)
+library(ggplot2)
 ```
 
+
+## Part I  
+### 1) Pre-process data  
 Now, upload the file "Class_Motivation.csv" from the Assignment 3 Repository as a data frame called "K1""
 ```{r}
-
-K1 <- read.csv(...)
-
+# load data
+K1 <- read.csv("Class_Motivation.csv")
 ```
 
-This file contains the self-reported motivation scores for a class over five weeks. We are going to look for patterns in motivation over this time and sort people into clusters based on those patterns.
+This file contains the self-reported motivation scores for a class over five weeks. We are going to look for patterns in motivation over this time and sort people into clusters based on those patterns.  
 
-But before we do that, we will need to manipulate the data frame into a structure that can be analyzed by our clustering algorithm.
+But before we do that, we will need to manipulate the data frame into a structure that can be analyzed by our clustering algorithm.  
 
-The algorithm will treat each row as a value belonging to a person, so we need to remove the id variable.
+The algorithm will treat each row as a value belonging to a person, so we need to remove the id variable.  
 
 ```{r}
-
-K2 <- 
-
+# remove id variable
+K2 <- subset(K1, select = -id)
 ```
 
-It is important to think about the meaning of missing values when clustering. We could treat them as having meaning or we could remove those people who have them. Neither option is ideal. What problems do you foresee if we recode or remove these values? Write your answers below:
+It is important to think about the meaning of missing values when clustering. We could treat them as having meaning or we could remove those people who have them. Neither option is ideal. What problems do you foresee if we recode or remove these values? Write your answers below:  
 
-
+**Problems**: the decrease in sample size may lead to bias in clustering.
 
 We will remove people with missing values for this assignment, but keep in mind the issues that you have identified.
 
 
 ```{r}
-
+# remove missing values
 K3 <- na.omit(K2) #This command create a data frame with only those people with no missing values. It "omits" all rows with missing values, also known as a "listwise deletion". EG - It runs down the list deleting rows as it goes.
-
 ```
 
 Another pre-processing step used in K-means is to standardize the values so that they have the same range. We do this because we want to treat each week as equally important - if we do not standardise then the week with the largest range will have the greatest impact on which clusters are formed. We standardise the values by using the "scale()" command.
 
 ```{r}
-
-K3 <- 
-
+# Standardize the values
+K3 <- scale(K3)
 ```
 
-
-Now we will run the K-means clustering algorithm we talked about in class. 
-1) The algorithm starts by randomly choosing some starting values 
-2) Associates all observations near to those values with them
-3) Calculates the mean of those clusters of values
-4) Selects the observation closest to the mean of the cluster
-5) Re-associates all observations closest to this observation
-6) Continues this process until the clusters are no longer changing
+### 2) Cluster analysis: K-means  
+Now we will run the K-means clustering algorithm we talked about in class.  
+1) The algorithm starts by randomly choosing some starting values  
+2) Associates all observations near to those values with them  
+3) Calculates the mean of those clusters of values  
+4) Selects the observation closest to the mean of the cluster  
+5) Re-associates all observations closest to this observation  
+6) Continues this process until the clusters are no longer changing  
 
 Notice that in this case we have 5 variables and in class we only had 2. It is impossible to vizualise this process with 5 variables.
 
 Also, we need to choose the number of clusters we think are in the data. We will start with 2.
 
 ```{r}
-
-fit <- 
-
+# Build a kmeans model: k=2
+fit <- kmeans(K3, centers = 2)
 #We have created an object called "fit" that contains all the details of our clustering including which observations belong to each cluster.
 
+# Extract the cluster assignment vector from the kmeans model
+clust_km2 <- fit$cluster
 #We can access the list of clusters by typing "fit$cluster", the top row corresponds to the original order the rows were in. Notice we have deleted some rows.
 
-
-
+# Create a new data frame appending the cluster assignment
+K4 <- data.frame(K3, clust_km2)
 #We can also attach these clusters to the original dataframe by using the "data.frame" command to create a new data frame called K4.
 
-K4
-
-#Have a look at the K4 dataframe. Lets change the names of the variables to make it more convenient with the names() command.
-
+# Have a look at the K4 dataframe. Lets change the names of the variables to make it more convenient with the names() command.
+names(K4) <- c("1", "2", "3", "4", "5", "cluster")
+K4 
 
 ```
 
@@ -87,16 +98,19 @@ Now we need to visualize the clusters we have created. To do so we want to play 
 
 First lets use tidyr to convert from wide to long format.
 ```{r}
-
-K5 <- 
+# Convert from wide to long: add week
+K5 <- gather(K4, weeks, motivation, 1:5)
 ```
 
 Now lets use dplyr to average our motivation values by week and by cluster.
 
 ```{r}
-
-K6 <- 
-
+# average motivation values by week and by cluster
+K6 <- K5 %>%
+  group_by(weeks, cluster) %>%
+  summarise(mean(motivation))
+# rename the column
+colnames(K6)[3] <- "avg"
 ```
 
 Now it's time to do some visualization: 
@@ -112,11 +126,11 @@ We are going to create a line plot similar to the one created in the school drop
 Likewise, since "cluster" is not numeric but rather a categorical label we want to convert it from an "integer" format to a "factor" format so that ggplot does not treat it as a number. We can do this with the as.factor() command.
 
 ```{r}
+# Convert into numbers
+K6$weeks <- as.numeric(K6$weeks)
 
-K6$week <- 
-
-K6$cluster <- 
-
+# Convert cluster into factor
+K6$cluster <- as.factor(K6$cluster)
 ```
 
 Now we can plot our line plot using the ggplot command, "ggplot()".
@@ -127,29 +141,101 @@ Now we can plot our line plot using the ggplot command, "ggplot()".
 - Finally we are going to clean up our axes labels: xlab("Week") & ylab("Average Motivation")
 
 ```{r}
-
-
+# plot the line plot
+mot_plot <- ggplot(K6, aes(x = weeks, y = avg, color = cluster)) + 
+  geom_line() +
+  xlab("Week") + 
+  ylab("Average Motivation")
+mot_plot
 ```
 
-What patterns do you see in the plot?
+What patterns do you see in the plot?  
 
+**Pattern**: Cluster 1 has an increasing trend in average motivation with time while Cluster 2 has a decreasing trend. Both clusters of students have fluctuations in their motivation.  
 
-
-It would be useful to determine how many people are in each cluster. We can do this easily with dplyr.
+It would be useful to determine how many people are in each cluster. We can do this easily with dplyr.  
 
 ```{r}
-K7 <- 
+# count number of people in clusters
+K7 <- K4 %>% 
+  group_by(cluster) %>%
+  count(cluster)
+# 15 people in cluster 1, 8 people in cluster 2.
 ```
 
-Look at the number of people in each cluster, now repeat this process for 3 rather than 2 clusters. Which cluster grouping do you think is more informative? Write your answer below:
+Look at the number of people in each cluster, now repeat this process for 3 rather than 2 clusters. Which cluster grouping do you think is more informative? Write your answer below: 
+
+**Answer**: Clustering with 3 groups is more informative.   
+When K = 2, 15 people in cluster 1, 8 people in cluster 2;  
+When K = 3, 7 people in cluster 1, 7 people in cluster 2, 9 people in cluster 3.  
+As illustrated in the new plot, clustering with 3 groups provide more details when viewing the trend in motivation across time.
+
+```{r}
+# Build a kmeans model: k=2
+fit3 <- kmeans(K3, centers = 3)
+# Extract the cluster assignment vector from the kmeans model
+clust_km3 <- fit3$cluster
+# Create a new data frame appending the cluster assignment
+K8 <- data.frame(K3, clust_km3)
+# rename
+names(K8) <- c("1", "2", "3", "4", "5", "cluster")
+# Convert from wide to long: add week
+K9 <- gather(K8, weeks, motivation, 1:5)
+# average motivation values by week and by cluster
+K10 <- K9 %>%
+  group_by(weeks, cluster) %>%
+  summarise(mean(motivation))
+# rename the column
+colnames(K10)[3] <- "avg"
+# Convert into numbers
+K10$weeks <- as.numeric(K10$weeks)
+# Convert cluster into factor
+K10$cluster <- as.factor(K10$cluster)
+
+# plot the line plot
+mot_plot2 <- ggplot(K10, aes(x = weeks, y = avg, color = cluster)) + 
+  geom_line() +
+  xlab("Week") + 
+  ylab("Average Motivation")
+mot_plot2
+hh
+# count number of people in clusters
+K11 <- K8 %>% 
+  group_by(cluster) %>%
+  count(cluster)
+
+```
+
 
 ##Part II
 
-Using the data collected for Assignment 2 (which classes students were in), cluster the students, then redraw the graph of the class but color the students according the cluster they are in.
+Using the data collected for Assignment 2 (which classes students were in), cluster the students, then redraw the graph of the class but color the students according the cluster they are in.   
+
+```{r}
+# load data
+hudk <- read.csv("hudk4050-classes-cleaned.csv", header = TRUE, sep = ",")
+# change row name
+row.names(hudk) <- hudk$X
+hudk <- hudk[,-1]
+
+
+```
+
 
 ##Part III
 
-In class activity 6 you clustered students in the class by the answers to a questionaire. Create a visualization that shows the overlap between these clusters and the clusters generated in part II.
+In class activity 6 you clustered students in the class by the answers to a questionaire. Create a visualization that shows the overlap between these clusters and the clusters generated in part II.  
+
+```{r}
+#Load data
+hudk4050_activity6 <- read.csv("hudk405019-clustering-cleaned.csv", header = TRUE)
+# change row name
+row.names(hudk4050_activity6) <- hudk4050_activity6$X
+hudk4050_activity6 <- hudk4050_activity6[,-1]
+
+```
+
+
 
 ## Please render your code as an .html file using knitr and Pull Resquest both your .Rmd file and .html files to the Assignment 3 repository.
 
