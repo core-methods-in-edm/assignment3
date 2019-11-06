@@ -8,7 +8,6 @@ https://www.cs.uic.edu/~wilkinson/Applets/cluster.html
 
 
 ```{r}
-install.packages("klaR")
 library(tidyr)
 library(dplyr)
 library(klaR)
@@ -314,13 +313,14 @@ fit3<-kmeans(df_8,4)
 
 fit3$cluster
 
+df_10<-data.frame(df_8,df_9,fit3$cluster)
+
 #graph created in activity 6
 library(ggplot2)
 ggplot(df_10, aes(longitude, lattitude, color = as.factor(fit3.cluster))) +
   geom_point(size = 3)
 
 #combining two cluster together
-df_10<-data.frame(df_8,df_9,fit3$cluster)
 Full.Name<-toupper(row.names(df_6))
 df_10<-data.frame(Full.Name,df_10)
 df_11<-inner_join(df_10,df1,by="Full.Name")
