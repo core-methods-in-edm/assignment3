@@ -21,11 +21,12 @@ https://www.cs.uic.edu/~wilkinson/Applets/cluster.html
 library(dplyr)
 library(tidyr)
 library(ggplot2)
+library(igraph)
 ```
 
 
 ## Part I  
-### 1) Pre-process data  
+### Pre-process data  
 Now, upload the file "Class_Motivation.csv" from the Assignment 3 Repository as a data frame called "K1""
 ```{r}
 # load data
@@ -62,7 +63,7 @@ Another pre-processing step used in K-means is to standardize the values so that
 K3 <- scale(K3)
 ```
 
-### 2) Cluster analysis: K-means  
+### Cluster analysis: K-means  
 Now we will run the K-means clustering algorithm we talked about in class.  
 1) The algorithm starts by randomly choosing some starting values  
 2) Associates all observations near to those values with them  
@@ -168,7 +169,7 @@ Look at the number of people in each cluster, now repeat this process for 3 rath
 **Answer**: Clustering with 3 groups is more informative.   
 When K = 2, 15 people in cluster 1, 8 people in cluster 2;  
 When K = 3, 7 people in cluster 1, 7 people in cluster 2, 9 people in cluster 3.  
-As illustrated in the new plot, clustering with 3 groups provide more details when viewing the trend in motivation across time.
+As illustrated in the new plot, clustering with 3 groups provide more details when viewing the trend in motivation across time.  
 
 ```{r}
 # Build a kmeans model: k=3
@@ -206,7 +207,7 @@ mot_plot2 <- ggplot(K10, aes(x = weeks, y = avg, color = cluster)) +
   xlab("Week") + 
   ylab("Average Motivation")
 mot_plot2
-hh
+
 # count number of people in clusters
 K11 <- K8 %>% 
   group_by(cluster) %>%
@@ -215,11 +216,11 @@ K11 <- K8 %>%
 ```
 
 
-##Part II
+## Part II  
 
 Using the data collected for Assignment 2 (which classes students were in), cluster the students, then redraw the graph of the class but color the students according the cluster they are in.   
 
-### Data cleaning: Assignment 2
+### Data cleaning: Assignment 2  
 ```{r}
 # load data
 hudk <- read.csv("hudk4050-classes.csv", header = TRUE, sep = ",")
@@ -298,7 +299,6 @@ hudk_a2_km4_cluster <- data.frame(hudk_wide, hudk_cluster)
 ### Person-person matrix ###
 hudk_person_mat <- as.matrix(hudk_wide)
 hudk_person_mat <- hudk_person_mat %*% t(hudk_person_mat)
-
 ```
 
 ### Data visualization: redraw the graph of the class  
@@ -307,14 +307,15 @@ hudk_person_mat <- hudk_person_mat %*% t(hudk_person_mat)
 # create graph from adjacency matrices
 hudk_network <- graph.adjacency(hudk_person_mat)
 plot(hudk_network, layout=layout.fruchterman.reingold, vertex.label.color = hudk_a2_km4_cluster$hudk_cluster)
+
 ```
 
 
-##Part III
+## Part III  
 
 In class activity 6 you clustered students in the class by the answers to a questionaire. Create a visualization that shows the overlap between these clusters and the clusters generated in part II.  
 
-### Data cleaning: class activity 6
+### Data cleaning: class activity 6  
 ```{r}
 ## Load data
 DF1 <- read.csv("HUDK405019-clustering.csv", header = TRUE)
@@ -422,5 +423,5 @@ ggplot(data = merge_a2_ca6, mapping = aes(x = Student_name, y = class6_cluster, 
 ```  
 
 
-## Please render your code as an .html file using knitr and Pull Resquest both your .Rmd file and .html files to the Assignment 3 repository.
+**Please render your code as an .html file using knitr and Pull Resquest both your .Rmd file and .html files to the Assignment 3 repository.**
 
