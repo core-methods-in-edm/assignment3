@@ -185,14 +185,13 @@ row.names(D3) <- D3$Name
 D3$Name <- NULL
 D3 <- as.matrix(D3)
 D4 <- D3 %*% t(D3)
-D4 <- scale(D4)
 
 fit_class <- kmeans(D4, 3)
 D4 <- cbind(D4, fit_class$cluster)
 
-
-#g3 <- graph_from_adjacency_matrix(D4, mode = c("undirected"), weighted = TRUE, diag = FALSE)
-#plot(g3, layout=layout_on_grid, vertex.size = 3, vertex.label = NA, edge.width = .2)
+fit_class$cluster
+g3 <- graph_from_adjacency_matrix(D4[,-1], mode = c("undirected"), weighted = TRUE, diag = FALSE)
+plot(g3, vertex.size = 6, vertex.label = NA, vertex.color = fit_class$cluster, edge.width = .2)
 
 ```
 
