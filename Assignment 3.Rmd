@@ -276,6 +276,66 @@ plot(graph_cluster, layout=layout.fruchterman.reingold, edge.arrow.size=1 , vert
 ##Part III
 
 In class activity 6 you clustered students in the class by the answers to a questionaire. Create a visualization that shows the overlap between these clusters and the clusters generated in part II.
+```{r}
+#first of all, install the packages load the all the library 
+library(ggmap)
+
+library(tmaptools)
+
+A1<-read.csv("HUDK405019-clustering.csv", header = TRUE)
+
+#THEN MAKE THEM SAME MODE
+
+A1<-unite(A1,"Name",c("First.Name","Last.Name"),sep=".")
+
+#rerow the name
+
+row.names(A1)<-A1$Name
+
+#make the data be a intergret
+
+A1$Name <- NULL
+
+# the gathering information we have 
+A2 <- A1[1:11]
+# we need to filter the information
+
+A2 <- A2 %>% mutate_all(funs(gsub("[a-zA-Z]", "", .)))
+
+A2 <- A2 %>% mutate_all(funs(as.numeric(.)))
+
+A2 <- as.data.frame(scale(A2))
+
+A2 <- A2 %>% mutate_all(funs(ifelse(is.na(.) == TRUE, 0, .)))
+
+#Filter the main points we created on 13:14
+
+A3 <- A1[13:14]
+
+names(A3) <- c("lattitude", "longitude")
+
+A3 <- A3 %>% mutate_all(funs(gsub("[a-zA-Z]", "", .)))
+
+A3 <- A3 %>% mutate_all(funs(sub("[?]", "", .)))
+
+#all the long lattitude and longtitude we must sperate
+
+A3$lattitude <- sub(",.*$","", A3$lattitude) 
+A3$lattitude <- sub("°.*$","", A3$lattitude)
+A3$longitude <- gsub(".*,","",A3$longitude)
+A3$longitude <- sub("°.*$","", A3$longitude)
+
+A3 <- A3 %>% mutate_all(funs(as.numeric(.)))
+
+fit <- kmeans(A2, 3) 
+
+A4 <- data.frame(A2, A3, fit$cluster)
+#we habe to graph a ditribution graph 
+
+ggplot(A4, aes(longitude, lattitude, color = as.factor(fit.cluster))) + geom_point(size = 10)
+
+
+```
 
 ```
 
