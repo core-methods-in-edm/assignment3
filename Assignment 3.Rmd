@@ -25,7 +25,7 @@ The algorithm will treat each row as a value belonging to a person, so we need t
 ```{r}
 library(tidyverse)
 
-K2 <- select(K1,-1)
+K2 <- dplyr::select(K1,-1)
 
 ```
 
@@ -66,7 +66,7 @@ Also, we need to choose the number of clusters we think are in the data. We will
 ```{r}
 library(klaR)
 
-fit <- kmeans(K3,2)
+fit <- kmeans(K3,3)
 
 #We have created an object called "fit" that contains all the details of our clustering including which observations belong to each cluster.
 
@@ -147,22 +147,43 @@ K6 <- data.frame(K6, fit$size)
 ```
 
 Look at the number of people in each cluster, now repeat this process for 3 rather than 2 clusters. Which cluster grouping do you think is more informative? Write your answer below:
-#Group 3 is more important because it has the most people. There are relatively few in groups 1 and 2.  
+#Whichever group has the most people. I noticed when I ran this multiple times that I got different groupings...  
 
 ##Part II
 
 Using the data collected for Assignment 2 (which classes students were in), cluster the students, then redraw the graph of the class but color the students according the cluster they are in.
 ````{r}
 library(klaR)
+library(tidyverse)
+library(igraph)
 
-F1 <- read.csv("hudk4050-classes.csv", header = TRUE)
+F1 <- read.csv("hudk4050-classes.csv", header = TRUE, as.is = TRUE)
 F1 <- unite(F1,"name",Last.Name,First.Name, sep = ", ", remove = TRUE)
-F2 <- F1 %>% mutate_all(funs(gsub(".*4050","",.))) %>%
-mutate_all(funs(gsub("\\s+","",.))) %>% gather("class_number","course_num",2:7) %>%
-select(-class_number) 
+F1 <- F1 %>% mutate_all(funs(gsub(".*4050","",.))) %>%
+  mutate_all(funs(gsub("\\s+","",.))) %>% 
+  gather("class_number","course_num",2:7) %>% 
+  dplyr::select(-class_number)
 
-fire_fit <- kmeans(F2,2)
+F1 <- F1[!(F1$course_num=="" | F1$course_num==" "),]
 
+F1$inclass <- c("Yes")
+F2 <- F1 %>% spread(course_num,inclass,fill="No") %>%
+  remove_rownames %>% column_to_rownames(var="name")
+
+fire_fit <- kmodes(F2,2,iter.max = 10, weighted = FALSE)
+
+for (column in 1:ncol(F2))
+{
+  F2[,column] <- as.factor(F2[,column]) 
+  levels(F2[,column]) <- c(0,1)
+}
+F2 <- as.matrix(F2)
+class(F2) <- "numeric"
+F2 <- F2 %*% t(F2)
+diag(F2) <- NA
+
+g <- graph.adjacency(F3,mode="undirected")
+plot(g,layout=layout.fruchterman.reingold, vertex.size=10, vertex.color = fire_fit$cluster)
 
 ````
 ##Part III
