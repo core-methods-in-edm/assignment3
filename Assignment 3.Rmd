@@ -177,6 +177,7 @@ library(klaR)
 fit <- kmodes(S3, 5, iter.max = 10, weighted = FALSE)
 fit$cluster
 S4 = data.frame(S3, fit$cluster)
+V1 <- fit$cluster
 
 library(igraph)
 S <- graph.adjacency(S5,mode="undirected")
@@ -188,6 +189,27 @@ plot(S,layout=layout.fruchterman.reingold, vertex.size=10, vertex.label.cex = 0.
 ##Part III
 
 In class activity 6 you clustered students in the class by the answers to a questionaire. Create a visualization that shows the overlap between these clusters and the clusters generated in part II.
+```{r}
+library(vcd)
+library(dplyr)
+DF1 <- read.csv("HUDK405019-clustering.csv", header = TRUE)
+rownames(DF1) <- DF1$First.Name
+DF1$First.Name = NULL
+DF1$Last.Name = NULL
+
+DF2 <- DF1 %>% mutate_all(as.character) %>% mutate_all(as.numeric) %>%
+  dplyr::select(-c(What.city.town.did.you.grow.up.in.:What.is.the.longitude.of.the.city.town.you.grew.up.in.))
+
+DF2[is.na(DF2)] = 0 
+DF2 <- scale(DF2)
+fit <- kmeans(DF2, 5) 
+V2 <-fit$cluster
+V <- structable(V1~V2)
+mosaic(V)
+```
+
+
 
 ## Please render your code as an .html file using knitr and Pull Resquest both your .Rmd file and .html files to the Assignment 3 repository.
+
 
