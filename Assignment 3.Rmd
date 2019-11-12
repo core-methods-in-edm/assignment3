@@ -206,9 +206,9 @@ DF1 <- read.csv("HUDK405019-clustering.csv", header = TRUE)
 rownames(DF1) <- DF1$First.Name
 DF1$First.Name = NULL
 DF1$Last.Name = NULL
-DF2 <- DF1 %>% mutate_all(as.character) %>% mutate_all(as.numeric) %>%
-  dplyr::select(-c(What.city.town.did.you.grow.up.in.:What.is.the.longitude.of.the.city.town.you.grew.up.in.))
-DF2[is.na(DF2)] = 0 
+DF2 <- dplyr:: select(DF1, 1:11) %>%
+        mutate_all(as.character) %>% mutate_all(as.numeric) 
+DF2 <-DF2 %>% mutate_all(funs(ifelse(is.na(.) == TRUE,0,.)))
 DF2 <- scale(DF2)
 fit <- kmeans(DF2, 5) 
 V1 <- fit$cluster
