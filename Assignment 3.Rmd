@@ -1,6 +1,13 @@
 ---
-title: "Assignment 3: K Means Clustering"
+title: 'Assignment 3: K Means Clustering'
 ---
+Assignment 3
+Lintong Li
+UNI: ll3358
+
+
+
+
 
 In this assignment we will be applying the K-means clustering algorithm we looked at in class. At the following link you can find a description of K-means:
 
@@ -8,13 +15,16 @@ https://www.cs.uic.edu/~wilkinson/Applets/cluster.html
 
 
 ```{r}
-library()
+install.packages("tidyverse")
+library(dplyr)
+library(tidyr)
+library(tidyverse)
 ```
 
 Now, upload the file "Class_Motivation.csv" from the Assignment 3 Repository as a data frame called "K1""
 ```{r}
 
-K1 <- read.csv(...)
+K1 <- read.csv("Class_Motivation.csv",header = TRUE)
 
 ```
 
@@ -26,7 +36,7 @@ The algorithm will treat each row as a value belonging to a person, so we need t
 
 ```{r}
 
-K2 <- 
+K2 <- select(K1, motivation1, motivation2, motivation3, motivation4, motivation5)
 
 ```
 
@@ -47,7 +57,7 @@ Another pre-processing step used in K-means is to standardize the values so that
 
 ```{r}
 
-K3 <- 
+K3 <- scale(K3)
 
 ```
 
@@ -66,19 +76,22 @@ Also, we need to choose the number of clusters we think are in the data. We will
 
 ```{r}
 
-fit <- 
-
 #We have created an object called "fit" that contains all the details of our clustering including which observations belong to each cluster.
+
+set.seed(123)
+fit <- kmeans(K3, 2)
 
 #We can access the list of clusters by typing "fit$cluster", the top row corresponds to the original order the rows were in. Notice we have deleted some rows.
 
-
+fit$cluster
 
 #We can also attach these clusters to the original dataframe by using the "data.frame" command to create a new data frame called K4.
 
-K4
+as.data.frame(fit$cluster)
+K4 <- data.frame(K3, fit$cluster)
 
 #Have a look at the K4 dataframe. Lets change the names of the variables to make it more convenient with the names() command.
+names(K4) <- c("motivation_1", "motivation_2", "motivation_3", "motivation_4", "motivation_5","cluster")
 
 
 ```
@@ -87,15 +100,16 @@ Now we need to visualize the clusters we have created. To do so we want to play 
 
 First lets use tidyr to convert from wide to long format.
 ```{r}
-
-K5 <- 
+?gather
+K5 <- gather(K4, week, motivation, motivation_1:motivation_5, -cluster)
 ```
 
 Now lets use dplyr to average our motivation values by week and by cluster.
 
 ```{r}
 
-K6 <- 
+K5<- group_by(K5,week,cluster)
+K6 <- mutate(K5, avg = mean(motivation))
 
 ```
 
@@ -112,10 +126,18 @@ We are going to create a line plot similar to the one created in the school drop
 Likewise, since "cluster" is not numeric but rather a categorical label we want to convert it from an "integer" format to a "factor" format so that ggplot does not treat it as a number. We can do this with the as.factor() command.
 
 ```{r}
+install.packages("ggplot2")
+library(ggplot2)
 
-K6$week <- 
-
-K6$cluster <- 
+K6$week <- gsub(pattern = "motivation_1","1", K6$week) 
+K6$week <- gsub(pattern = "motivation_2","2", K6$week)
+K6$week <- gsub(pattern = "motivation_3","3", K6$week) 
+K6$week <- gsub(pattern = "motivation_4","4", K6$week) 
+K6$week <- gsub(pattern = "motivation_5","5", K6$week) 
+K6$week <- as.numeric(K6$week)
+mode(K6$avg)
+mode(K6$week)
+K6$cluster <-  as.factor(K6$cluster)
 
 ```
 
@@ -128,6 +150,7 @@ Now we can plot our line plot using the ggplot command, "ggplot()".
 
 ```{r}
 
+ggplot(K6, aes(x=week, y=avg, color = cluster)) + geom_line()
 
 ```
 
@@ -138,18 +161,137 @@ What patterns do you see in the plot?
 It would be useful to determine how many people are in each cluster. We can do this easily with dplyr.
 
 ```{r}
-K7 <- 
+K7 <- group_by(K6, cluster) %>% summarise(n=n())
 ```
 
 Look at the number of people in each cluster, now repeat this process for 3 rather than 2 clusters. Which cluster grouping do you think is more informative? Write your answer below:
+```{r}
+set.seed(123)
+fit_new<-kmeans(K3, 3)
+fit_new$cluster
+as.data.frame(fit_new$cluster)
+K4_new <- data.frame(K3, cluster = fit_new$cluster)
+K5_new <- gather(K4_new , week, motivation, motivation1:motivation5, -cluster)
+K5_new <- group_by(K5_new ,week , cluster)
+K6_new <- mutate(K5_new, avg =mean(motivation))
+K6_new$week <- gsub(pattern = "motivation1","1", K6_new$week) 
+K6_new$week <- gsub(pattern = "motivation2","2", K6_new$week)
+K6_new$week <- gsub(pattern = "motivation3","3", K6_new$week) 
+K6_new$week <- gsub(pattern = "motivation4","4", K6_new$week) 
+K6_new$week <- gsub(pattern = "motivation5","5", K6_new$week) 
+K6_new$week <- as.numeric(K6_new$week)
+mode(K6_new$avg)
+mode(K6_new$week)
+K6_new$cluster <-  as.factor(K6_new$cluster)
+ggplot(K6_new, aes(x=week, y=avg, color = cluster)) + geom_line()
+
+```
+
 
 ##Part II
 
 Using the data collected for Assignment 2 (which classes students were in), cluster the students, then redraw the graph of the class but color the students according the cluster they are in.
+```{r}
+#read the file and clean the data which is mot correct. 
+D1 <- read.csv("hudk4050-classes.csv", header=TRUE)
+D1 <- as.data.frame(D1)
+D1 <- unite(D1, Name, "First.Name", "Last.Name", sep=" ")
+D1 <- filter(D1, Name != "ZIMO CHEN")
+D2 <- gather(D1,Class.number, Class.Name, -Name)
+D2 <- filter(D2, Class.Name >0)
+D2 <- filter(D2, D2$Class.Name !="HUDK 4050")
+D2 <- select(D2, Name,Class.Name)
+f1 <- function(a)
+{ gsub(" ", "", a)}
+D2 <- lapply(D2,f1)
+D2$count <- 1
+#fixing the wrong information in D2. 
+D2$Class.Name <- gsub(pattern = "QMSS-",
+                                     replacement = "",
+                                     x = D2$Class.Name)
+D2$Class.Name <- gsub(pattern = "QMSS",
+                                     replacement = "G",
+                                     x = D2$Class.Name)
+D2$Class.Name <- gsub(pattern = "GG",
+                                     replacement = "G",
+                                     x = D2$Class.Name)
+D2$Class.Name <- gsub(pattern = "GR",
+                                     replacement = "G",
+                                     x = D2$Class.Name)
+D2 <- as.data.frame.list(D2)
+D3 <- spread(D2, Class.Name, count, fill = 0 )
+D3$id <- seq(1,51,1) #in case, we may use that to make graph
+ID <- select(D3, Name, id)#in case, we may use that to make graph
+D3 <- D3[,-57]
+row.names(D3) <- D3$Name
+D3 <- D3[,-1]
+#Next,we begin to get cluster
+set.seed(123)
+fit2<-kmeans(D3, 4) #the number of cluster is based on how many classes they take.
+fit2$cluster
+as.data.frame(fit2$cluster)
+D4<- data.frame(D3, cluster = fit2$cluster)
+D5 <- count(D4, cluster) #we want to know how many students in each cluster.
+D3 <- as.matrix(D3)
+D6 <- D3 %*% t(D3)
+#make a graph
+library(igraph)
+graph2 <- graph_from_adjacency_matrix(D6, weighted = TRUE,
+  diag = FALSE, add.colnames = NULL, add.rownames = NA)
+plot(graph2, layout=layout.fruchterman.reingold, edge.arrow.size=0.05 , vertex.color=D4$cluster)
+```
+
 
 ##Part III
 
 In class activity 6 you clustered students in the class by the answers to a questionaire. Create a visualization that shows the overlap between these clusters and the clusters generated in part II.
+```{r}
+#read the file and choose the data we need 
+P1 <- read.csv("HUDK405019-clustering.csv", header = TRUE)
+P1 <- as.data.frame(P1)
+P1 <- unite(P1, Name, "First.Name", "Last.Name", sep=" ")
+row.names(P1) <- P1$Name
+P1 <- P1[,-1]
+P2 <- select(P1, 1:11)
+#fixing the wrong information in P2. 
+P2$How.many.months.have.you.lived.in.New.York.City. <- gsub(pattern = "new york",
+                                     replacement = "0",
+                                     x = P2$How.many.months.have.you.lived.in.New.York.City.)
+P2$How.many.miles.do.you.travel.from.home.to.TC. <- gsub(pattern = "100m",
+                                     replacement = "100",
+                                     x = P2$How.many.miles.do.you.travel.from.home.to.TC.)
+P2$How.many.miles.do.you.travel.from.home.to.TC. <- gsub(pattern = "0.4miles",
+                                     replacement = "0.4",
+                                     x = P2$How.many.miles.do.you.travel.from.home.to.TC.)
+P2$How.many.miles.do.you.travel.from.home.to.TC. <- gsub(pattern = "NA",
+                                     replacement = "0",
+                                     x = P2$How.many.miles.do.you.travel.from.home.to.TC.)
+P2$Estimate.how.many.of.your.friends.own.Android.phones <- gsub(pattern = "NO IDEA",
+                                     replacement = "0",
+                                     x = P2$Estimate.how.many.of.your.friends.own.Android.phones)
+P2$How.many.states.have.you.visited.in.the.US. <- gsub(pattern = "NY",
+                                     replacement = "0",
+                                     x = P2$How.many.states.have.you.visited.in.the.US.)
+#create a file including lattitude and longitude information
+P3 <- select(P1, 13:14)
+names(P3) <- c("lattitude", "longitude")#rename
+#fixing the wrong information in P2.
+P3 <- P3 %>% mutate_all(funs(gsub("[a-zA-Z]", "", .)))
+P3 <- P3 %>% mutate_all(funs(sub("[?]", "", .)))
+P3 <- filter(P3, P3$lattitude >0)
+P3$lattitude <- sub(",.*$","", P3$lattitude) 
+P3$lattitude <- sub("°.*$","", P3$lattitude)
+P3$longitude <- gsub(".*,","", P3$longitude)
+P3$longitude <- sub("°.*$","", P3$longitude)
+#Getting kmeans
+P2 <- P2 %>% mutate_all(funs(as.numeric(.)))
+fit3 <- kmeans(P2, 2)
+Final1 <- data.frame(Final1, fit1$cluster)
+#getting cluster
+
+
+```
+
 
 ## Please render your code as an .html file using knitr and Pull Resquest both your .Rmd file and .html files to the Assignment 3 repository.
 
