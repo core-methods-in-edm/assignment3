@@ -8,8 +8,7 @@ https://www.cs.uic.edu/~wilkinson/Applets/cluster.html
 
 
 ```{r}
-# install.packages("klaR")
-library(klaR)
+library()
 ```
 
 Now, upload the file "Class_Motivation.csv" from the Assignment 3 Repository as a data frame called "K1""
@@ -67,7 +66,7 @@ Notice that in this case we have 5 variables and in class we only had 2. It is i
 Also, we need to choose the number of clusters we think are in the data. We will start with 2.
 
 ```{r}
-
+set.seed(119)
 fit <- kmeans(K3, 2) 
 
 #We have created an object called "fit" that contains all the details of our clustering including which observations belong to each cluster.
@@ -147,32 +146,33 @@ K7 <- dplyr::count(K4, cluster)
 K7
 ```
 
-### There are 15 people in Cluster 1 and 8 in Cluster 8.
+### There are 8 people in Cluster 1 and 15 in Cluster 2.
 
 Look at the number of people in each cluster, now repeat this process for 3 rather than 2 clusters. Which cluster grouping do you think is more informative? Write your answer below:
 
 ```{r}
+set.seed(119)
 fit2 <- kmeans(K3, 3) 
-K4 <- data.frame(K3, fit2$cluster)
-names(K4) <- c("1", "2", "3", "4", "5", "cluster") 
+K8 <- data.frame(K3, fit2$cluster)
+names(K8) <- c("1", "2", "3", "4", "5", "cluster") 
 library(tidyr)
-K5 <- gather(K4, "week", "motivation", -6)
+K9 <- gather(K8, "week", "motivation", -6)
 library(dplyr)
-K6 <- K5 %>% group_by(cluster, week) %>% summarise(avg = mean(motivation))
-K6$week <- as.numeric(K6$week)
+K10 <- K9 %>% group_by(cluster, week) %>% summarise(avg = mean(motivation))
+K10$week <- as.numeric(K10$week)
+K10$cluster <- as.factor(K10$cluster)
 
-K6$cluster <- as.factor(K6$cluster)
 library(ggplot2)
-ggplot(K6, aes(x = week, y = avg, colour = cluster)) +
+ggplot(K10, aes(x = week, y = avg, colour = cluster)) +
   geom_line() +
   xlab("Week") +
   ylab("Average Motivation")
 
-K7 <- dplyr::count(K4, cluster)
-K7
+K11 <- dplyr::count(K8, cluster)
+K11
 ```
 
-### I think 3-cluster grouping is more informative. There are 9, 7 and 7 in Cluster 1, 2 and 3 respectively. Thus we have relativley even number of people in each cluster. Furthermore, there is a middle level which provides us more information.
+### I think 3-cluster grouping is more informative. There are 9, 7 and 7 in Cluster 1, 2 and 3 respectively. Thus we have relativley even amount of people in each cluster. Furthermore, there is a middle level which could provide us more information.
 
 
 
@@ -181,51 +181,49 @@ K7
 Using the data collected for Assignment 2 (which classes students were in), cluster the students, then redraw the graph of the class but color the students according the cluster they are in.
 
 ```{r}
-D3 <- read.csv("hudk4050-classes.csv", header = TRUE, na.strings = c("", "NA")) 
+D1 <- read.csv("hudk4050-classes.csv", header = TRUE, na.strings = c("", "NA")) 
 
 library(tidyr)
+library(dplyr)
 
 ## clean data
-D3 %>% mutate_if(is.factor, as.character) -> D3 
+D1 %>% mutate_if(is.factor, as.character) -> D1
 
-D3 %>% mutate_all(function(x)gsub(" ", "",x)) -> D3
-D3 %>% mutate_all(function(x)gsub("&", "",x)) -> D3
+D1 %>% mutate_all(function(x)gsub(" ", "",x)) -> D1
+D1 %>% mutate_all(function(x)gsub("&", "",x)) -> D1
 
-D3 %>% unite(Name, First.Name, Last.Name, sep = " ", remove = TRUE) ->D4
+D1 %>% unite(Name, First.Name, Last.Name, sep = " ", remove = TRUE) ->D2
 
-D4 %>% gather(c(2:7), key = "Number", value = "Class") -> D4
+D2 %>% gather(c(2:7), key = "Number", value = "Class") -> D2
 
-D4 %>% select(Name, Class) %>% na.omit -> D4
+D2 %>% select(Name, Class) %>% na.omit -> D2
 
-unique(D4$Class)
+# unique(D2$Class)
 
-D4 %>% mutate(Class=replace(Class, Class=="4050", "HUDK4050")) -> D4
-D4 %>% mutate(Class=replace(Class, Class=="4125", "HUDM4125")) -> D4
-D4 %>% mutate(Class=replace(Class, Class=="5126", "HUDM5126")) -> D4
-D4 %>% mutate(Class=replace(Class, Class=="5026", "HUDM5026")) -> D4
-D4 %>% mutate(Class=replace(Class, Class=="HUD4120", "HUDM4120")) -> D4
-D4 %>% mutate(Class=replace(Class, Class=="HUDM4050", "HUDK4050")) -> D4
-D4 %>% mutate(Class=replace(Class, Class=="IFSF4090002", "ITSF4090")) -> D4
+D2 %>% mutate(Class=replace(Class, Class=="4050", "HUDK4050")) -> D2
+D2 %>% mutate(Class=replace(Class, Class=="4125", "HUDM4125")) -> D2
+D2 %>% mutate(Class=replace(Class, Class=="5126", "HUDM5126")) -> D2
+D2 %>% mutate(Class=replace(Class, Class=="5026", "HUDM5026")) -> D2
+D2 %>% mutate(Class=replace(Class, Class=="HUD4120", "HUDM4120")) -> D2
+D2 %>% mutate(Class=replace(Class, Class=="HUDM4050", "HUDK4050")) -> D2
+D2 %>% mutate(Class=replace(Class, Class=="IFSF4090002", "ITSF4090")) -> D2
 
-D4 %>% mutate(Class=replace(Class, grepl("5067", Class)==TRUE, "QMSS5067")) -> D4
-D4 %>% mutate(Class=replace(Class, grepl("5015", Class)==TRUE, "QMSS5015")) -> D4
-D4 %>% mutate(Class=replace(Class, grepl("5072", Class)==TRUE, "QMSS5072")) -> D4
+D2 %>% mutate(Class=replace(Class, grepl("5067", Class)==TRUE, "QMSS5067")) -> D2
+D2 %>% mutate(Class=replace(Class, grepl("5015", Class)==TRUE, "QMSS5015")) -> D2
+D2 %>% mutate(Class=replace(Class, grepl("5072", Class)==TRUE, "QMSS5072")) -> D2
 
-unique(D4$Class)
 
 ## remove all HUDK4050
-D4 <- dplyr::filter(D4, Class != "HUDK4050")
+D2 <- dplyr::filter(D2, Class != "HUDK4050")
 
-D4$Status <- 1
-D4 <- D4[-161,]
-D4 %>% spread(key = Class, value = Status, fill = NA) -> D5
+D3 <- D2 %>% mutate(count = 1) %>% spread(key = Class, value = count, fill = NA) -> D3 
+  
+D3[is.na(D3)] <- 0
 
-D5[is.na(D5)] <- 0
+rownames(D3) <- D3$Name
+D3 <- D3[,-1]
 
-rownames(D5) <- D5$Name
-D5 <- D5[,-1]
-
-M1 <- as.matrix(D5)
+M1 <- as.matrix(D3)
 M2 <- M1 %*% t(M1)
 diag(M2) <- 0
 
@@ -240,10 +238,57 @@ plot(g, layout=layout.fruchterman.reingold, vertex.color=fit3$cluster, vertex.la
 
 In class activity 6 you clustered students in the class by the answers to a questionaire. Create a visualization that shows the overlap between these clusters and the clusters generated in part II.
 ```{r}
+#Load data
 DF1 <- read.csv("HUDK405019-clustering.csv", header = TRUE)
+
+#Convert the index numbers of the data frame into the student names.
+
+DF1 <- unite(DF1, "Name", c("First.Name", "Last.Name"), sep = " ")
+
+row.names(DF1) <- DF1$Name
+
+DF1$Name <- NULL
+
+#Wrangle data using dplyr to include only the numerical values.
+
+#Remove location variables
+DF2 <- select(DF1, 1:11)
+
+#Remove any characters
+DF2 <- DF2 %>% mutate_all(funs(gsub("[a-zA-Z]", "", .)))
+
+#Convert all variables to numeric
+DF2 <- DF2 %>% mutate_all(funs(as.numeric(.)))
+
+#Scale the data so that no variable has undue influence
+DF2 <- as.data.frame(scale(DF2))
+ 
+#Replace missing values with average score EG - zero
+DF2 <- DF2 %>% mutate_all(funs(ifelse(is.na(.) == TRUE, 0, .)))
+
+
+fit4 <- kmeans(DF2, 3) 
+fit4$cluster
+
+part3 <- data.frame(DF2, fit4$cluster)
+row.names(part3) <- row.names(DF1)
+
+part2 <- data.frame(D3, fit3$cluster)
+
+
+part2cluster <- as.data.frame(cbind(toupper(row.names(part2)), part2$fit3.cluster))
+colnames(part2cluster) <- c("Name", "Part2Cluster")
+
+part3cluster <- as.data.frame(cbind(toupper(row.names(part3)), part3$fit4.cluster))
+colnames(part3cluster) <- c("Name", "Part3Cluster")
+
+overlap <- inner_join(part2cluster, part3cluster, by = "Name")
 
 # install.packages("vcd")
 library(vcd)
+
+struc <- structable(overlap$Part2Cluster ~ overlap$Part3Cluster)
+mosaic(struc, shade=TRUE, legend=TRUE)
 
 ```
 
