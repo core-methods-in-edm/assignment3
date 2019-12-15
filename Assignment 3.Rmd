@@ -8,13 +8,15 @@ https://www.cs.uic.edu/~wilkinson/Applets/cluster.html
 
 
 ```{r}
-library()
+library(ggplot2)
+library(dplyr)
+library(tidyr)
 ```
 
 Now, upload the file "Class_Motivation.csv" from the Assignment 3 Repository as a data frame called "K1""
 ```{r}
 
-K1 <- read.csv(...)
+K1 <- read.csv("Class_Motivation.csv", header = TRUE)
 
 ```
 
@@ -26,13 +28,13 @@ The algorithm will treat each row as a value belonging to a person, so we need t
 
 ```{r}
 
-K2 <- 
+K2 <- select(K1, motivation1, motivation2, motivation3, motivation4, motivation5)
 
 ```
 
 It is important to think about the meaning of missing values when clustering. We could treat them as having meaning or we could remove those people who have them. Neither option is ideal. What problems do you foresee if we recode or remove these values? Write your answers below:
 
-
+Missing values might mean that our questions are biased, and only certain groups can sufficiently supply answers. For example, race questions are often biased against persons of multiple races. Removing or recoding missing values means we might be omitting data from groups whose answers might significantly impact our results and analysis.
 
 We will remove people with missing values for this assignment, but keep in mind the issues that you have identified.
 
@@ -47,7 +49,7 @@ Another pre-processing step used in K-means is to standardize the values so that
 
 ```{r}
 
-K3 <- 
+K3 <- scale(K3)
 
 ```
 
@@ -66,21 +68,21 @@ Also, we need to choose the number of clusters we think are in the data. We will
 
 ```{r}
 
-fit <- 
+fit <- kmeans(K3, 2) 
 
 #We have created an object called "fit" that contains all the details of our clustering including which observations belong to each cluster.
 
 #We can access the list of clusters by typing "fit$cluster", the top row corresponds to the original order the rows were in. Notice we have deleted some rows.
 
-
+fit$cluster
 
 #We can also attach these clusters to the original dataframe by using the "data.frame" command to create a new data frame called K4.
 
-K4
+K4 <- data.frame(K3, fit$cluster)
 
 #Have a look at the K4 dataframe. Lets change the names of the variables to make it more convenient with the names() command.
 
-
+names(K4) <- c("1", "2", "3", "4", "5", "cluster")
 ```
 
 Now we need to visualize the clusters we have created. To do so we want to play with the structure of our data. What would be most useful would be if we could visualize average motivation by cluster, by week. To do this we will need to convert our data from wide to long format. Remember your old friends tidyr and dplyr!
@@ -88,15 +90,19 @@ Now we need to visualize the clusters we have created. To do so we want to play 
 First lets use tidyr to convert from wide to long format.
 ```{r}
 
-K5 <- 
+K5 <- gather(K4, week, motivation, -cluster)
+
 ```
 
 Now lets use dplyr to average our motivation values by week and by cluster.
 
 ```{r}
 
-K6 <- 
+K6 <- tbl_df(K5)
 
+K6 <- group_by(K6, week, cluster)
+
+K6 <- summarize(K6, avg = mean(motivation))
 ```
 
 Now it's time to do some visualization: 
@@ -113,9 +119,9 @@ Likewise, since "cluster" is not numeric but rather a categorical label we want 
 
 ```{r}
 
-K6$week <- 
+K6$week <- as.numeric(K6$week)
 
-K6$cluster <- 
+K6$cluster <- as.factor(K6$cluster)
 
 ```
 
@@ -128,6 +134,8 @@ Now we can plot our line plot using the ggplot command, "ggplot()".
 
 ```{r}
 
+ggplot(K6, aes(x = week, y = avg, color = cluster)) + 
+  geom_line() + xlab("Week") + ylab("Average Motivation")
 
 ```
 
@@ -138,14 +146,99 @@ What patterns do you see in the plot?
 It would be useful to determine how many people are in each cluster. We can do this easily with dplyr.
 
 ```{r}
-K7 <- 
+K7 <- count(K4, cluster) 
 ```
 
-Look at the number of people in each cluster, now repeat this process for 3 rather than 2 clusters. Which cluster grouping do you think is more informative? Write your answer below:
+Look at the number of people in each cluster, now repeat this process for 3 rather than 2 clusters. Which cluster grouping do you think is more informative? Write your answer below: 
+
+## Cluster grouping for 3 seems more informative. Having a grouping of 2 seems to imply that the student is either extremely motivated or extremely unmotivated, and I think a grouping of 3 allows us to visualize a third grouping that might be somewhere in the middle.
+
+```{r}
+fit2 <- kmeans(K3, 3) 
+
+fit2$cluster
+
+L4 <- data.frame(K3, fit2$cluster)
+
+names(L4) <- c("1", "2", "3", "4", "5", "cluster")
+
+L5 <- gather(L4, week, motivation, -cluster)
+
+L6 <- tbl_df(L5)
+
+L6 <- group_by(L6, week, cluster)
+
+L6 <- summarize(L6, avg = mean(motivation))
+
+L6$week <- as.numeric(L6$week)
+
+L6$cluster <- as.factor(L6$cluster)
+
+ggplot(L6, aes(x = week, y = avg, color = cluster)) + 
+  geom_line() + xlab("Week") + ylab("Average Motivation")
+```
+
 
 ##Part II
 
 Using the data collected for Assignment 2 (which classes students were in), cluster the students, then redraw the graph of the class but color the students according the cluster they are in.
+
+```{r}
+
+# Read in the .csv to create a data.frame
+M1 <- read.csv("HUDK405018-cluster.csv")
+
+# Keep only rows with numbers
+M2 <- M1[3:47, 20:26]
+
+# Convert blank cells to NA
+M2[M2 == ""] <- NA
+
+# Remove rows with NA
+M3 <- na.omit(M2)
+
+# Simplify column names
+names(M3) <- c('Q1', 'Q2', 'Q3', 'Q4', 'Q5', 'Q6', 'Q7')
+
+# Convert from factor to numeric
+M3$Q1 <- as.numeric(as.character(M3$Q1))
+M3$Q2 <- as.numeric(as.character(M3$Q2))
+M3$Q3 <- as.numeric(as.character(M3$Q3))
+M3$Q4 <- as.numeric(as.character(M3$Q4))
+M3$Q5 <- as.numeric(as.character(M3$Q5))
+M3$Q6 <- as.numeric(as.character(M3$Q6))
+M3$Q7 <- as.numeric(as.character(M3$Q7))
+
+# Scale the data
+M3 <- scale(M3)
+
+# Run K-means with center=3 (Lots of time, some time, little time)
+fit3 <- kmeans(M3, 3) 
+
+fit3$cluster
+
+M4 <- data.frame(M3, fit3$cluster)
+
+names(M4) <- c('1', '2', '3', '4', '5', '6', '7', 'cluster') 
+
+M5 <- gather(M4, question, hours, -cluster)
+
+M6 <- tbl_df(M5)
+
+M6 <- group_by(M6, question, cluster)
+
+M6 <- summarize(M6, avg = mean(hours))
+
+M6$question <- as.numeric(M6$question)
+
+M6$cluster <- as.factor(M6$cluster)
+
+ggplot(M6, aes(x = question, y = avg, color = cluster)) + 
+  geom_line() + xlab("Question Number") + ylab("Average Hours")
+
+
+```
+
 
 ##Part III
 
