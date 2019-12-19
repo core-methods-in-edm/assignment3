@@ -193,22 +193,10 @@ K7 <- K4_3 %>% group_by(cluster) %>% summarise("count" = n())
 Using the data collected for Assignment 2 (which classes students were in), cluster the students, then redraw the graph of the class but color the students according the cluster they are in.
 
 ```{r}
-library(igraph)
+#Using the data collected for Assignment 2 (which classes students were in), cluster the students, then redraw the graph of the class but color the students according the cluster they are in.
 
-load("assn_2.RData")
-
-rownames(person_class_DF)<-person_class_DF$id
-
-set.seed(4050)
-
-class_fit<-kmodes(person_class_DF_2,2)
-
-plot.igraph(person_person_graph_data,
-            layout = layout.fruchterman.reingold,
-            vertex.size=10,
-            vertex.color=class_fit$cluster,
-            vertex.label.cex=0.4
-            )
+D1 <- read.csv("Class_Motivation.csv", header = TRUE)
+#Merge First.name and Last.name variables to create unique ID because we have duplicate first and last names in the class
 
 
 
@@ -220,48 +208,10 @@ plot.igraph(person_person_graph_data,
 In class activity 6 you clustered students in the class by the answers to a questionaire. Create a visualization that shows the overlap between these clusters and the clusters generated in part II.
 
 ```{r}
-person_class_DF$id<-str_to_upper(person_class_DF$id) %>% str_remove_all("[[:space:]]")
-assn_2_new_DF<-data.frame(person_class_DF,
-                          class_fit$cluster) %>% rename("assn_3_cluster_assn2"=class_fit.cluster)
+#In class activity 6 you clustered students in the class by the answers to a questionaire. Create a visualization that shows the overlap between these clusters and the clusters generated in part II.
 
-load("class_act_6.RData")
 
-class_act_6_name<-str_to_upper(class_act_6_names,
-                               class_act_6_df,
-                               fit_act_6$cluster) %>%
-  rename("id"=class_act_6_names,
-         "act_6_cluster"=cluster,
-         "assn_3_cluster_act6"=fit_act_6.cluster
-         )
 
-assn_3_combined_df<-full_join(act_6_new_df,assn_2_new_DF,by="id") %>%
-                    mutate(act6_clusters=factor(assn_3_cluster_act6,exclude=NULL),
-                           assn2_clusters=factor(assn_3_cluster_assn2,exclude=NULL)
-                           ) %>%
-                    select(id,act6-clusters,assn2_clusters)
-
-ggplot(assn_3_combined_df,aes(X=act6_clusters,fill=assn2_clusters))+
-  geom_bar(position=position_dodge(preserve="single"))+
-  labs(x="Activity 6 clusters",
-       y="Number of people",
-       title="Cluster Overlaps",
-       fill="Assingment 2 Clusters",
-       caption="NAs represent those who filled in one form but not the other")
-```
-
-```{r}
-assn_3_summary<-assn_3_combined_df %>% group_by(act6_clusters,assn2_clusters) %>%
-                  summarise("Freq"=n())
-```
-
-```{r}
-ggplot(assn_3_summary)+
-  geom_mosaic(aes(weight=Freq,x=product(act6_clusters),fill=assn2_clusters))+
-  labs(x="Activity 6 clusters",
-       y="Assignment 2 clusters",
-       title="Cluster Overlaps",
-       fill="Assingment 2 Clusters",
-       caption="NAs represent those who filled in one form but not the other")
 ```
 
 
