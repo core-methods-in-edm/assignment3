@@ -90,8 +90,8 @@ Now we need to visualize the clusters we have created. To do so we want to play 
 
 First lets use tidyr to convert from wide to long format.
 ```{r}
-library(tidyverse)
-K5 <- K4 %>% gather("week", "motivation",1:5) 
+library(tidyr)
+K5 <- K4 %>% gather(week, motivation,1:5) 
 ```
 
 Now lets use dplyr to average our motivation values by week and by cluster.
@@ -182,7 +182,7 @@ class(F2) <- "numeric"
 F2 <- F2 %*% t(F2)
 diag(F2) <- NA
 
-g <- graph.adjacency(F3,mode="undirected")
+g <- graph.adjacency(F2,mode="undirected")
 plot(g,layout=layout.fruchterman.reingold, vertex.size=10, vertex.color = fire_fit$cluster)
 
 ````
