@@ -3,7 +3,7 @@
 This repo contains files for an assignment on K-means clustering in R.
 
 
-## Instructor notes:
+## Instructor Notes
 
 In Assignment 3 we will be looking at some class motivation data collected from this class two years ago. You will be expected to cluster and visualize the clusters.
 
