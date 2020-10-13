@@ -153,7 +153,6 @@ for (i in data$ID){
     }
   }
 }
-person_class 
 
 ## create a person person matrix
 person_person <- person_class %*% t(person_class)
