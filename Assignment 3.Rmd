@@ -6,6 +6,8 @@ Start by installing the "igraph" package. Once you have installed igraph, load t
 Now upload the data file "comment-data.csv" as a data frame called "D1". Each row represents a comment from one student to another so the first line shows that student "28" commented on the comment of student "21". It also shows the gender of both students and the students' main elective field of study ("major"").
 
 ```{r}
+#install.packages("igraph",dependencies = T,type = "source")
+library(igraph)
 D1 <- read.csv("comment-data.csv", header = TRUE)
 ```
 
@@ -24,18 +26,14 @@ First we will isolate the variables that are of interest: comment.from and comme
 
 ```{r}
 library(dplyr)
-
 D2 <- select(D1, comment.to, comment.from) #select() chooses the columns
 ```
 
 Since our data represnts every time a student makes a comment there are multiple rows when the same student comments more than once on another student's video. We want to collapse these into a single row, with a variable that shows how many times a student-student pair appears.
 
 ```{r}
-
 EDGE <- count(D2, comment.to, comment.from)
-
 names(EDGE) <- c("from", "to", "count")
-
 ```
 
 EDGE is your edge list. Now we need to make the vertex list, a list of all the students and their characteristics in our network. Because there are some students who only recieve comments and do not give any we will need to combine the comment.from and comment.to variables to produce a complete list.
@@ -77,7 +75,6 @@ Now we have both a Vertex and Edge list it is time to plot our graph!
 
 ```{r}
 #Load the igraph package
-
 library(igraph)
 
 #First we will make an object that contains the graph information using our two dataframes EDGE and VERTEX. Notice that we have made "directed = TRUE" - our graph is directed since comments are being given from one student to another.
@@ -106,17 +103,115 @@ In Part II your task is to [look up](http://igraph.org/r/) in the igraph documen
 * The vertices are colored according to major
 * The vertices are sized according to the number of comments they have recieved
 
+```{r}
+minC <- rep(-Inf, vcount(g))
+maxC <- rep(Inf, vcount(g))
+minC[1] <- maxC[1] <- 0
+co <- layout_with_fr(g, minx=minC, maxx=maxC,
+                                  miny=minC, maxy=maxC)
+plot(g,layout=co, 
+     vertex.color=VERTEX$major, 
+     edge.width=EDGE$count*0.75,
+     edge.arrow.size=E(g)$count*0.75)
+```
+
+
 ## Part III
 
 Now practice with data from our class. This data is real class data directly exported from Qualtrics and you will need to wrangle it into shape before you can work with it. Import it into R as a data frame and look at it carefully to identify problems.
 
 Please create a **person-network** with the data set hudk4050-classes.csv. To create this network you will need to create a person-class matrix using the tidyr functions and then create a person-person matrix using `t()`. You will then need to plot a matrix rather than a to/from data frame using igraph.
 
+```{r}
+library(stringr)
+library(readr)
+# load the data
+data <- read_csv("hudk4050-classes.csv", skip = 1)
+data <- data[-1,]
+
+# clean up the data first: all upcase and remove all the space
+data$`First Name` <- data$`First Name` %>% str_replace(" ","") %>% str_replace("`","") %>% str_to_upper() %>% as.factor()
+data$`Last Name` <- data$`Last Name` %>% str_replace(" ","")  %>% str_to_upper() %>% as.factor()
+data$`Class 1` <- data$`Class 1` %>% str_replace(" ","")  %>% str_to_upper() 
+data$`Class 2` <- data$`Class 2` %>% str_replace(" ","")  %>% str_to_upper() 
+data$`Class 3` <- data$`Class 3` %>% str_replace(" ","")  %>% str_to_upper() 
+data$`Class 4` <- data$`Class 4` %>% str_replace(" ","")  %>% str_to_upper() 
+data$`Class 5` <- data$`Class 5` %>% str_replace(" ","")  %>% str_to_upper() 
+data$`Class 6` <- data$`Class 6` %>% str_replace(" ","")  %>% str_to_upper() 
+data$ID <- as.factor(1:nrow(data))
+
+class_list <-  unique(c(data$`Class 1`,data$`Class 2`,data$`Class 3`,data$`Class 4`,
+                 data$`Class 5`,data$`Class 6`))
+class_list <- class_list[!is.na(class_list)]
+person_class <- matrix(0,nrow = length(data$ID),ncol = length(class_list))
+rownames(person_class) <- data$ID
+colnames(person_class) <- class_list
+for (i in data$ID){
+  for (j in select(data,`Class 1`:`Class 6`)[i,] %>% as.character()){
+    if (!is.na(j)){
+      person_class[i,j] = person_class[i,j] + 1
+    }
+  }
+}
+person_class 
+
+## create a person person matrix
+person_person <- person_class %*% t(person_class)
+person_person
+
+# diagnal elelment represent the number of class
+# of diagnoal element represent the number of same class
+```
 Once you have done this, also [look up](http://igraph.org/r/) how to generate the following network metrics:
+
+#### this is the network of students in the class and the edge indicate two students share at least one course. I ignore the diagnoal in the matrix since I do not want to count the self-loop. Since most student as least list this class, most students have connection to each other. Thus, you can see there are many nodes cluter together in the middle. 
+```{r}
+# ignore the self-loop
+g <- graph_from_adjacency_matrix(person_person, mode = "directed",diag = FALSE,weighted=TRUE)
+plot(g,layout=layout_with_fr,vertex.size=15,edge.arrow.size=0.5,edge.width=1)
+```
+
+#### to make the data and network more useful. I redefine the edge as **has at least two courses together**, which mean they have at least one another course. 
+
+```{r}
+person_person_new <- ifelse(person_person <=1,0,1)
+g2 <- graph_from_adjacency_matrix(person_person_new, mode = "directed",diag = FALSE)
+plot(g2,layout=layout_with_fr,vertex.size=15,edge.arrow.size=0.5,edge.width=1)
+```
+
 
 * Betweeness centrality and dregree centrality. **Who is the most central person in the network according to these two metrics? Write a sentence or two that describes your interpretation of these metrics**
 
+```{r}
+sort(betweenness(g),decreasing = T)[1:3]
+sort(betweenness(g2),decreasing = T)[1:3]
+data[27,]
+data[42,]
+centr_degree(g)
+which(centr_degree(g)$res == max(centr_degree(g)$res))
+centr_degree(g2)
+which(centr_degree(g2)$res == max(centr_degree(g2)$res))
+```
+Betweeness is a measure of how closely a node lies between other nodes. It is equal to the number of shortest paths from all nodes to all others that pass through that node.
+Based on the frist graph: Shuying Xiong is the most central student.
+Based on the second graph: Danny Shan should be the most central student. 
+
+Dregree centrality: the number of links incident upon a node.
+Based on the first graph: 17 students have 86 degree, which is all are the highest degree.
+Based on the second graph: Danny Shan is the one with highest degree.
+
+
 * Color the nodes according to interest. Are there any clusters of interest that correspond to clusters in the network? Write a sentence or two describing your interpetation.
+
+```{r}
+interest <- as.numeric(as.factor(data$`Which of these topics is most interesting to you?`))
+plot(g,layout=layout_with_fr, 
+     vertex.color=interest,edge.arrow.size=0.5,edge.width=1)
+plot(g2,layout=layout_with_fr, 
+     vertex.color=interest,edge.arrow.size=0.5,edge.width=1)
+```
+
+I did not see any clear pattern.
 
 ### To Submit Your Assignment
 
