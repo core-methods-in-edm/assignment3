@@ -6,6 +6,7 @@ Start by installing the "igraph" package. Once you have installed igraph, load t
 Now upload the data file "comment-data.csv" as a data frame called "D1". Each row represents a comment from one student to another so the first line shows that student "28" commented on the comment of student "21". It also shows the gender of both students and the students' main elective field of study ("major"").
 
 ```{r}
+
 D1 <- read.csv("comment-data.csv", header = TRUE)
 ```
 
@@ -26,6 +27,7 @@ First we will isolate the variables that are of interest: comment.from and comme
 library(dplyr)
 
 D2 <- select(D1, comment.to, comment.from) #select() chooses the columns
+
 ```
 
 Since our data represnts every time a student makes a comment there are multiple rows when the same student comments more than once on another student's video. We want to collapse these into a single row, with a variable that shows how many times a student-student pair appears.
@@ -34,7 +36,7 @@ Since our data represnts every time a student makes a comment there are multiple
 
 EDGE <- count(D2, comment.to, comment.from)
 
-names(EDGE) <- c("from", "to", "count")
+names(EDGE) <- c("to", "from", "count")
 
 ```
 
@@ -106,17 +108,34 @@ In Part II your task is to [look up](http://igraph.org/r/) in the igraph documen
 * The vertices are colored according to major
 * The vertices are sized according to the number of comments they have recieved
 
+```{r}
+
+```
+
 ## Part III
 
 Now practice with data from our class. This data is real class data directly exported from Qualtrics and you will need to wrangle it into shape before you can work with it. Import it into R as a data frame and look at it carefully to identify problems.
 
 Please create a **person-network** with the data set hudk4050-classes.csv. To create this network you will need to create a person-class matrix using the tidyr functions and then create a person-person matrix using `t()`. You will then need to plot a matrix rather than a to/from data frame using igraph.
 
+```{r}
+
+```
+
 Once you have done this, also [look up](http://igraph.org/r/) how to generate the following network metrics:
 
 * Betweeness centrality and dregree centrality. **Who is the most central person in the network according to these two metrics? Write a sentence or two that describes your interpretation of these metrics**
 
+```{r}
+
+```
+
 * Color the nodes according to interest. Are there any clusters of interest that correspond to clusters in the network? Write a sentence or two describing your interpetation.
+
+```{r}
+
+```
+
 
 ### To Submit Your Assignment
 
