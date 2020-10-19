@@ -32,7 +32,7 @@ Since our data represnts every time a student makes a comment there are multiple
 
 ```{r}
 
-EDGE <- count(D2, comment.to, comment.from)
+EDGE <- count(D2, comment.from, comment.to)
 
 names(EDGE) <- c("from", "to", "count")
 
