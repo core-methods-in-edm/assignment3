@@ -103,8 +103,17 @@ plot(g,layout=layout.fruchterman.reingold, vertex.color=VERTEX$gender, edge.widt
 In Part II your task is to [look up](http://igraph.org/r/) in the igraph documentation and modify the graph above so that:
 
 * Ensure that sizing allows for an unobstructed view of the network features (For example, the arrow size is smaller)
-* The vertices are colored according to major
+* The vertices are colored according to major   
 * The vertices are sized according to the number of comments they have recieved
+```{r}
+vs = data.frame(VERTEX$id,10)
+names(vs) = c("to", "n")
+cedge = count(EDGE, to)
+cedge$n = cedge$n + 5
+uvs = full_join(cedge,vs)
+finalc = count(uvs, to, wt = n)
+plot(g, layout=layout.lgl, vertex.color=VERTEX$major, edge.width=EDGE$count, edge.arrow.size=0.5, edge.arrow.width = 0.7, vertex.size =finalc$n, vertex.label.cex=finalc$n/18)
+```
 
 ## Part III
 
@@ -117,6 +126,72 @@ Once you have done this, also [look up](http://igraph.org/r/) how to generate th
 * Betweeness centrality and dregree centrality. **Who is the most central person in the network according to these two metrics? Write a sentence or two that describes your interpretation of these metrics**
 
 * Color the nodes according to interest. Are there any clusters of interest that correspond to clusters in the network? Write a sentence or two describing your interpetation.
+```{r}
+DC <- read.csv("hudk4050-classes.csv", header = TRUE)
+a = DC[1,1]
+for(i in 2:(ncol(DC)-1)){
+  a = c(a,DC[1,i])
+}
+names(DC) = c(a,"Interest")
+DC = DC[c(-1,-2),]
+names = paste0(DC$`First Name`," ",DC$`Last Name`)
+library(tidyr)
+DCC = select(DC, `Class 1`, `Class 2`, `Class 3`, `Class 4`, `Class 5`, `Class 6`, Interest)
+DCPC = data.frame(names,DCC)
+library(stringr)
+DCPCF = data.frame(lapply(DCPC, function(v) {
+  if (is.character(v)){
+       return(toupper(str_replace_all(v, fixed(" "), "")))
+    }
+  else return(v)
+}))
+DCPCF[33,6:7] = ""
+DCPCF$names <- ifelse(is.na(DCPC$names) == TRUE, as.factor(as.character(DCPC$names)), as.factor(as.character(DCPC$names)))
+DCPCF$Interest <- ifelse(is.na(DCPC$Interest) == TRUE, as.factor(as.character(DCPC$Interest)), as.factor(as.character(DCPC$Interest)))
+
+#l = matrix(DCPCF[,-1])[[1]]
+#for(i in 2:6)(l = matrix(c(l,matrix(DCPCF[,-1])[[i]])))
+#l = unique(l)[-13,]
+pc = matrix(c(0,0),ncol = 2)
+for(i in 2:7){
+  for(j in 1:47){
+    if(DCPCF[j,i] != "" & DCPCF[j,i] != "HUDK4050"){
+      pc = rbind(pc, matrix(c(DCPCF[j,1],DCPCF[j,i]), ncol = 2))
+    }
+  }
+}
+pc = pc[-1,]
+pc[,2] <- ifelse(is.na(pc[,2]) == TRUE, as.factor(as.character(pc[,2])), as.factor(as.character(pc[,2])))
+
+colnames(pc) = c("person", "class")
+pp = matrix(c(0,0),ncol = 2)
+for(i in 1:(length(pc[,1])-1)){
+  for(j in (i+1):length(pc[,1])){
+    if(pc[i,2] == pc[j,2]){
+      pp = rbind(pp, matrix(c(pc[i,1], pc[j,1]), ncol = 2))
+    }
+  }
+}
+pp = pp[-1,]
+colnames(pp) = c("person1", "person2")
+ppdf = data.frame(pp)
+ppdf$person1 = as.factor(ppdf$person1)
+ppdf$person2 = as.factor(ppdf$person2)
+EDGE1 <- count(ppdf, person1, person2)
+VERTEX1 = select(DCPCF, names, Interest)
+g1 <- graph.data.frame(EDGE1, directed=FALSE, vertices=VERTEX1)
+betweenness(g1,v = V(g1), directed = FALSE)
+```
+```{r}
+centr_degree(g1, mode = "all")
+# From the betweenness, person 36, Xiaojia Liu, is the most central person in this network.
+```
+```{r}
+plot(g1, layout=layout.fruchterman.reingold, vertex.color=VERTEX1$Interest, edge.width=EDGE1$n)
+#There is no cluster since all the colors are mixed quite evenly.
+```
+
+
 
 ### To Submit Your Assignment
 
