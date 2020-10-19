@@ -113,7 +113,7 @@ for (i in 1:length(vertexid)){
   new=length(which(vtoid==vertexid[i]))
   num=c(num,new)
 }
-plot(g,layout=layout.fruchterman.reingold, vertex.color=VERTEX$major, vertex.size=num*1.5,edge.arrow.size=0.3,margin=-0.1)
+plot(g,layout=layout.fruchterman.reingold, vertex.color=VERTEX$major, vertex.size=num*2,edge.arrow.size=0.3,margin=-0.1,edge.color='red',vertex.label.color='black')
 ```
 
 ## Part III
@@ -127,20 +127,18 @@ library(tidyr)
 library(dplyr)
 library(igraph)
 d1 <- read_csv("hudk4050-classes.csv")
+d1$Q18[1]='interest'
 names(d1)=as.character(d1[1,])#use the first row as names
-b1=1:2
-dnew=d1[-b1,]#delete the first 2 rows
+dnew=d1[-c(1:2),]#delete the first 2 rows
 fullname=paste(dnew$`First Name`,dnew$`Last Name`) #generate a new variable containing students' full names
 dnew=data.frame(cbind(fullname,dnew))
-b2=c(2:3,length(dnew))
-dnew=dnew[,-b2] #delete the last question and first and last names
-dnew2=dnew %>% pivot_longer(-fullname,names_to='class',values_to='classname')
-dnew2=na.omit(dnew2)
-dnew2=dnew2[,-2]
-persontoclass=as.matrix(table(dnew2$fullname,dnew2$classname)) #person-class matrix
+dnew1=dnew[,-c(2:3)]#deleting the last and first names 
+dn2=dnew1 %>% pivot_longer(Class.1:Class.6,names_to='class',values_to='classname',values_drop_na = TRUE)
+persontoclass=as.matrix(table(dn2$fullname,dn2$classname)) #person-class matrix
 persontoperson=persontoclass%*%t(persontoclass)#person-person matrix
 diag(persontoperson)=0#remove diagonal elements from person-person matrix
 ```
+
 Once you have done this, also [look up](http://igraph.org/r/) how to generate the following network metrics:
 
 * Betweeness centrality and dregree centrality. **Who is the most central person in the network according to these two metrics? Write a sentence or two that describes your interpretation of these metrics**
@@ -165,14 +163,15 @@ g3degree[which(g3degree==max(g3degree))]#the biggest degree centrality
 
 * Color the nodes according to interest. Are there any clusters of interest that correspond to clusters in the network? Write a sentence or two describing your interpetation.
 ```{r}
-int=d1$`Which of these topics is most interesting to you?`[3:49]
-clusterpp=cluster_fast_greedy(g2)
-plot(clusterpp,g2,layout=layout.fruchterman.reingold, edge.width=0.3,vertex.label.cex=0.3,vertex.color=int)
-clusterpc=cluster_fast_greedy(g3)
-plot(clusterpc,g3,layout=layout.fruchterman.reingold, edge.width=0.3,margin=-0.2,vertex.label.cex=0.5,vertex.color=int)
+dn3=dn2[order(dn2$fullname),]#sort the data frame dn2 by the full names
+int=dn3[!duplicated(dn3$fullname),]$interest#match full names with interests
+V(g2)$color=factor(int)
+V(g3)[1:47]$color=factor(int)
+plot(g2,layout=layout.fruchterman.reingold, edge.width=0.3,vertex.label.cex=0.3)
+plot(g3,layout=layout.fruchterman.reingold, edge.width=0.3,margin=-0.2,vertex.label.cex=0.5)
 ```
 
-#Answer: As is seen in these two pictures, nearly all the clusters of interest by different colors correpond to the clustes in the network identified and colored by the RStudio.
+#Answer: As is seen in these two pictures, the clusters of interets does not correspond to clusters in the network for that the colors according to interests are distributed promiscuously distributed in every clusters.
 
 ### To Submit Your Assignment
 
