@@ -96,7 +96,7 @@ plot(g,layout=layout.fruchterman.reingold, vertex.color=VERTEX$gender)
 
 plot(g,layout=layout.fruchterman.reingold, vertex.color=VERTEX$gender, edge.width=EDGE$count)
 
-````
+```
 
 ## Part II
 
@@ -105,6 +105,13 @@ In Part II your task is to [look up](http://igraph.org/r/) in the igraph documen
 * Ensure that sizing allows for an unobstructed view of the network features (For example, the arrow size is smaller)
 * The vertices are colored according to major
 * The vertices are sized according to the number of comments they have recieved
+
+```{r}
+
+plot(g,layout=layout.kamada.kawai, vertex.color=VERTEX$major, vertex.size = (EDGE$count*12.5), edge.width=1, margin=-.3, edge.arrow.size=.5, edge.arrow.width=1)
+
+```
+
 
 ## Part III
 
@@ -117,6 +124,73 @@ Once you have done this, also [look up](http://igraph.org/r/) how to generate th
 * Betweeness centrality and dregree centrality. **Who is the most central person in the network according to these two metrics? Write a sentence or two that describes your interpretation of these metrics**
 
 * Color the nodes according to interest. Are there any clusters of interest that correspond to clusters in the network? Write a sentence or two describing your interpetation.
+```{r}
+library(dplyr)
+library(igraph)
+library(readr)
+library(tidyr)
+library(rgl)
+
+D9 <- read.csv("hudk4050-classes.csv", skip=1, header = TRUE, na.strings="", stringsAsFactors = TRUE)
+D9 <- tbl_df(D9)
+D9 <- D9[-c(1),]
+
+D9 <- unite(D9, "First.Name", "Last.Name", col = name, sep = " ")
+D10 <- select(D9, name, Class.1, Which.of.these.topics.is.most.interesting.to.you.)
+colnames(D10) <- c("name", "class", "interests")
+D9_2 <- select(D9, name, Class.2, Which.of.these.topics.is.most.interesting.to.you.)
+names(D9_2) <- c("name", "class", "interests")
+D9_3 <- select(D9, name, Class.3, Which.of.these.topics.is.most.interesting.to.you.)
+names(D9_3) <- c("name", "class", "interests")
+D9_4 <- select(D9, name, Class.4, Which.of.these.topics.is.most.interesting.to.you.)
+names(D9_4) <- c("name", "class", "interests")
+D9_5 <- select(D9, name, Class.5, Which.of.these.topics.is.most.interesting.to.you.)
+names(D9_5) <- c("name", "class", "interests")
+D9_6 <- select(D9, name, Class.6, Which.of.these.topics.is.most.interesting.to.you.)
+names(D9_6) <- c("name", "class", "interests")
+D10 <- bind_rows(D10, D9_2, D9_3, D9_4, D9_5, D9_6)
+D10$class = gsub(" ", "", toupper(D10$class))
+D10$class <- ifelse(D10$class == "HUDM41220", "HUDM4122", D10$class)
+D10$class <- D10$class %>% dplyr::na_if("NA")
+D10$interests <- as.factor(as.character(D10$interests))
+D10$name <- as.factor(D10$name)
+D10$class <- as.factor(as.character(D10$class))
+D10$frequency <- as.integer(1)
+
+D10 <- D10 %>% group_by(class, name, interests) %>% summarise(score = sum(frequency))
+D10 <- as.data.frame(D10 %>% pivot_wider(names_from = class, values_from = score))
+D10[is.na(D10)] = 0
+D10 <- D10[,-c(54)]
+D10_1_labels <- as.vector(as.factor(as.character(D10[, c(1)])))
+D10_1_interests <- as.vector(as.factor(as.character(D10[, c(2)])))
+D10_1 <- D10[,-c(1:2)]
+rownames(D10_1) <- D10_1_labels
+matrix_D10_1 <- as.matrix(D10_1) #without interests
+
+g_1 <- graph_from_incidence_matrix(matrix_D10_1)
+g_1
+proj2_1 <- bipartite_projection(g_1)
+proj2_1
+
+#Centrality measures
+centr_degree(proj2_1$proj1, mode = "total", loops = TRUE, normalized = TRUE)
+betweenness(proj2_1$proj1)
+sort(betweenness(proj2_1$proj1))
+
+#Shuying Xiong is the most central actor in this network, shown by both the degree centrality measure of 43 and betweenness centrality measure of 50.07. The degree centrality measure of 43 means Shuying is connected to 43 other actors while the highest betweenness centrality measure shows that Shuying is the node through which the highest number of shortest paths pass, i.e., Shuying is the most central "bridge" that connects any pair of actors in the network.
+
+#Network
+V(proj2_1$proj1)$color <- ifelse(D10_1_interests == "Data Wrangling", "dodgerblue3","seagreen")
+V(proj2_1$proj1)$color <- ifelse(D10_1_interests == "Social Network Analysis", "red",V(proj2_1$proj1)$color)
+V(proj2_1$proj1)$color <- ifelse(D10_1_interests == "Facial recognition", "purple",V(proj2_1$proj1)$color)
+V(proj2_1$proj1)$color <- ifelse(D10_1_interests == "Visualization", "yellow",V(proj2_1$proj1)$color)
+plot(proj2_1$proj1, layout=layout.fruchterman.reingold, vertex.size = 10, vertex.color = V(proj2_1$proj1)$color, edge.width = E(proj2_1$proj1)$weight, edge.color = "magenta", edge.curved=.2, diag = FALSE, margin = -.07, vertex.label.cex=0.9)
+plot(proj2_1$proj1, layout=layout.fruchterman.reingold, vertex.size = 10, vertex.color = V(proj2_1$proj1)$color, edge.width = E(proj2_1$proj1)$weight, edge.color = "magenta", edge.curved=.2, diag = FALSE, margin = -.07, vertex.label = NA)
+
+#There does not seem to be clusters around specific interests as the cluster in the center, wherein many students form connections, has nodes or vertices of various colors indicating variability in students' interests.
+
+```
+
 
 ### To Submit Your Assignment
 
