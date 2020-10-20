@@ -34,7 +34,7 @@ Since our data represnts every time a student makes a comment there are multiple
 
 EDGE <- count(D2, comment.to, comment.from)
 
-names(EDGE) <- c("from", "to", "count")
+names(EDGE) <- c("to", "from", "count")
 
 ```
 
@@ -103,20 +103,92 @@ plot(g,layout=layout.fruchterman.reingold, vertex.color=VERTEX$gender, edge.widt
 In Part II your task is to [look up](http://igraph.org/r/) in the igraph documentation and modify the graph above so that:
 
 * Ensure that sizing allows for an unobstructed view of the network features (For example, the arrow size is smaller)
-* The vertices are colored according to major
-* The vertices are sized according to the number of comments they have recieved
 
+* The vertices are colored according to major
+
+* The vertices are sized according to the number of comments they have recieved
+```{r}
+tocount <- EDGE %>% group_by(to) %>% summarise(count =sum(count))
+a <- rep(0, length(VERTEX$id))
+for (i in 1:length(VERTEX$id)){
+  if(i %in% tocount$to){
+    a[i] <- tocount$count[which(tocount$to==i)]
+  }
+}
+plot(g,layout=layout.fruchterman.reingold, vertex.color=VERTEX$major, vertex.size=a*2,edge.arrow.size=0.3,margin=-0.1)
+```
 ## Part III
 
 Now practice with data from our class. This data is real class data directly exported from Qualtrics and you will need to wrangle it into shape before you can work with it. Import it into R as a data frame and look at it carefully to identify problems.
 
 Please create a **person-network** with the data set hudk4050-classes.csv. To create this network you will need to create a person-class matrix using the tidyr functions and then create a person-person matrix using `t()`. You will then need to plot a matrix rather than a to/from data frame using igraph.
+```{r}
+#import libraries
+library(dplyr)
+library(igraph)
+library(readr)
+library(tidyr)
+
+#clean data
+df1<-read.csv("hudk4050-classes.csv")
+names(df1)<- c("first.name", "last.name", "class.1", "class.2", "class.3", "class.4", "class.5", "class.6", "interest")
+df1 <- df1[-(1:2),]
+df1$name <- paste(df1$first.name,df1$last.name)
+df1 <- df1[,-(1:2)]
+df2 <- df1 %>% pivot_longer(class.1:class.6,names_to='class',values_to='classname',values_drop_na = TRUE)
+
+#standardize classname format & ignore NA/empty/HUDK4050 classes
+df2$classname <- gsub('\\s+', '', df2$classname)
+df2$classname <- toupper(df2$classname)
+df2 <- df2[-which(df2$classname == ""), ]
+df2 <- df2[-which(df2$classname == "HUDK4050"), ]
+
+#person-class matrix
+person_class <- as.matrix(table(df2$name,df2$classname))
+
+#person-person matrix
+person_person <- person_class%*%t(person_class)
+diag(person_person) <- 0
+```
 
 Once you have done this, also [look up](http://igraph.org/r/) how to generate the following network metrics:
 
 * Betweeness centrality and dregree centrality. **Who is the most central person in the network according to these two metrics? Write a sentence or two that describes your interpretation of these metrics**
+```{r}
+#person-person matrix
+graph_pp <- graph_from_adjacency_matrix(person_person, mode = c("undirected"), weighted = T,
+  diag = FALSE)
+#highest betweenness centrality
+pp_betweeness <- betweenness(graph_pp)
+pp_betweeness[which.max(pp_betweeness)]
+#highest degree centrality
+pp_degree <- degree(graph_pp)
+pp_degree[which(pp_degree==max(pp_degree))]
+
+#person-class matrix
+graph_pc <- graph_from_incidence_matrix(person_class, directed = FALSE)
+#highest betweenness centrality
+pc_betweeness <- betweenness(graph_pc)
+pc_betweeness[which.max(pc_betweeness)]
+#highest degree centrality
+pc_degree <- degree(graph_pc)
+pc_degree[which(pc_degree==max(pc_degree))]
+```
+**Yifei zhang is the most central person in the network according to the two metrics, since he/she has both the highest betweeness centrality and dregree centrality.**
 
 * Color the nodes according to interest. Are there any clusters of interest that correspond to clusters in the network? Write a sentence or two describing your interpetation.
+```{r}
+#dataframe with interest
+df3 <- select(df1,name,interest)
+df3$interest <- as.factor(df3$interest)
+
+#plot person-to-person graph
+plot(graph_pp,layout=layout.fruchterman.reingold,vertex.label.cex=0.3,vertex.color=df3$interest)
+
+#plot person-to-class graph
+plot(graph_pc,layout=layout.fruchterman.reingold,edge.width=0.3,vertex.label.cex=0.3,vertex.color=df3$interest)
+```
+**There isn't any cluster of interest that correspond to cluster in the network according to the two pictures above. Interests are randomly distributed.** 
 
 ### To Submit Your Assignment
 
