@@ -105,6 +105,21 @@ In Part II your task is to [look up](http://igraph.org/r/) in the igraph documen
 * Ensure that sizing allows for an unobstructed view of the network features (For example, the arrow size is smaller)
 * The vertices are colored according to major
 * The vertices are sized according to the number of comments they have recieved
+```{r}
+
+plot(g,layout=layout.fruchterman.reingold, vertex.color=VERTEX$gender, edge.width=EDGE$count, vertex.size=30)
+
+plot(g,layout=layout.fruchterman.reingold, vertex.color=VERTEX$gender, edge.width=EDGE$count, vertex.size=25, edge.arrow.size=0.3)
+
+commentNum <- count(D2, comment.to)
+names(commentNum) <- c("id", "count")
+commentNum <- left_join(VERTEX,commentNum,by=c("id"))
+commentNum$count[is.na(commentNum$count)] <- 0
+
+plot(g,layout=layout.fruchterman.reingold, vertex.color=VERTEX$gender, edge.width=EDGE$count, vertex.size=15+commentNum$count, edge.arrow.size=0.5)
+
+
+```
 
 ## Part III
 
