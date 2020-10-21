@@ -33,8 +33,7 @@ Since our data represnts every time a student makes a comment there are multiple
 ```{r}
 
 EDGE <- count(D2, comment.to, comment.from)
-
-names(EDGE) <- c("from", "to", "count")
+names(EDGE) <- c("to","from","count")
 
 ```
 
@@ -103,9 +102,19 @@ plot(g,layout=layout.fruchterman.reingold, vertex.color=VERTEX$gender, edge.widt
 In Part II your task is to [look up](http://igraph.org/r/) in the igraph documentation and modify the graph above so that:
 
 * Ensure that sizing allows for an unobstructed view of the network features (For example, the arrow size is smaller)
-* The vertices are colored according to major
-* The vertices are sized according to the number of comments they have recieved
 
+* The vertices are colored according to major
+```{r}
+plot(g,layout=layout.fruchterman.reingold,vertex.color=VERTEX$major, edge.arrow.size=.4, vertex.size=5)
+
+```
+
+* The vertices are sized according to the number of comments they have received
+
+```{r}
+plot(g,layout=layout.fruchterman.reingold,vertex.color=VERTEX$major, edge.arrow.size=.3, vertex.size=VERTEX$major*5,vertex.label.color="black")
+
+```
 ## Part III
 
 Now practice with data from our class. This data is real class data directly exported from Qualtrics and you will need to wrangle it into shape before you can work with it. Import it into R as a data frame and look at it carefully to identify problems.
@@ -114,10 +123,68 @@ Please create a **person-network** with the data set hudk4050-classes.csv. To cr
 
 Once you have done this, also [look up](http://igraph.org/r/) how to generate the following network metrics:
 
-* Betweeness centrality and dregree centrality. **Who is the most central person in the network according to these two metrics? Write a sentence or two that describes your interpretation of these metrics**
+```{r}
+library(stringr)
+library(tidyr)
+library(dplyr)
+library(igraph)
 
+#Dataset and data cleaning
+t <- read.csv("hudk4050-classes.csv", stringsAsFactors = FALSE,header = TRUE)
+colnames(t) = t[1, ] 
+t = t[-(1:2),]
+names(t)[names(t) == "First Name"] <- "First_name"
+t <- t %>% mutate_at(3:8, list(toupper))
+t <- t %>% mutate_at(3:8, str_replace_all, " ", "")
+
+#Data restructuring 
+T2 = subset(t, select = c("First_name", "Class 1","Class 2","Class 3","Class 4","Class 5","Class 6"))
+longT <- gather(T2, key ="class", value="course",-First_name)
+longT = subset(longT, select = -c(class) )
+
+T3 <- na.omit(longT)
+T3$ count<- 1
+T3<- filter (T3, course != "")
+T3 <- unique(T3)
+T3<- spread(T3,course, count)
+
+rownames(T3) <- T3$First_name
+T3<- select(T3, -First_name)
+T3[is.na(T3)]<- 0
+
+#Matrix creation, Person to class and Person to person 
+T3<-as.matrix(T3)
+T4 <- T3 %*% t(T3)
+
+#Graph plot
+G=graph_from_adjacency_matrix(T4,mode = c('undirected'),weighted = NULL, diag=F)
+plot(G,edged.curve=0.3,vertex.size=7,vertex.color="darkgreen",edge.curved=0,vertex.label.cex=0.7)
+
+```
+* Betweeness centrality and dregree centrality. 
+**Who is the most central person in the network according to these two metrics? Write a sentence or two that describes your interpretation of these metrics**
+
+```{r}
+#Centrality
+sort(degree(G), decreasing = TRUE)
+#Calculate the betweeness centrality, showing how many "shortest paths" pass through each nodes
+sort(betweenness(G), decreasing = TRUE)
+##Looking at two metrics, Yingxin and Yifei are the most central people in the class##
+```
 * Color the nodes according to interest. Are there any clusters of interest that correspond to clusters in the network? Write a sentence or two describing your interpetation.
 
+```{r}
+T5 <- read.csv("hudk4050-classes.csv", stringsAsFactors = FALSE,header = TRUE)
+T5<-T5
+colnames(T5) <- T5[1,]
+T5 <- slice(T5, 3:49)
+names(T5)[names(T5) == "First Name"] <- "First_name"
+names(T5)[9] <- "interest"
+T6 <- select(T5, First_name, interest)
+plot(G, layout=layout.fruchterman.reingold, vertex.size=10, edge.curved=0,vertex.label.cex =0.3, vertex.label.color="black", vertex.color=as.factor(T6$interest))
+##There are no prominent clusters in the network##
+
+```
 ### To Submit Your Assignment
 
 Please submit your assignment by first "knitting" your RMarkdown document into an html file and then comit, push and pull request both the RMarkdown file and the html file.
