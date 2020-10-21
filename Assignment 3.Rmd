@@ -34,7 +34,7 @@ Since our data represnts every time a student makes a comment there are multiple
 
 EDGE <- count(D2, comment.to, comment.from)
 
-names(EDGE) <- c("from", "to", "count")
+names(EDGE) <- c( "to", "from","count")
 
 ```
 
@@ -51,11 +51,15 @@ V.TO <- select(D1, comment.to, to.gender, to.major)
 names(V.FROM) <- c("id", "gender.from", "major.from")
 names(V.TO) <- c("id", "gender.to", "major.to")
 
+
 #Make sure that the id variable in both dataframes has the same number of levels
 lvls <- sort(union(levels(V.FROM$id), levels(V.TO$id)))
 
+#So this union will work on a on a vector. It's kind of like a join, but just for a vector. And then I'm going to use the levels command.That extracts the levels from each variable. So we're going to take out that this one is 25(i.e. v.FROM$id) and this one that has 22 and then union is going to join those two things together for us. And then because
+
 VERTEX <- full_join(mutate(V.FROM, id=factor(id, levels=lvls)),
     mutate(V.TO, id=factor(id, levels=lvls)), by = "id")
+
 
 #Fill in missing gender and major values - ifelse() will convert factors to numerical values so convert to character
 VERTEX$gender.from <- ifelse(is.na(VERTEX$gender.from) == TRUE, as.factor(as.character(VERTEX$gender.to)), as.factor(as.character(VERTEX$gender.from)))
@@ -96,19 +100,94 @@ plot(g,layout=layout.fruchterman.reingold, vertex.color=VERTEX$gender)
 
 plot(g,layout=layout.fruchterman.reingold, vertex.color=VERTEX$gender, edge.width=EDGE$count)
 
-````
+```
 
 ## Part II
 
-In Part II your task is to [look up](http://igraph.org/r/) in the igraph documentation and modify the graph above so that:
+#In Part II your task is to [look up](http://igraph.org/r/) in the igraph documentation and modify the graph above so that:
 
-* Ensure that sizing allows for an unobstructed view of the network features (For example, the arrow size is smaller)
-* The vertices are colored according to major
-* The vertices are sized according to the number of comments they have recieved
+#* Ensure that sizing allows for an unobstructed view of the network features (For example, the arrow size is smaller)
+#* The vertices are colored according to major
+#* The vertices are sized according to the number of comments they have recieved
+
+```{r}
+par(bg="pink")
+#arrow
+library(dplyr)
+V(g)$vertex_degree <- degree(g)
+#comment <- EDGE%>%group_by(to)%>%summarize(totalcomment=sum(count,na.rm=T))
+#node.size<-setNames(comment$totalcomment,comment$to)
+#vertex.size=node.size,
+scale_factor<-4
+plot(g,layout=layout.fruchterman.reingold,vertex.color=VERTEX$major,
+     edge.arrow.size=.5,vertex.shape="circle",vertex.size=V(g)$vertex_degree*scale_factor,edge.curved=.1,vertex.frame.color="gray",vertex.label.cex=.8,)
+V(g)$size <- V(g)$count.size*0.7
+#major
+
+#sized comments 
+```
+
 
 ## Part III
 
 Now practice with data from our class. This data is real class data directly exported from Qualtrics and you will need to wrangle it into shape before you can work with it. Import it into R as a data frame and look at it carefully to identify problems.
+```{r}
+library(tidyverse)
+library(readr)
+library(igraph)
+library(stringr)
+#clean the data 
+pn <- read.csv("hudk4050-classes.csv", skip=1, header = TRUE)
+#recode name 
+pn<-unite(pn,"name","First.Name","Last.Name",sep=" ")
+#remove unpredictable characters from names 
+pn$name<-str_replace(pn$name,"`","")
+#remove unrelated columns
+d_pn<-pn[-1,-8]
+#create dataframe with two varialbe, students and name 
+tidy_pn2<-d_pn%>%gather(key="class",value="course",Class.1:Class.6,-name, factor_key=TRUE,na.rm=TRUE)
+#remove blank course
+index2 <- which(tidy_pn2$course =="")
+tidy_pn2<-tidy_pn2[-index2,] 
+#remove duplicates (Danny!)
+tidy_pn2<-unique(tidy_pn2)
+#make all "course" letter capital
+tidy_pn2$course=toupper(tidy_pn2$course)
+#remove whitespace within "course"
+tidy_pn2$course=gsub("[[:space:]]", "",tidy_pn2$course)
+#recode wrong input of class
+index3<-which(tidy_pn2$course=="41220")
+tidy_pn2[index3,3]<-"4122"
+#remove HUDK4050
+index_remove4050<-which(tidy_pn2$course=="HUDK4050")
+tidy_pn<-tidy_pn2[-index_remove4050,]
+#change class type into factor instead of character
+tidy_pn$course<-as.factor(tidy_pn$course)
+#person-class matrix
+persontoclass<-as.matrix(table(tidy_pn$name,tidy_pn$course)) 
+persontoclass
+#person-person matrix #这是还是不明白multiply怎么就能出现persontoperson
+persontoperson=persontoclass%*%t(persontoclass)
+persontoperson
+#remove diagonal elements from person-person matrix
+#igraph
+g2 <-graph_from_adjacency_matrix(persontoperson,mode = c('undirected'),diag=F)
+plot(g2,layout=layout.fruchterman.reingold)
+
+#学习betweeness的内容完成下面部分
+#**Who is the most central person in the network according to these two metrics? Write a sentence or two that describes your interpretation of these metrics**
+  
+#network metrics: Betweeness centrality and dregree centrality
+sort(betweenness(g2),decreasing=T)
+#the biggest betweenness centrality
+g2between[which(g2between==max(g2between))]
+
+sort(degree(g2),decreasing=T)
+#the biggest degree centrality
+g2degree[which(g2degree==max(g2degree))]
+
+#comment: Yifei Zhang (myself haha #_#) has the biggest betweenness centrality. Guoliang Xu, Hangshi Jin, Jiaao Qi, Jiacong Zhu, Jiahao Shen,Wenqi Gao, Xiyun Zhang and Yingxin Xie have the biggest degree centrality.
+```
 
 Please create a **person-network** with the data set hudk4050-classes.csv. To create this network you will need to create a person-class matrix using the tidyr functions and then create a person-person matrix using `t()`. You will then need to plot a matrix rather than a to/from data frame using igraph.
 
@@ -117,6 +196,15 @@ Once you have done this, also [look up](http://igraph.org/r/) how to generate th
 * Betweeness centrality and dregree centrality. **Who is the most central person in the network according to these two metrics? Write a sentence or two that describes your interpretation of these metrics**
 
 * Color the nodes according to interest. Are there any clusters of interest that correspond to clusters in the network? Write a sentence or two describing your interpetation.
+
+```{r}
+#remove first row
+interest <- pn[-1,]$Which.of.these.topics.is.most.interesting.to.you.
+ColorList = c("yellow", "darkblue", "green", "pink", "red")
+V(g2)$color = ColorList[interest]
+plot(g2,layout=layout.fruchterman.reingold,vertex.size=10)
+#comment: Yes. There are clusters corresponding to the cluster in the network. In my opinion, there are more students interested in social network analysis in one cluster and more students interested in predicting modelling in the other cluster.
+```
 
 ### To Submit Your Assignment
 
