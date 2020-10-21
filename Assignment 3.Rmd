@@ -1,4 +1,7 @@
 # Assignment 3 - Social Network Analysis
+#### author: "Jiani Yang"
+#### date: "October 21, 2020"
+#### output: html_document
 
 ## Part I
 Start by installing the "igraph" package. Once you have installed igraph, load the package.
@@ -7,6 +10,7 @@ Now upload the data file "comment-data.csv" as a data frame called "D1". Each ro
 
 ```{r}
 D1 <- read.csv("comment-data.csv", header = TRUE)
+#Each row represents a comment. 
 ```
 
 Before you proceed, you will need to change the data type of the student id variable. Since it is a number R will automatically think it is an integer and code it as such (look at the list of variables by clicking on the data frame arrow in the Data pane. Here you will see the letters "int"" next to the stid variable, that stands for integer). However, in this case we are treating the variable as a category, there is no numeric meaning in the variable. So we need to change the format to be a category, what R calls a "factor". We can do this with the following code:
@@ -14,6 +18,7 @@ Before you proceed, you will need to change the data type of the student id vari
 ```{r}
 D1$comment.to <- as.factor(D1$comment.to)
 D1$comment.from <- as.factor(D1$comment.from)
+#to and from have different levels 21 vs. 25
 ```
 
 igraph requires data to be in a particular structure. There are several structures that it can use but we will be using a combination of an "edge list" and a "vertex list" in this assignment. As you might imagine the edge list contains a list of all the relationships between students and any characteristics of those edges that we might be interested in. There are two essential variables in the edge list a "from" variable and a "to" variable that descibe the relationships between vertices. While the vertex list contains all the characteristics of those vertices, in our case gender and major.
@@ -34,7 +39,7 @@ Since our data represnts every time a student makes a comment there are multiple
 
 EDGE <- count(D2, comment.to, comment.from)
 
-names(EDGE) <- c("from", "to", "count")
+names(EDGE) <- c("to", "from", "count")
 
 ```
 
@@ -103,20 +108,103 @@ plot(g,layout=layout.fruchterman.reingold, vertex.color=VERTEX$gender, edge.widt
 In Part II your task is to [look up](http://igraph.org/r/) in the igraph documentation and modify the graph above so that:
 
 * Ensure that sizing allows for an unobstructed view of the network features (For example, the arrow size is smaller)
+```{r}
+
+plot(g,layout=layout.fruchterman.reingold, vertex.color=VERTEX$gender, edge.width=EDGE$count/3, edge.arrow.size = .6)
+
+
+```
+
 * The vertices are colored according to major
+```{r}
+library(RColorBrewer)
+coul <- brewer.pal(4, "Set1")
+my_color <- coul[as.numeric(as.factor(V(g)$major))]
+plot(g,layout=layout.fruchterman.reingold,edge.width=EDGE$count/3, edge.arrow.size = .6, vertex.color = my_color)
+
+```
+
 * The vertices are sized according to the number of comments they have recieved
+```{r}
+#Vertex size still doesn't look perfect, but it's the best option I choose. It shows the difference in comment received, but still doesn't look ridiculously large or small.
+plot(g,layout=layout.fruchterman.reingold,edge.width=EDGE$count/3, edge.arrow.size = .6, vertex.color = my_color, vertex.size = EDGE$count*5)
+```
+
 
 ## Part III
 
 Now practice with data from our class. This data is real class data directly exported from Qualtrics and you will need to wrangle it into shape before you can work with it. Import it into R as a data frame and look at it carefully to identify problems.
 
 Please create a **person-network** with the data set hudk4050-classes.csv. To create this network you will need to create a person-class matrix using the tidyr functions and then create a person-person matrix using `t()`. You will then need to plot a matrix rather than a to/from data frame using igraph.
+```{r}
+library(tidyr)
+library(tibble)
+C1 <- read.csv("hudk4050-classes.csv", header = TRUE)
+#combine first and last name together 
+C1$name <- paste(C1$Q8, C1$Q9)
+#Remove meaningless rows
+C2 <- C1[-c(1:2),]
+C2 <- C2[, -c(1:2)]
+C3 <- cbind(C2[7:8], stack(lapply(C2[1:6], as.character)))
+C3a <- select(C3, name, values)
+names(C3a) <- c("Name", "Class")
+C3a <- C3a%>% na_if("") %>% na.omit
+searchString <- ' '
+replacementString <- ''
+C3a$Class = gsub(searchString, replacementString, C3a$Class)
+C3b <- data.frame(lapply(C3a,      # Convert data with toupper function
+                         function(variables) {
+                           if (is.character(variables)) {
+                             return(toupper(variables))
+                           } else {
+                             return(variables)
+                           }
+                         }),
+                  stringsAsFactors = FALSE)
+C3b$Name <- gsub("[[:punct:]]", "", C3b$Name)
+C3b$Count <- rep(1)
+C3b <- C3b[-161,]
+C4 <- C3b %>% unique() %>% spread(Class, Count)
+rownames(C4) <- C4$Name
+C4 <- select(C4, -Name, -HUDK4050)
+C4[is.na(C4)] <- 0
+C5 <- as.matrix(C4)
+C5 <- C5%*%t(C5)
+network <- graph.adjacency(C5, mode = "undirected", diag = FALSE)
+plot(network,layout=layout.fruchterman.reingold, vertex.size = 4, vertex.label.cex = 0.8, vertex.label.color = "blue", vertex.color = "gainsboro")
+
+```
+
 
 Once you have done this, also [look up](http://igraph.org/r/) how to generate the following network metrics:
 
 * Betweeness centrality and dregree centrality. **Who is the most central person in the network according to these two metrics? Write a sentence or two that describes your interpretation of these metrics**
+```{r}
+sort(degree(network), decreasing = TRUE)
+#There are 8 peoeple that have the most connections in this class. 
+sort(betweenness(network), decreasing = TRUE)
+#A node with higher betweenness centrality would have more control over the network, because more information will pass through that node. Therefore, if I want to ask people to vote for student senate, I should contact Yifei Zhang first and let her to connect with other people. 
+```
+
 
 * Color the nodes according to interest. Are there any clusters of interest that correspond to clusters in the network? Write a sentence or two describing your interpetation.
+```{r}
+
+B1 <- read.csv("hudk4050-classes.csv", header = TRUE)
+#combine first and last name together 
+B1$name <- paste(B1$Q8, B1$Q9)
+#Remove the first two rows
+B2 <- B1[-c(1:2),]
+#Only keep name and interest columns 
+B2 <- select(B2, 9:10)
+colnames(B2) <- c("Interest", "Name")
+B2$Name <- gsub("[[:punct:]]", "", B2$Name)
+#There are five different interests.
+color <- brewer.pal(5, "Set1")
+my_color_intst <- color[as.numeric(B2$Interest)]
+plot(network,layout=layout.fruchterman.reingold, vertex.size = 10, vertex.label.cex = 0.8, vertex.label.color = "blue", vertex.color = my_color)
+```
+
 
 ### To Submit Your Assignment
 
