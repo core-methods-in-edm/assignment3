@@ -169,7 +169,7 @@ C3 <- select(C3, -name, -HUDK4050)
 #Shortest:
 C3[is.na(C3)] <- 0
 #Cheat way:
-C3 <- ifelse(is.na(C3),0,1)
+C3[is.na(C3)]
 
 #Matrix operations
 #Convert to matrix
