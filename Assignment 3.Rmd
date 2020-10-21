@@ -32,10 +32,8 @@ Since our data represnts every time a student makes a comment there are multiple
 
 ```{r}
 
-EDGE <- count(D2, comment.to, comment.from)
-
+EDGE <- count(D2, comment.from, comment.to)
 names(EDGE) <- c("from", "to", "count")
-
 ```
 
 EDGE is your edge list. Now we need to make the vertex list, a list of all the students and their characteristics in our network. Because there are some students who only recieve comments and do not give any we will need to combine the comment.from and comment.to variables to produce a complete list.
@@ -83,6 +81,7 @@ library(igraph)
 #First we will make an object that contains the graph information using our two dataframes EDGE and VERTEX. Notice that we have made "directed = TRUE" - our graph is directed since comments are being given from one student to another.
 
 g <- graph.data.frame(EDGE, directed=TRUE, vertices=VERTEX)
+g
 
 #Now we can plot our graph using the force directed graphing technique - our old friend Fruchertman-Reingold!
 
@@ -96,7 +95,7 @@ plot(g,layout=layout.fruchterman.reingold, vertex.color=VERTEX$gender)
 
 plot(g,layout=layout.fruchterman.reingold, vertex.color=VERTEX$gender, edge.width=EDGE$count)
 
-````
+```
 
 ## Part II
 
@@ -105,6 +104,20 @@ In Part II your task is to [look up](http://igraph.org/r/) in the igraph documen
 * Ensure that sizing allows for an unobstructed view of the network features (For example, the arrow size is smaller)
 * The vertices are colored according to major
 * The vertices are sized according to the number of comments they have recieved
+```{r}
+received <- count(D2, comment.to)
+names(received) <- c("id", "received")
+VERTEX2 <- full_join(VERTEX, received, by = "id")
+VERTEX2$received <- ifelse(is.na(VERTEX2$received) == TRUE, 0, VERTEX2$received)
+
+g <- graph.data.frame(EDGE, directed=TRUE, vertices=VERTEX2)
+
+l <- layout_with_fr(g)
+l <- norm_coords(l, ymin=-1, ymax=1, xmin=-1, xmax=1)
+
+plot(g,vertex.color=VERTEX2$major, edge.arrow.size =0.3,vertex.size = VERTEX2$received*3, vertex.label.dist = 0.1, edge.width=EDGE$count, rescale = F, layout = l*1.1)
+
+```
 
 ## Part III
 
@@ -117,6 +130,76 @@ Once you have done this, also [look up](http://igraph.org/r/) how to generate th
 * Betweeness centrality and dregree centrality. **Who is the most central person in the network according to these two metrics? Write a sentence or two that describes your interpretation of these metrics**
 
 * Color the nodes according to interest. Are there any clusters of interest that correspond to clusters in the network? Write a sentence or two describing your interpetation.
+
+```{r}
+
+library(dplyr)
+library(tidyr)
+library(igraph)
+
+DF <- read.csv("hudk4050-classes.csv", header = TRUE)
+
+#Data normalizing
+
+DF1 <- DF
+DF1 <- DF1 [-c(1,2),]
+colnames(DF1) <- c("First_Name","Last_Name","Class1","Class2","Class3","Class4","Class5","Class6","Interest")
+
+DF2 <- unite(DF1, "Full_Name", First_Name:Last_Name, sep = " ")
+
+clean_up <- function(col) {
+  # remove non-alpha-numerical characters
+  t <- gsub("[^[:alnum:] ]", "", col)
+  
+  # remove multiple spaces with one only
+  t <- gsub("\\s+", " ", t)
+  return(toupper(t))
+}
+
+DF3 <- DF2 %>%
+  mutate_at(1:8, clean_up)
+
+```
+```{r}
+#data restructure 
+DF4 <- DF3[,-8]
+
+DF5 <- gather(DF4,key,Class,2:7) %>%
+  select(-key)
+
+DF5$count <- 1
+
+DF5 <- filter(DF5, Class != "")
+
+# Remove duplicated rows
+DF5 <- unique(DF5)
+
+
+DF5 <- spread(DF5, Class, count)
+
+rownames(DF5) <- DF5$Full_Name
+
+DF5 <- select(DF5, -Full_Name, - HUDK4050)
+
+DF5 <- ifelse(is.na(DF5), 0, 1)
+
+DF5 <- data.matrix(DF5)
+
+DF5 <- DF5 %*% t(DF5)
+```
+
+```{r}
+g <- graph.adjacency(DF5, mode = "undirected", diag = FALSE)
+
+l <- layout_with_dh(g)
+l <- norm_coords(l, ymin=-1, ymax=1, xmin=-1, xmax=1)
+plot(g, layout = l*1, vertex.color= "blue", vertex.size = 1, vertex.label.dist = 0.8, edge.color = "red", rescale = F)
+
+sort(degree(g), decreasing = TRUE)
+
+sort(betweenness(g), decreasing = TRUE)
+
+```
 
 ### To Submit Your Assignment
 
