@@ -34,7 +34,7 @@ Since our data represnts every time a student makes a comment there are multiple
 
 EDGE <- count(D2, comment.to, comment.from)
 
-names(EDGE) <- c("from", "to", "count")
+names(EDGE) <- c("to", "from", "count")
 
 ```
 
@@ -103,8 +103,22 @@ plot(g,layout=layout.fruchterman.reingold, vertex.color=VERTEX$gender, edge.widt
 In Part II your task is to [look up](http://igraph.org/r/) in the igraph documentation and modify the graph above so that:
 
 * Ensure that sizing allows for an unobstructed view of the network features (For example, the arrow size is smaller)
+
+```{r}
+plot(g,layout=layout.fruchterman.reingold, vertex.color=VERTEX$gender, edge.width=EDGE$count, edge.arrow.width = 0.01)
+```
+
 * The vertices are colored according to major
+```{r}
+plot(g,layout=layout.fruchterman.reingold, vertex.color=VERTEX$major)
+```
+
 * The vertices are sized according to the number of comments they have recieved
+```{r}
+library(dplyr)
+plot(g,layout=layout.fruchterman.reingold, vertex.size =EDGE$count*10,vertex.color=VERTEX$id,edge.arrow.width = 0.01)
+```
+
 
 ## Part III
 
@@ -112,11 +126,78 @@ Now practice with data from our class. This data is real class data directly exp
 
 Please create a **person-network** with the data set hudk4050-classes.csv. To create this network you will need to create a person-class matrix using the tidyr functions and then create a person-person matrix using `t()`. You will then need to plot a matrix rather than a to/from data frame using igraph.
 
+
+```{r}
+library(tidyverse)
+class_dt <- read_csv("hudk4050-classes.csv", skip = 1)
+class_dt1 <- class_dt[-1,]
+class_dt1 <- class_dt1 %>% mutate_at(3:8, list(toupper))
+class_dt1 <- class_dt1 %>% mutate_at(3:8,str_replace_all," ","")
+
+
+class_dt1$`Class 1` <-str_replace(class_dt1$`Class 1`, "HUDK4050", " ")
+class_dt1$`Class 2` <-str_replace(class_dt1$`Class 2`, "HUDK4050", " ")
+class_dt1$`Class 3` <-str_replace(class_dt1$`Class 3`, "HUDK4050", " ")
+class_dt1$`Class 4` <-str_replace(class_dt1$`Class 4`, "HUDK4050", " ")
+class_dt1$`Class 5` <-str_replace(class_dt1$`Class 5`, "HUDK4050", " ")
+
+class_dt1[class_dt1==" "]<-NA
+class_dt1$student <- paste(class_dt1$`First Name`,class_dt1$`Last Name`,sep=" ")
+
+class_dt2 <- class_dt1 %>% gather(`First Name`,`Last Name`,`Class 1`,`Class 2`,`Class 3`,`Class 4`,`Class 5`,`Class 6`,) %>% select (`student`,`Last Name`)
+names(class_dt2) <- c("student","class_id")
+class_dt2 <- na.omit(class_dt2)
+
+class_dt2$count <- 1
+class_dt2_spread <- spread(class_dt2,class_id,count)
+class_dt2_spread[is.na(class_dt2_spread)] <- 0
+student_m <- select(class_dt2_spread,student)
+
+student_m <- as.matrix(student_m)
+
+
+class_dt2_spread<- class_dt2_spread[,-1]
+class_dt2_spread <-as.matrix(class_dt2_spread)
+rownames(class_dt2_spread) <- student_m
+
+class_student<- class_dt2_spread
+
+class_student
+
+
+```
+
+```{r}
+class_class <- class_student%*% t(class_student)
+class_class
+```
+
+
 Once you have done this, also [look up](http://igraph.org/r/) how to generate the following network metrics:
 
 * Betweeness centrality and dregree centrality. **Who is the most central person in the network according to these two metrics? Write a sentence or two that describes your interpretation of these metrics**
 
 * Color the nodes according to interest. Are there any clusters of interest that correspond to clusters in the network? Write a sentence or two describing your interpetation.
+
+```{r}
+adjacent_list <- graph_from_adjacency_matrix(class_class,mode = "undirected",diag=FALSE)
+plot(adjacent_list, layout=layout.fruchterman.reingold,
+     vertex.size=4,
+     vertex.label.cex=0.8,
+     vertex.label.color="black",
+     vertex.color="gainsboro")
+```
+
+* Centrality
+```{r}
+sort(degree(adjacent_list),decreasing = TRUE)
+sort(betweenness(adjacent_list),decreasing = TRUE)
+```
+
+* Interpretaion\
+The most central person in the network is Guoliang Xu, Hangshi Jin, and those who have 31 as the degree centrality, and Yifei Zhang is the most central person according to these two matrics. These people have the higest commonality. Also, there are clusters in the network. Most of the students are taking the same class. It is probably because students are in same major and the courses they are taking are the major requirments.
+
+
 
 ### To Submit Your Assignment
 
