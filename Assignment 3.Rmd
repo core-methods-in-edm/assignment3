@@ -1,3 +1,8 @@
+---
+output:
+  html_document: default
+  pdf_document: default
+---
 # Assignment 3 - Social Network Analysis
 
 ## Part I
@@ -77,7 +82,6 @@ Now we have both a Vertex and Edge list it is time to plot our graph!
 
 ```{r}
 #Load the igraph package
-
 library(igraph)
 
 #First we will make an object that contains the graph information using our two dataframes EDGE and VERTEX. Notice that we have made "directed = TRUE" - our graph is directed since comments are being given from one student to another.
@@ -106,15 +110,71 @@ In Part II your task is to [look up](http://igraph.org/r/) in the igraph documen
 * The vertices are colored according to major
 * The vertices are sized according to the number of comments they have recieved
 
+```{r}
+plot(g,layout=layout.fruchterman.reingold, vertex.color=VERTEX$major, vertex.size = (EDGE$count*10), edge.width=1, margin=-0.1, edge.arrow.size=.5, edge.arrow.width=0.8)
+```
+
+
 ## Part III
 
 Now practice with data from our class. This data is real class data directly exported from Qualtrics and you will need to wrangle it into shape before you can work with it. Import it into R as a data frame and look at it carefully to identify problems.
 
+```{r}
+library(tidyverse)
+library(dbplyr)
+class_df <- read_csv("hudk4050-classes.csv", skip = 1)
+class_df
+class_df <- class_df[-1,]
+class_df
+```
+
+
 Please create a **person-network** with the data set hudk4050-classes.csv. To create this network you will need to create a person-class matrix using the tidyr functions and then create a person-person matrix using `t()`. You will then need to plot a matrix rather than a to/from data frame using igraph.
+
+```{r}
+library(tidyr)
+names(class_df) = c("FirstName","LastName","Class1","Class2","Class3","Class4","Class5","Class6","Interest")
+class_df$Name = paste(class_df$FirstName,class_df$LastName)
+class_df
+class_df$Name <- str_replace(class_df$Name,"`","")
+class_df$Name <- str_to_title(class_df$Name)
+class_df1 <- class_df %>% gather(label, Class, 2:7, na.rm = TRUE, convert = FALSE ) %>% select(Name,Class)
+```
+
+```{r}
+
+class_df1$Count <- 1
+class_df1 <- filter(class_df1, Class != "")
+class_df1 <- unique(class_df1)
+class_df1 <- spread(class_df1,Class,Count)
+rownames(class_df1) <- class_df1$Name
+class_df1 <- select(class_df1,-Name,-HUDK4050)
+class_df1 [is.na(class_df1)]<- 0
+```
+```{r}
+
+connection_matrix <- as.matrix(class_df1) %*% t(as.matrix(class_df1))
+```
 
 Once you have done this, also [look up](http://igraph.org/r/) how to generate the following network metrics:
 
+```{r}
+pt <- graph_from_adjacency_matrix(connection_matrix, mode="undirected", diag = FALSE)
+plot(pt, layout=layout.fruchterman.reingold,
+     vertex.size= 4,
+     vertex.label.cex=0.8,
+     vertex.label.color="black",
+     vertex.color="gainsboro")
+```
+
+
 * Betweeness centrality and dregree centrality. **Who is the most central person in the network according to these two metrics? Write a sentence or two that describes your interpretation of these metrics**
+
+```{r}
+sort(degree(pt),decreasing = TRUE)
+sort(betweenness(pt),decreasing = TRUE)
+```
+
 
 * Color the nodes according to interest. Are there any clusters of interest that correspond to clusters in the network? Write a sentence or two describing your interpetation.
 
