@@ -159,23 +159,20 @@ library(dplyr)
 library(tidyr)
 library(stringr)
 
+#read in file and create header names
 S1 <- read.csv("hudk4050-classes.csv",col.names = c("First_Name", "Last_Name", "Class1", "Class2", "Class3", "Class4", "Class5", "Class6", "Topic_Interest"), stringsAsFactors = FALSE)
 S2 <- S1
-#colnames(pNetwork) <- pNetwork[2]
-
 #remove unwanted rows
-#pNetwork<-slice(pNetwork,3:49)
-S2 <- S2[-c(1,2),]
-
+S2<-slice(S2,3:49)
 #Fix names so that first and last are together as full name
 S2 <- unite(S2,First_Name, Last_Name, col = "Full_Name", sep = " ", remove = TRUE)
-#
+#Get rid of random `
 S2$Full_Name <- str_replace(S2$Full_Name, "`", "")
-#
+#Make all the names the same (capitals)
 S2$Full_Name <- str_to_title(S2$Full_Name)
-#
+#Fix the class names so they are all the same (all caps)
 S2 <- S2 %>% mutate_at(2:7, list(toupper))
-#
+#Fix the class names so they are all the same (no spaces)
 S2 <- S2 %>% mutate_at(2:7, str_replace_all, " ", "")
 S4 <- S2
 ```
@@ -183,18 +180,24 @@ S4 <- S2
 #a.Create Person-Class matrix with tidyr; b. create Person-Person matrix with t()
 ```{r}
 #a.
+#Organize dataframe into the structure looking for
 S3 <- gather(S2,2:7,key="counts",value="Class_Name", na.rm = TRUE, convert = FALSE) %>% select(Full_Name,Class_Name,counts)
 #Danny Case
 S3 <- S3[-c(42),]
-#fix to get into a matrix
+#Creating a column of 1 that will be spread across the dataframe
 S3$counts <- ifelse(S3$counts == "Class1", 1, ifelse(S3$counts == "Class2", 1, ifelse(S3$counts == "Class3", 1, ifelse(S3$counts == "Class4", 1, ifelse(S3$counts == "Class5", 1, ifelse(S3$counts == "Class6", 1, "NOPE"))))))
 S3$counts <- as.numeric(S3$counts)
+#Setting up NAs and removing them so does not interfer with spread()
 S3$Class_Name <- ifelse(S3$Class_Name == "", NA, S3$Class_Name)
 S3 <- na.omit(S3)
+#Spreading the counts across the data frame with Class_Name across the top and leaving the student names
 S3 <- spread(S3, Class_Name,counts)
+#Putting 0 in place for NAs so that it is just a count of 1 and 0s
 S3[is.na(S3)] <- 0
+#Rename rows and picking columns to delete (deleting the names post row naming and to make the graph more interesting remove HUDK4050)
 rownames(S3)<-S3$Full_Name
 S3 <- select(S3, -Full_Name, -HUDK4050)
+#Creates the Person-Class matrix
 PersonClass <- as.matrix(S3)
 
 #b. Create a person-person matrix using t()
