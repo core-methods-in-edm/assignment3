@@ -118,13 +118,13 @@ V(g)$vertex_degree <- degree(g)
 #comment <- EDGE%>%group_by(to)%>%summarize(totalcomment=sum(count,na.rm=T))
 #node.size<-setNames(comment$totalcomment,comment$to)
 #vertex.size=node.size,
-scale_factor<-4
+comment_count<-EDGE%>%group_by(to)%>%summarize(count=sum(count))
+colnames(comment_count)<-c("id","count")
+VERTEX <-left_join(VERTEX, comment_count, by = 'id')
+VERTEX$count[is.na(VERTEX$count)] <- 0
 plot(g,layout=layout.fruchterman.reingold,vertex.color=VERTEX$major,
-     edge.arrow.size=.5,vertex.shape="circle",vertex.size=V(g)$vertex_degree*scale_factor,edge.curved=.1,vertex.frame.color="gray",vertex.label.cex=.8,)
-V(g)$size <- V(g)$count.size*0.7
-#major
+     edge.arrow.size=.5,vertex.shape="circle",vertex.size=VERTEX$count*4,edge.curved=.1,vertex.frame.color="gray",vertex.label.cex=.8,)
 
-#sized comments 
 ```
 
 
@@ -180,10 +180,12 @@ plot(g2,layout=layout.fruchterman.reingold)
 #network metrics: Betweeness centrality and dregree centrality
 sort(betweenness(g2),decreasing=T)
 #the biggest betweenness centrality
+g2between=betweenness(g2)
 g2between[which(g2between==max(g2between))]
 
 sort(degree(g2),decreasing=T)
 #the biggest degree centrality
+g2degree=degree(g2)
 g2degree[which(g2degree==max(g2degree))]
 
 #comment: Yifei Zhang (myself haha #_#) has the biggest betweenness centrality. Guoliang Xu, Hangshi Jin, Jiaao Qi, Jiacong Zhu, Jiahao Shen,Wenqi Gao, Xiyun Zhang and Yingxin Xie have the biggest degree centrality.
