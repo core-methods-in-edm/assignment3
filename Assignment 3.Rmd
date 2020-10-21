@@ -6,6 +6,9 @@ Start by installing the "igraph" package. Once you have installed igraph, load t
 Now upload the data file "comment-data.csv" as a data frame called "D1". Each row represents a comment from one student to another so the first line shows that student "28" commented on the comment of student "21". It also shows the gender of both students and the students' main elective field of study ("major"").
 
 ```{r}
+#install.packages("igraph")
+library(igraph)
+
 D1 <- read.csv("comment-data.csv", header = TRUE)
 ```
 
@@ -14,6 +17,9 @@ Before you proceed, you will need to change the data type of the student id vari
 ```{r}
 D1$comment.to <- as.factor(D1$comment.to)
 D1$comment.from <- as.factor(D1$comment.from)
+
+table(D1$comment.from)
+table(D1$comment.to)
 ```
 
 igraph requires data to be in a particular structure. There are several structures that it can use but we will be using a combination of an "edge list" and a "vertex list" in this assignment. As you might imagine the edge list contains a list of all the relationships between students and any characteristics of those edges that we might be interested in. There are two essential variables in the edge list a "from" variable and a "to" variable that descibe the relationships between vertices. While the vertex list contains all the characteristics of those vertices, in our case gender and major.
@@ -34,7 +40,7 @@ Since our data represnts every time a student makes a comment there are multiple
 
 EDGE <- count(D2, comment.to, comment.from)
 
-names(EDGE) <- c("from", "to", "count")
+names(EDGE) <- c("to", "from", "count")
 
 ```
 
@@ -57,16 +63,20 @@ lvls <- sort(union(levels(V.FROM$id), levels(V.TO$id)))
 VERTEX <- full_join(mutate(V.FROM, id=factor(id, levels=lvls)),
     mutate(V.TO, id=factor(id, levels=lvls)), by = "id")
 
-#Fill in missing gender and major values - ifelse() will convert factors to numerical values so convert to character
+# Create a copy of gender from/to, and keep them as characters. This will help label the graph, while also 
+# allowing us to use them as factors (Charles' code below) to code colors based on major
+VERTEX$major.char <- ifelse(is.na(VERTEX$major.from) == TRUE, VERTEX$major.to, VERTEX$major.from)
+
+# Fill in missing gender and major values - ifelse() will convert factors to numerical values so convert to character
 VERTEX$gender.from <- ifelse(is.na(VERTEX$gender.from) == TRUE, as.factor(as.character(VERTEX$gender.to)), as.factor(as.character(VERTEX$gender.from)))
 
 VERTEX$major.from <- ifelse(is.na(VERTEX$major.from) == TRUE, as.factor(as.character(VERTEX$major.to)), as.factor(as.character(VERTEX$major.from)))
 
 #Remove redundant gender and major variables
-VERTEX <- select(VERTEX, id, gender.from, major.from)
+VERTEX <- select(VERTEX, id, gender.from, major.from, major.char)
 
 #rename variables
-names(VERTEX) <- c("id", "gender", "major")
+names(VERTEX) <- c("id", "gender", "major", "major.char")
 
 #Remove all the repeats so that we just have a list of each student and their characteristics
 VERTEX <- unique(VERTEX)
@@ -106,17 +116,291 @@ In Part II your task is to [look up](http://igraph.org/r/) in the igraph documen
 * The vertices are colored according to major
 * The vertices are sized according to the number of comments they have recieved
 
+
+```{r}
+#?igraph.plotting
+
+# Define Graph
+  g <- graph.data.frame(EDGE, directed=TRUE, vertices=VERTEX)
+
+# Generate colors for nodes
+  colors <- c("yellow4", "tomato", "gold", "cadetblue")
+
+# Vertex Char.
+  V(g)$color <- colors[V(g)$major] # vertex colors based on majors
+  V(g)$size <- E(g)$count*6 #vertex node size comes from a var in the Edge frame
+  V(g)$frame.color="black" #surrounding line of vertex, same color as edge
+  V(g)$label.color <- "black" #default is blue, change to black
+  V(g)$label.cex=.5 # label size for labels
+  V(g)$label.dist=1
+  V(g)$label=NA # turn it off for now
+  V(g)$legend=V(g)$major
+
+# Edge Char.
+  E(g)$width <- .3 #Edge width - make it thinner
+  E(g)$arrow.size <- .2 # make it smaller to unobstruct view
+  E(g)$edge.color <- "gray80"
+
+# For Legend: Find out number/Char equivalency. 
+# There is certainly a be way to do it, but anyway...
+  plot(g) 
+  title("Student Comment Network",cex.main=1,col.main="black")
+  legend(x=1.5, y=-1.1, c("M1", "M2", "M3", "M4"), pch=21, pt.bg=colors, pt.cex=2, cex=.8, bty="n", ncol=1)
+
+
+
+
+```
+
+
 ## Part III
 
 Now practice with data from our class. This data is real class data directly exported from Qualtrics and you will need to wrangle it into shape before you can work with it. Import it into R as a data frame and look at it carefully to identify problems.
 
-Please create a **person-network** with the data set hudk4050-classes.csv. To create this network you will need to create a person-class matrix using the tidyr functions and then create a person-person matrix using `t()`. You will then need to plot a matrix rather than a to/from data frame using igraph.
+Please create a **person-network** with the data set hudk4050-classes.csv. To create this network you will need to create a person-class matrix using the tidyr functions and then create a person-person matrix using `t( )`. You will then need to plot a matrix rather than a to/from data frame using igraph.
+
+
+### STEP1: DATA WRANGLING
+```{r}
+
+#install.packages("stringr")
+#install.packages("foreach")
+  library(stringr)
+  library(dplyr)
+  library(tidyr)
+  library(tidyverse)
+  library(foreach)
+  library(igraph)
+
+
+# Import data
+  DF <- read.csv("hudk4050-classes.csv", header = TRUE)
+ 
+# Rename variables
+  names(DF) <-  unlist(DF[1,])
+  names(DF) <- sub(" ", ".", names(DF))
+
+#remove first TWO rows
+  DF <- DF[-c(1, 2), ] 
+
+# Create numeric ID 
+  DF$ids <- 1:47
+  DF$ids<- as.factor(DF$ids)
+  DF$interest <- DF$`Which.of these topics is most interesting to you?`
+
+#Make data frame with all classes and numeric ID. 
+#DF2 <- data.frame(DF$ids, DF[,grep("Class", colnames(DF))] ) #also works, but select(, contains()) is better
+  DF2 <- select(DF, ids, contains("Class"))
+  
+# All uppercase
+  DF2 <- data.frame(lapply(DF2, function(v) {
+    if (is.character(v)) return(toupper(v))
+    else return(v)
+  }))
+  
+# Get rid of space between dept and cn 
+  DF2 <- data.frame(lapply(DF2, function(v) {
+    if (is.character(v)) str_replace(v, " ", "")
+    else return(v)
+  }))
+
+# From Wide to Long
+  DF3 <- DF2 %>% gather("Class.n", "class", -ids)
+  #DF2 <- select(DF2, class, ids)
+  table(DF3$class)
+  
+# Get rid of missing entries 
+  DF3$class <- str_replace(DF3$class, " ", "")
+  DF3 <- DF3 %>% filter(str_detect(DF3$class, "[0-9]"))
+
+# From long to wide
+  DF3$dummy <- rep(1, 163)
+  
+  #diff# DF3 <- DF2 %>% spread(ids, dummy) # one entry per class 
+  DF4 <- DF3 %>% spread(class, dummy) # one entry per student
+  
+# Collapse to the student level
+  DF4 <- select(DF4, -Class.n)
+  names(DF4) = paste0("class_", names(DF4))
+  DF4 <- DF4 %>% rename(ID=class_ids)
+  
+  DF4[is.na(DF4)] = 0
+  
+  DF5 <- DF4 %>% group_by(ID) %>% summarise_if(is.numeric, max)
+  #diff# DF4 <- DF3 %>% group_by(class) %>% summarise_if(is.numeric, max)
+  #diff# names(DF4) = paste0("std_", names(DF4))
+  #diff# DF4 <- DF4 %>% rename(class = std_class) 
+  
+# Data level: STD 
+# There are 52 course variables in the data 
+# If two students are in the same course, a connection should be created
+  
+  
+  
+
+```
+
+
+### STEP2: TRY MATRIX FROM DF5 (STUDENT LEVEL)
+```{r}
+
+## Aha! This does not work because R works columnwise! ugh
+EDGE = matrix(c(0,0),ncol = 2)
+for(c in 2:53){                          # 52 classes in wide format
+  for(id1 in 1:47){                      # 47 students
+  for(id2 in 1:47){                      # 47 students
+    if(DF5[id1,c] == DF5[id2,c] & DF5[id1,c]==1 & id1!=id2){   # if 2 dif std have a "1" for the same class: connect
+      EDGE = rbind(EDGE, matrix(c(DF5[id1,1],DF5[id2,1]), ncol = 2))
+    }
+  }
+  }
+}
+
+```
+  
+### STEP3: TRY MATRIX FROM DF3 (STUDENT/COURSE LEVEL)
+  
+```{r}
+
+## Let's go back to DF3 and try columnwise
+### Question: how to remove duplicates? example: 1/2 & 2/1
+  
+DF3$c <- as.factor(DF3$class)
+  
+EDGE = matrix(c(0,0,0),ncol = 3)
+  
+  for(o1 in 1:163){                      # total obs from long dataset
+  for(o2 in 1:163){                      # total obs from long dataset
+    if(DF3[o1,5] == DF3[o2,5] & o1!=o2) {   # if 2 std are in the same class
+      EDGE = rbind(EDGE, matrix(c(DF3[o1,1],DF3[o2,1], DF3[o1, 5]), ncol = 3))
+    }
+  }
+  }
+
+EDGE = EDGE[-1,]
+colnames(EDGE) = c("std1", "std2", "class")
+
+```
+
+
+
+### STEP4: EDGE AND VERTEX FROM MATRIX
+
+```{r}
+
+  # EDGE: To/From IDs
+  # Vertex: All IDs 
+  
+  VERTEX <- select(DF, First.Name, ids, interest)
+  VERTEX <- VERTEX %>% rename(ID=ids)
+  VERTEX$interest <- as.factor(as.character(VERTEX$interest))
+
+  EDGE <- as.data.frame(EDGE)
+  EDGE <- count(EDGE, std1, std2)
+  
+```
+
+
+### STEP5: GRAPH
+
+
+```{r}
+
+  g2 <- graph.data.frame(EDGE, directed=F, vertices=VERTEX$ID)
+  #g2 <- simplify(g2, remove.multiple=TRUE)
+  #is.simple(g2)
+  
+# Generate colors for nodes
+  colors <- c("yellow4", "tomato", "gold", "cadetblue", "gray80")
+
+# Vertex Char.
+  V(g2)$color <- colors[VERTEX$interest] 
+  V(g2)$size <- 10
+  V(g2)$frame.color="black" #surrounding line of vertex, same color as edge
+  V(g2)$label.color <- "black" #default is blue, change to black
+  V(g2)$label.cex=.5 # label size for labels
+  V(g2)$label.dist=0
+
+# Edge Char.
+  E(g2)$width <- EDGE$n*.2 #Edge width - based on the n of connections between std
+  E(g2)$arrow.size <- .2 # make it smaller to unobstruct view
+  E(g2)$edge.color <- "gray80"
+
+# Plot
+  
+  #why isn't simplify command above working when I knit this? 
+  # It DOES work when I run the code chunk
+  
+  plot(g2, layout=layout.fruchterman.reingold, remove.multiple=TRUE) 
+  title("Student Course-taking Network",cex.main=1,col.main="black")
+
+```
+
+
 
 Once you have done this, also [look up](http://igraph.org/r/) how to generate the following network metrics:
 
 * Betweeness centrality and dregree centrality. **Who is the most central person in the network according to these two metrics? Write a sentence or two that describes your interpretation of these metrics**
 
+```{r}
+
+## ON MY GRAPH (G2)
+#Degree centrality - this was supposed to indicate the individual with most connections. unclear in this network.
+sort(degree(g2), decreasing=TRUE)
+
+#betweeness - individual 27 is the shortest path to other individuals. this could be considered the most "influencial" person in the network.
+sort(betweenness(g2), decreasing=TRUE)
+
+
+
+```
+
+
 * Color the nodes according to interest. Are there any clusters of interest that correspond to clusters in the network? Write a sentence or two describing your interpetation.
+
+```{r}
+
+# nodes already colored according to interest
+
+plot(g2, layout=layout_nicely)
+  title("Student Course-taking Network",cex.main=1,col.main="black")
+
+```
+
+
+# Graph after Code workout :-) 
+```{r}
+
+# Could work more on this - will come back to it later!
+
+# Transfer IDS to ROWNAMES - rownames are already the num IDS, but I liked this command
+rownames(DF5) <- DF5$ID
+# Remove 4050, OK
+DF6 <- select(DF5, -class_HUDK4050)
+# Remove ID column
+DF6 <- select(DF6, -ID)
+# Matrix - classes as rows, without names
+CW <- as.matrix(DF6)
+#Craete person-person
+CW <- CW %*% t(CW)
+#Graphing 
+g3 <- graph.adjacency(CW, mode="undirected", diag=FALSE)
+
+
+# Vertex Char.
+  V(g3)$size <- 10
+  V(g3)$frame.color="black" 
+  V(g3)$label.color <- "black" 
+  V(g3)$label.cex=.5 # label size for labels
+  V(g3)$label.dist=0
+
+
+plot (g3)
+
+
+
+```
+
 
 ### To Submit Your Assignment
 
