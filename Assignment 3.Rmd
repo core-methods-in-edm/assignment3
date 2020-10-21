@@ -14,6 +14,8 @@ Before you proceed, you will need to change the data type of the student id vari
 ```{r}
 D1$comment.to <- as.factor(D1$comment.to)
 D1$comment.from <- as.factor(D1$comment.from)
+table(D1$comment.to)
+table(D1$comment.from)
 ```
 
 igraph requires data to be in a particular structure. There are several structures that it can use but we will be using a combination of an "edge list" and a "vertex list" in this assignment. As you might imagine the edge list contains a list of all the relationships between students and any characteristics of those edges that we might be interested in. There are two essential variables in the edge list a "from" variable and a "to" variable that descibe the relationships between vertices. While the vertex list contains all the characteristics of those vertices, in our case gender and major.
@@ -34,7 +36,7 @@ Since our data represnts every time a student makes a comment there are multiple
 
 EDGE <- count(D2, comment.to, comment.from)
 
-names(EDGE) <- c("from", "to", "count")
+names(EDGE) <- c( "to","from", "count")
 
 ```
 
@@ -105,6 +107,18 @@ In Part II your task is to [look up](http://igraph.org/r/) in the igraph documen
 * Ensure that sizing allows for an unobstructed view of the network features (For example, the arrow size is smaller)
 * The vertices are colored according to major
 * The vertices are sized according to the number of comments they have recieved
+```{r}
+C1<- data.frame(table(D1$comment.to))
+names(C1)= c("id", "comment.to1")
+C2 <- data.frame(VERTEX$id,rep(0, times=length(VERTEX$id)))
+names(C2) = c("id","comment.to2")
+Comment.to.size<- left_join(C2,C1)
+Comment.to.size$comment.to1<- ifelse(is.na(Comment.to.size$comment.to1)==TRUE,0,Comment.to.size$comment.to1)
+Comment.to.size$comment.to = Comment.to.size$comment.to1 + Comment.to.size$comment.to2
+Csize = select(Comment.to.size, id, comment.to)
+
+plot( g,layout=layout.fruchterman.reingold, vertex.color=VERTEX$major,vertex.size=Csize$comment.to+10, edge.width=EDGE$count,edge.arrow.size=.2)
+```
 
 ## Part III
 
@@ -117,6 +131,50 @@ Once you have done this, also [look up](http://igraph.org/r/) how to generate th
 * Betweeness centrality and dregree centrality. **Who is the most central person in the network according to these two metrics? Write a sentence or two that describes your interpretation of these metrics**
 
 * Color the nodes according to interest. Are there any clusters of interest that correspond to clusters in the network? Write a sentence or two describing your interpetation.
+```{r}
+library(tidyr)
+library(stringr)
+D3 <- read.csv("hudk4050-classes.csv", stringsAsFactors = FALSE, header = TRUE)
+D3 <- slice(D3,3:49)
+names(D3) = c("FirstName","LastName","Class1","Class2","Class3","Class4","Class5","Class6","Interest")
+D3$Name = paste(D3$FirstName,D3$LastName)
+D3 <- select(D3,1:7)
+D3$Name <- str_replace(D3$Name,"`","")
+D3$Name <- str_to_title(D3$Name)
+D3 <- D3 %>% mutate_at(2:7,list(toupper))
+D3 <- D3 %>% mutate_at(2:7,str_replace_all," ","")
+```
+#Data restructuring
+```{r}
+D4 <- D3 %>% gather(label, Class, 2:7, na.rm = TRUE, convert = FALSE ) %>% select(Name,Class)
+D4$Count <- 1
+D4 <- filter(D4, Class != "")
+D4 <- unique(D4)
+D4 <- spread(D4,Class,Count)
+rownames(D4) <- D4$Name
+D4 <- select(D4,-Name,-HUDK4050)
+D4[is.na(D4)]<- 0
+```
+#Matrix operation
+```{r}
+D5 <- as.matrix(D4)
+D5 <- D5 %*% t(D5)
+```
+#Graphing
+```{r}
+pt <- graph.adjacency(D5, mode="undirected", diag = FALSE)
+
+plot(pt, layout=layout.fruchterman.reingold,
+     vertex.size= 4,
+     vertex.label.cex=0.8,
+     vertex.label.color="black",
+     vertex.color="gainsboro")
+```
+#Centrality
+```{r}
+sort(degree(pt),decreasing=TRUE)
+sort(betweenness(pt),decreasing=TRUE)
+```
 
 ### To Submit Your Assignment
 
