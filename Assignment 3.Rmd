@@ -96,7 +96,7 @@ plot(g,layout=layout.fruchterman.reingold, vertex.color=VERTEX$gender)
 
 plot(g,layout=layout.fruchterman.reingold, vertex.color=VERTEX$gender, edge.width=EDGE$count)
 
-````
+```
 
 ## Part II
 
@@ -105,18 +105,91 @@ In Part II your task is to [look up](http://igraph.org/r/) in the igraph documen
 * Ensure that sizing allows for an unobstructed view of the network features (For example, the arrow size is smaller)
 * The vertices are colored according to major
 * The vertices are sized according to the number of comments they have recieved
+```{r}
+V.TO_id= as.numeric(as.character(V.TO$id))
+VERTEX_id = as.numeric(as.character(VERTEX$id))
+num = c()
+for (i in 1:length(VERTEX_id))
+{
+   new = length(which(V.TO_id==VERTEX_id[i]))
+   num = c(num,new)
+}
+n = num + 12
+plot(g, layout = layout.fruchterman.reingold, vertex.color = VERTEX$major, edge.width = EDGE$count, edge.arrow.size = 0.6, edge.arrow.width = 0.6, vertex.size = n,vertex.label.cex = n/15, vertex.label.color = "black")
+```
 
 ## Part III
 
 Now practice with data from our class. This data is real class data directly exported from Qualtrics and you will need to wrangle it into shape before you can work with it. Import it into R as a data frame and look at it carefully to identify problems.
+```{r}
+library(tidyr)
+library(dplyr)
+library(stringr)
+library(igraph)
+c1 <- read.csv("hudk4050-classes.csv",stringsAsFactors = FALSE, header = TRUE)
+c2 <- c1
+```
+
 
 Please create a **person-network** with the data set hudk4050-classes.csv. To create this network you will need to create a person-class matrix using the tidyr functions and then create a person-person matrix using `t()`. You will then need to plot a matrix rather than a to/from data frame using igraph.
+```{r}
+colnames(c2) <- c2[1,]
+c2 <- slice(c2,3:49)
+c2 <- select(c2,1:8)
+c2 <- unite(c2,"name",`First Name`, `Last Name`, sep=" ")
+c2$name <- str_replace(c2$name,"`","")
+c2$name <- str_to_title(c2$name)
+c2 <- c2 %>% mutate_at(2:7,list(toupper))
+c2 <- c2 %>% mutate_at(2:7,str_replace_all," ","")
+```
+## Data restructuring
+```{r}
+c3<-c2 %>% gather(label,class,2:7,na.rm = TRUE, convert = FALSE) %>% select(name,class)
+c3$count <- 1
+c3 <- filter(c3,class != "")
+c3 <- unique(c3)
+c3 <- spread(c3,class,count)
+rownames(c3) <- c3$name
+c3 <- select(c3,-name,-HUDK4050)
+c3[is.na(c3)] <- 0
+```
+## matrix operation
+```{r}
+c4 <- as.matrix(c3)
+c4 <- c4 %*% t(c4)
+```
+## Graphing
+```{r}
+g <- graph.adjacency(c4,mode = "undirected", diag = FALSE)
+plot(g,layout=layout.fruchterman.reingold, vertex.size = 4, #degree(g)*0.7
+     vertex.label.cex = 0.8,vertex.label.color = "black",vertex.color = "gainsboro")
+```
 
 Once you have done this, also [look up](http://igraph.org/r/) how to generate the following network metrics:
 
 * Betweeness centrality and dregree centrality. **Who is the most central person in the network according to these two metrics? Write a sentence or two that describes your interpretation of these metrics**
+```{r}
+sort(degree(g),decreasing = TRUE)
+sort(betweenness(g),decreasing = TRUE)
+# Yifei Zhang is the most central person in the network according to those two metrics. 
+# Betweenness centrality quantifies the number of times a node acts as a bridge along the shortest path between two other nodes; Since Yifei zhang has the highest Betweenness centrality and a relatively high dregree centrality, she is the most connected person in the network.
+```
 
 * Color the nodes according to interest. Are there any clusters of interest that correspond to clusters in the network? Write a sentence or two describing your interpetation.
+```{r}
+c5 <- c1
+colnames(c5) <- c5[1,]
+c5 <- slice(c5,3:49)
+c5 <- select(c5,c(1,2,9))
+c5 <- unite(c5,"name",`First Name`, `Last Name`, sep=" ")
+c5$name <- str_replace(c5$name,"`","")
+c5$name <- str_to_title(c5$name)
+colnames(c5) <- c("Name","Interest")
+color <- as.factor(c5$Interest)
+plot(g, layout = layout.fruchterman.reingold, vertex.color=as.factor(c5$Interest),
+     vertex.size =10, vertex.label.cex = 0.8, edge.width = 1, vertex.label.color = "black")
+# There is no obvious cluster of interest that corresponds to clusters in the network. It indicates that the interests of students are not related to classes they take.  
+```
 
 ### To Submit Your Assignment
 
