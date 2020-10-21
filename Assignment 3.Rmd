@@ -34,7 +34,7 @@ Since our data represnts every time a student makes a comment there are multiple
 
 EDGE <- count(D2, comment.to, comment.from)
 
-names(EDGE) <- c("from", "to", "count")
+names(EDGE) <- c("to", "from", "count")
 
 ```
 
@@ -106,6 +106,10 @@ In Part II your task is to [look up](http://igraph.org/r/) in the igraph documen
 * The vertices are colored according to major
 * The vertices are sized according to the number of comments they have recieved
 
+```{r}
+plot(g,edge.arrow.size=.5,layout=layout.fruchterman.reingold, vertex.color=VERTEX$major, vertex.size=EDGE$count*5,edge.width=EDGE$count)
+```
+
 ## Part III
 
 Now practice with data from our class. This data is real class data directly exported from Qualtrics and you will need to wrangle it into shape before you can work with it. Import it into R as a data frame and look at it carefully to identify problems.
@@ -117,6 +121,57 @@ Once you have done this, also [look up](http://igraph.org/r/) how to generate th
 * Betweeness centrality and dregree centrality. **Who is the most central person in the network according to these two metrics? Write a sentence or two that describes your interpretation of these metrics**
 
 * Color the nodes according to interest. Are there any clusters of interest that correspond to clusters in the network? Write a sentence or two describing your interpetation.
+
+```{r}
+library(tidyr)
+library(dplyr)
+library(stringr)
+library(igraph)
+
+D1 <- read.csv("hudk4050-classes.csv", stringsAsFactors = FALSE, header = TRUE)
+D2 <- D1
+
+colnames(D2) <- D2[1,]
+D2 <- slice(D2,3:49)
+D2 <- select(D2,1:8)
+D2 <- unite(D2, "name", 'First Name', 'Last Name', sep = " ")
+D2$name <- str_replace(D2$name, "'", "")
+D2$name <- str_to_title(D2$name)
+D2 <- D2 %>% mutate_at(2:7, list(toupper))
+D2 <- D2 %>% mutate_at(2:7, str_replace_all, " ", "")
+```
+
+```{r}
+D3 <- D2 %>% gather(label, class, 2:7, na.rm = TRUE, convert = FALSE) %>% select(name, class)
+D3$count <- 1
+D3 <- filter(D3, class != "")
+D3 <- unique(D3)
+D3 <- spread(D3, class, count)
+rownames(D3) <- D3$name
+D3 <- select(D3, -name, -HUDK4050)
+D3[is.na(D3)] <- 0
+```
+
+```{r}
+D4 <- as.matrix(D3)
+D4 <- D4 %*% t(D4)
+```
+
+```{r}
+g <- graph.adjacency(D4, mode="undirected", diag = FALSE)
+
+plot(g,layout=layout.fruchterman.reingold,
+     vertex.size = 4,
+        #degree(g)*0.7
+     vertex.label.cex=0.8,
+     vertex.label.color="black",
+     vertex.color="gainsboro")
+```
+```{r}
+sort(degree(g),decreasing = TRUE)
+
+sort(betweenness(g),decreasing = TRUE)
+```
 
 ### To Submit Your Assignment
 
