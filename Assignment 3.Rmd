@@ -199,7 +199,7 @@ sort(degree(g), decreasing = TRUE)
 
 #Betweenness Centrality
 sort(betweenness(g), decreasing = TRUE)
-#Yifei Zhang has the highest betweenness centrality with a measure of 260, which means that she is the person with the shortest path to other nodes in the network. She is the junction point and has more information passing through her than any other member in the group. Therefore, she is the most likely person to unify the network.
+#Yifei Zhang has the highest betweenness centrality with a measure of 260, which means that Yifei is the person with the shortest path to other nodes in the network. Yifei is the junction point and has more information passing through than any other member in the group. Therefore, Yifei is the most likely person to unify the network.
 ```
 
 
