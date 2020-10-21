@@ -34,7 +34,7 @@ Since our data represnts every time a student makes a comment there are multiple
 
 EDGE <- count(D2, comment.to, comment.from)
 
-names(EDGE) <- c("from", "to", "count")
+names(EDGE) <- c( "to", "from","count")
 
 ```
 
@@ -53,12 +53,14 @@ names(V.TO) <- c("id", "gender.to", "major.to")
 
 #Make sure that the id variable in both dataframes has the same number of levels
 lvls <- sort(union(levels(V.FROM$id), levels(V.TO$id)))
+#union is like "joint" for vector, joint only works for data frame
 
 VERTEX <- full_join(mutate(V.FROM, id=factor(id, levels=lvls)),
     mutate(V.TO, id=factor(id, levels=lvls)), by = "id")
 
 #Fill in missing gender and major values - ifelse() will convert factors to numerical values so convert to character
 VERTEX$gender.from <- ifelse(is.na(VERTEX$gender.from) == TRUE, as.factor(as.character(VERTEX$gender.to)), as.factor(as.character(VERTEX$gender.from)))
+#ifelse doesn't work well with factor, so change it ot character first
 
 VERTEX$major.from <- ifelse(is.na(VERTEX$major.from) == TRUE, as.factor(as.character(VERTEX$major.to)), as.factor(as.character(VERTEX$major.from)))
 
@@ -81,7 +83,7 @@ Now we have both a Vertex and Edge list it is time to plot our graph!
 library(igraph)
 
 #First we will make an object that contains the graph information using our two dataframes EDGE and VERTEX. Notice that we have made "directed = TRUE" - our graph is directed since comments are being given from one student to another.
-
+#vertices is the the nodes
 g <- graph.data.frame(EDGE, directed=TRUE, vertices=VERTEX)
 
 #Now we can plot our graph using the force directed graphing technique - our old friend Fruchertman-Reingold!
@@ -96,15 +98,41 @@ plot(g,layout=layout.fruchterman.reingold, vertex.color=VERTEX$gender)
 
 plot(g,layout=layout.fruchterman.reingold, vertex.color=VERTEX$gender, edge.width=EDGE$count)
 
-````
+```
 
 ## Part II
 
 In Part II your task is to [look up](http://igraph.org/r/) in the igraph documentation and modify the graph above so that:
 
-* Ensure that sizing allows for an unobstructed view of the network features (For example, the arrow size is smaller)
+# Ensure that sizing allows for an unobstructed view of the network features (For example, the arrow size is smaller)
+```{r}
+plot(g,layout=layout.fruchterman.reingold, 
+     vertex.color=VERTEX$gender, 
+     edge.width=EDGE$count,
+     edge.arrow.size = 0.5,
+     vertex.size=5)
+```
+
 * The vertices are colored according to major
+```{r}
+plot(g,layout=layout.fruchterman.reingold, vertex.color=VERTEX$major,edge.width=EDGE$count,edge.arrow.size = 0.5)
+```
+
+
 * The vertices are sized according to the number of comments they have recieved
+```{r}
+#create a new data frame 
+EDGE<- EDGE%>% group_by(EDGE$to) %>% mutate(received = sum(count))
+
+plot(g,layout=layout.fruchterman.reingold, 
+     vertex.color=VERTEX$major,
+     edge.width=EDGE$count,
+     edge.arrow.size = 0.5,
+     vertex.size=EDGE$received*3,
+     edge.color="gray",
+     weight.edge.lengths=0.2)
+
+```
 
 ## Part III
 
@@ -112,11 +140,97 @@ Now practice with data from our class. This data is real class data directly exp
 
 Please create a **person-network** with the data set hudk4050-classes.csv. To create this network you will need to create a person-class matrix using the tidyr functions and then create a person-person matrix using `t()`. You will then need to plot a matrix rather than a to/from data frame using igraph.
 
+#Importing data
+```{r}
+library(stringr)
+library(tidyr)
+#import data
+C1 <- read.csv("hudk4050-classes.csv", stringsAsFactors=FALSE,header = TRUE)
+C2<-C1
+```
+
+#Cleaning data
+```{r}
+colnames(C2) <-C2[1,]
+C2<-slice(C2,3:49)
+C2<-select (C2,1:8)
+C2<- unite(C2,"name",`First Name`,`Last Name`,sep=" ")
+C2$name <- str_replace(C2$name, "`","")
+C2 <- C2 %>% mutate_at(2:7,list(toupper))
+C2 <- C2 %>% mutate_at(2:7,str_replace_all," ","")
+```
+
+#Restucturing data
+```{r}
+C3<- C2 %>% gather(label, class,2:7,na.rm=TRUE,convert=FALSE)%>% select (name,class)
+C3$count<-1
+C3<-filter(C3,class!="")
+C3<-unique(C3)
+C3<-spread(C3,class,count)
+rownames(C3)<-C3$name
+C3<-select(C3,-name)
+C3<-select(C3,-HUDK4050)
+C3[is.na(C3)]<-0
+```
+
+#Creating the matrix
+```{r}
+C4<-as.matrix(C3)
+C4<-C4 %*% t(C4)
+```
+
+#Graphing
+```{r}
+g2<-graph.adjacency(C4,mode="undirected",diag=FALSE)
+plot(g2,layout=layout.fruchterman.reingold)
+plot(g2,layout=layout.fruchterman.reingold,vertex.size=4,vertext.label.cex=0.8,vertex.label.color="black",vertex.color="gainsboro")
+```
+
 Once you have done this, also [look up](http://igraph.org/r/) how to generate the following network metrics:
 
 * Betweeness centrality and dregree centrality. **Who is the most central person in the network according to these two metrics? Write a sentence or two that describes your interpretation of these metrics**
 
-* Color the nodes according to interest. Are there any clusters of interest that correspond to clusters in the network? Write a sentence or two describing your interpetation.
+# Betweenness centrality 
+```{r}
+#betweenness centrality
+sort(betweenness(g2),decreasing=TRUE)
+```
+
+From the output, we can see that Yifei Zhang has the highest betweenness centrality, that means Yifei Zhang has the most shortest paths pass through, which is about 260. It's way more than the second one Si Heng Zhao. This result matches with the network graph above, Yifei Zhang is the connection point of two big clusters in the graph. If we wanted to connect the two big clusters, Yifei might be the breakthrough point. 
+
+# Degree centrality
+```{r}
+#degree centrality of the nodes
+sort(degree(g2),decreasing=TRUE)
+```
+
+From the degree centrality analysis, we don't see one person has much more connections than others. 8 students have measure of degree centrality of 31, which means they are connected with 31 students in the class (taking the same course(s)) respectively, no one has particularly high degree of centrality, this matches with what we see in the graph as well. 
+
+In this case, betweenness centrality tell us more information about the network than degree of centrality. If we wanted to find the influential person in the class, we should look at the betweenness centrality.
+
+#Color the nodes according to interest. Are there any clusters of interest that correspond to clusters in the network? Write a sentence or two describing your interpetation.
+```{r}
+#Clean the data with the interest column
+Ci<-C1
+colnames(Ci) <-Ci[1,]
+Ci<-slice(Ci,3:49)
+colnames(Ci)[c(9)] <- c( "interest")
+Ci<- unite(Ci,"name",`First Name`,`Last Name`,sep=" ")
+Ci$name <- str_replace(Ci$name, "`","")
+Ci <- Ci %>% mutate_at(2:7,list(toupper))
+Ci <- Ci %>% mutate_at(2:7,str_replace_all," ","")
+Ci <- unique(Ci)
+#specify the color graphical parameter
+color <- as.factor(Ci$interest)
+#graph
+g3<-graph.adjacency(C4,mode="undirected",diag=FALSE)
+plot(g3,layout=layout.fruchterman.reingold,
+     vertext.label.cex=0.01,
+     vertex.label.color="black",
+     vertex.color=color)
+```
+
+Based on the graph above, it doesn't seem like there's a pattern of interest and group cluster, it doesn't seem like the interest correspond to the cluster in our class.
 
 ### To Submit Your Assignment
 
