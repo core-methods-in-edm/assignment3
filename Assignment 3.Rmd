@@ -1,5 +1,7 @@
 # Assignment 3 - Social Network Analysis
 
+#Junhao Zhang
+
 ## Part I
 Start by installing the "igraph" package. Once you have installed igraph, load the package.
 
