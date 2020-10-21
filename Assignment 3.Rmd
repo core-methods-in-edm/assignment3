@@ -1,3 +1,10 @@
+---
+title: "Assignment 3"
+author: "Nicole Schlosberg"
+date: "10/15/2020"
+output: html_document
+---
+
 # Assignment 3 - Social Network Analysis
 
 ## Part I
@@ -14,6 +21,8 @@ Before you proceed, you will need to change the data type of the student id vari
 ```{r}
 D1$comment.to <- as.factor(D1$comment.to)
 D1$comment.from <- as.factor(D1$comment.from)
+#table(D1$comment.from)
+#table(D1$comment.to)
 ```
 
 igraph requires data to be in a particular structure. There are several structures that it can use but we will be using a combination of an "edge list" and a "vertex list" in this assignment. As you might imagine the edge list contains a list of all the relationships between students and any characteristics of those edges that we might be interested in. There are two essential variables in the edge list a "from" variable and a "to" variable that descibe the relationships between vertices. While the vertex list contains all the characteristics of those vertices, in our case gender and major.
@@ -31,10 +40,11 @@ D2 <- select(D1, comment.to, comment.from) #select() chooses the columns
 Since our data represnts every time a student makes a comment there are multiple rows when the same student comments more than once on another student's video. We want to collapse these into a single row, with a variable that shows how many times a student-student pair appears.
 
 ```{r}
+#because igraph cant understand
 
-EDGE <- count(D2, comment.to, comment.from)
+EDGE <- count(D2, comment.to, comment.from) #count the rows of D2, and use both variables in the count
 
-names(EDGE) <- c("from", "to", "count")
+names(EDGE) <- c("to", "from","count")
 
 ```
 
@@ -42,17 +52,17 @@ EDGE is your edge list. Now we need to make the vertex list, a list of all the s
 
 ```{r}
 #First we will separate the commenters from our commentees
-V.FROM <- select(D1, comment.from, from.gender, from.major)
+V.FROM <- select(D1, comment.from, from.gender, from.major) #select all the froms together
 
 #Now we will separate the commentees from our commenters
 V.TO <- select(D1, comment.to, to.gender, to.major)
 
-#Make sure that the from and to data frames have the same variables names
+#Make sure that the from and to data frames have the same variables names bc want to stick them together and it needs to be the same all around
 names(V.FROM) <- c("id", "gender.from", "major.from")
 names(V.TO) <- c("id", "gender.to", "major.to")
 
-#Make sure that the id variable in both dataframes has the same number of levels
-lvls <- sort(union(levels(V.FROM$id), levels(V.TO$id)))
+#Make sure that the id variable in both dataframes has the same number of levels because we want to combine them (21 and 25 levels)
+lvls <- sort(union(levels(V.FROM$id), levels(V.TO$id))) #union is like join but just for a vector
 
 VERTEX <- full_join(mutate(V.FROM, id=factor(id, levels=lvls)),
     mutate(V.TO, id=factor(id, levels=lvls)), by = "id")
@@ -61,6 +71,7 @@ VERTEX <- full_join(mutate(V.FROM, id=factor(id, levels=lvls)),
 VERTEX$gender.from <- ifelse(is.na(VERTEX$gender.from) == TRUE, as.factor(as.character(VERTEX$gender.to)), as.factor(as.character(VERTEX$gender.from)))
 
 VERTEX$major.from <- ifelse(is.na(VERTEX$major.from) == TRUE, as.factor(as.character(VERTEX$major.to)), as.factor(as.character(VERTEX$major.from)))
+#ifelse doesnt convert nicely with factor
 
 #Remove redundant gender and major variables
 VERTEX <- select(VERTEX, id, gender.from, major.from)
@@ -68,7 +79,7 @@ VERTEX <- select(VERTEX, id, gender.from, major.from)
 #rename variables
 names(VERTEX) <- c("id", "gender", "major")
 
-#Remove all the repeats so that we just have a list of each student and their characteristics
+#Remove all the repeats so that we just have a list of each student and their characteristics (unique()removes the duplicates)
 VERTEX <- unique(VERTEX)
 
 ```
@@ -78,13 +89,13 @@ Now we have both a Vertex and Edge list it is time to plot our graph!
 ```{r}
 #Load the igraph package
 
-library(igraph)
+library(igraph) #used to create igraph objects that have their own set of methods...
 
 #First we will make an object that contains the graph information using our two dataframes EDGE and VERTEX. Notice that we have made "directed = TRUE" - our graph is directed since comments are being given from one student to another.
 
-g <- graph.data.frame(EDGE, directed=TRUE, vertices=VERTEX)
+g <- graph.data.frame(EDGE, directed=TRUE, vertices=VERTEX) 
 
-#Now we can plot our graph using the force directed graphing technique - our old friend Fruchertman-Reingold!
+#Now we can plot our graph using the force directed graphing technique - our old friend Fruchertman-Reingold! At a certain size these graphs look really bad so need to figure out a way to make it look better
 
 plot(g,layout=layout.fruchterman.reingold)
 
@@ -96,15 +107,39 @@ plot(g,layout=layout.fruchterman.reingold, vertex.color=VERTEX$gender)
 
 plot(g,layout=layout.fruchterman.reingold, vertex.color=VERTEX$gender, edge.width=EDGE$count)
 
-````
+```
 
 ## Part II
 
 In Part II your task is to [look up](http://igraph.org/r/) in the igraph documentation and modify the graph above so that:
 
+  or [look up](https://kateto.net/netscix2016.html)
+  
 * Ensure that sizing allows for an unobstructed view of the network features (For example, the arrow size is smaller)
 * The vertices are colored according to major
 * The vertices are sized according to the number of comments they have recieved
+
+```{r}
+library(igraph)
+library(dplyr)
+
+#Arrow size and other features
+plot(g,layout=layout.fruchterman.reingold, edge.arrow.size=0.4,edge.arrow.width=2, vertex.label.cex=.75, vertex.label.color="black", vertex.label.font=2)
+
+#Vertices are colored by major
+plot(g,layout=layout.fruchterman.reingold, vertex.color=VERTEX$major)
+
+#Vertices are sized by number of comments it received
+S1 <- EDGE %>% group_by(to) %>% summarise(count = sum(count), .groups = "keep")
+VERTEX <- left_join(VERTEX,S1, by=c("id"="to"))
+VERTEX[is.na(VERTEX)] = 0
+VERTEX$count <- as.integer(VERTEX$count)
+plot(g,layout=layout.fruchterman.reingold, vertex.size=VERTEX$count*2)
+
+#All steps together to modify the graph from Part I
+plot(g, layout=layout.fruchterman.reingold, edge.width=EDGE$count, edge.arrow.size=0.4, edge.arrow.width=2,vertex.label.cex=0.75, vertex.label.color="black",vertex.label.font=2, vertex.color=VERTEX$major, vertex.size=VERTEX$count*2)
+
+```
 
 ## Part III
 
@@ -117,6 +152,96 @@ Once you have done this, also [look up](http://igraph.org/r/) how to generate th
 * Betweeness centrality and dregree centrality. **Who is the most central person in the network according to these two metrics? Write a sentence or two that describes your interpretation of these metrics**
 
 * Color the nodes according to interest. Are there any clusters of interest that correspond to clusters in the network? Write a sentence or two describing your interpetation.
+
+#Import data and tidy up the data
+```{r}
+library(dplyr)
+library(tidyr)
+library(stringr)
+
+#read in file and create header names
+S1 <- read.csv("hudk4050-classes.csv",col.names = c("First_Name", "Last_Name", "Class1", "Class2", "Class3", "Class4", "Class5", "Class6", "Topic_Interest"), stringsAsFactors = FALSE)
+S2 <- S1
+#remove unwanted rows
+S2<-slice(S2,3:49)
+#Fix names so that first and last are together as full name
+S2 <- unite(S2,First_Name, Last_Name, col = "Full_Name", sep = " ", remove = TRUE)
+#Get rid of random `
+S2$Full_Name <- str_replace(S2$Full_Name, "`", "")
+#Make all the names the same (capitals)
+S2$Full_Name <- str_to_title(S2$Full_Name)
+#Fix the class names so they are all the same (all caps)
+S2 <- S2 %>% mutate_at(2:7, list(toupper))
+#Fix the class names so they are all the same (no spaces)
+S2 <- S2 %>% mutate_at(2:7, str_replace_all, " ", "")
+S4 <- S2
+```
+
+#a.Create Person-Class matrix with tidyr; b. create Person-Person matrix with t()
+```{r}
+#a.
+#Organize dataframe into the structure looking for
+S3 <- gather(S2,2:7,key="counts",value="Class_Name", na.rm = TRUE, convert = FALSE) %>% select(Full_Name,Class_Name,counts)
+#Danny Case
+S3 <- S3[-c(42),]
+#Creating a column of 1 that will be spread across the dataframe
+S3$counts <- ifelse(S3$counts == "Class1", 1, ifelse(S3$counts == "Class2", 1, ifelse(S3$counts == "Class3", 1, ifelse(S3$counts == "Class4", 1, ifelse(S3$counts == "Class5", 1, ifelse(S3$counts == "Class6", 1, "NOPE"))))))
+S3$counts <- as.numeric(S3$counts)
+#Setting up NAs and removing them so does not interfer with spread()
+S3$Class_Name <- ifelse(S3$Class_Name == "", NA, S3$Class_Name)
+S3 <- na.omit(S3)
+#Spreading the counts across the data frame with Class_Name across the top and leaving the student names
+S3 <- spread(S3, Class_Name,counts)
+#Putting 0 in place for NAs so that it is just a count of 1 and 0s
+S3[is.na(S3)] <- 0
+#Rename rows and picking columns to delete (deleting the names post row naming and to make the graph more interesting remove HUDK4050)
+rownames(S3)<-S3$Full_Name
+S3 <- select(S3, -Full_Name, -HUDK4050)
+#Creates the Person-Class matrix
+PersonClass <- as.matrix(S3)
+
+#b. Create a person-person matrix using t()
+ClassPerson <- t(PersonClass)
+PersonPerson <- PersonClass %*% ClassPerson
+```
+
+#Plot Matrix using igraph
+```{r}
+library(igraph)
+GraphedPersonPerson <- graph.adjacency(PersonPerson, mode = "undirected",diag = FALSE)
+plot(GraphedPersonPerson, layout=layout.fruchterman.reingold,
+     vertex.size = 4,
+     vertex.label.cex=.7,
+     vertex.label.color="black",
+     vertex.color="gainsboro")
+```
+
+#Centrality
+```{r}
+#a. Betweeness Centrality
+sort(betweenness(GraphedPersonPerson),decreasing=TRUE)
+
+#b. Degree Centrality
+sort(degree(GraphedPersonPerson),decreasing=TRUE)
+
+#Who is the most central person in the network according to these two metrics? Write a sentence or two that describes your interpretation of these metrics
+# Yifei Zhang is the posible the most central as she connects groups so her betweenness is high, but because her her degree of centrality is not the highest she is not necessarily the most central. However, as her degree of centrality is rather high compared to the group and her betweenness is the highest, I will say she is the most central. She would be someone who could unite people in the class for a common goal.
+
+```
+
+#Color nodes by interest
+```{r}
+S4 <- S4[order(S4$Full_Name),]
+plot(GraphedPersonPerson, layout=layout.fruchterman.reingold,
+     vertex.size = 4,
+     vertex.label.cex=.7,
+     vertex.label.color="black",
+     vertex.color= ifelse(S4$Topic_Interest == "Prediction modelling", c( "pink"), ifelse(S4$Topic_Interest == "Visualization", c("yellow"), ifelse(S4$Topic_Interest == "Social Network Analysis", c( "blue"), ifelse(S4$Topic_Interest == "Facial recognition", c("green"), ifelse(S4$Topic_Interest == "Data Wrangling", c("purple"),c("black")))))))
+
+#Are there any clusters of interest that correspond to clusters in the network? Write a sentence or two describing your interpetation.
+#There does not seem to be any clusters. However, you can see that there are few people who want to learn Visualization. Also a couple people who connect clusters are interested in prediction modelling. I would guess those who were not in many of the same classes, would be interested in something different than the others, but it seems that the interests do not congrigate by classes.
+```
+
 
 ### To Submit Your Assignment
 
