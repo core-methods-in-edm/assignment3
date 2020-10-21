@@ -106,18 +106,91 @@ In Part II your task is to [look up](http://igraph.org/r/) in the igraph documen
 * The vertices are colored according to major
 * The vertices are sized according to the number of comments they have recieved
 
+```{r}
+library(dplyr)
+library(igraph)
+color <- VERTEX$major
+size <- EDGE$count*8
+plot(g, layout=layout.fruchterman.reingold,
+     vertex.label.cex=0.5,
+     vertex.size=size,
+     vertex.color=color,
+     edge.arrow.size=0.2)
+```
+
+
 ## Part III
 
 Now practice with data from our class. This data is real class data directly exported from Qualtrics and you will need to wrangle it into shape before you can work with it. Import it into R as a data frame and look at it carefully to identify problems.
 
 Please create a **person-network** with the data set hudk4050-classes.csv. To create this network you will need to create a person-class matrix using the tidyr functions and then create a person-person matrix using `t()`. You will then need to plot a matrix rather than a to/from data frame using igraph.
+```{r}
+library(tidyr)
+library(dplyr)
+library(stringr)
+library(igraph)
+```
+
+```{r}
+hudk <- read.csv("hudk4050-classes.csv", stringsAsFactors=FALSE, header = TRUE)
+hudk2 <- hudk
+colnames(hudk2) <- hudk2[1,]
+hudk2 <- slice(hudk2, 3:49)
+hudk2 <- select(hudk2, 1:8)
+hudk2 <- unite(hudk2, "name", `First Name`, `Last Name`, sep=" ")
+hudk2$name <- str_replace(hudk2$name, "`", "")
+hudk2$name <- str_to_title(hudk2$name)
+hudk2 <- hudk2 %>% mutate_at(2:7, list(toupper))
+hudk2<- hudk2 %>% mutate_at(2:7, str_replace_all, " ", "")
+hudk3 <- hudk2 %>% gather(label, class, 2:7, na.rm=TRUE, convert=FALSE) %>% select(name, class)
+hudk3$count <- 1
+hudk3 <- filter(hudk3, class != "")
+hudk3 <- unique(hudk3)
+hudk3 <- spread(hudk3, class, count)
+rownames(hudk3) <- hudk3$name
+hudk3 <- select(hudk3, -name, -HUDK4050)
+hudk3[is.na(hudk3)] <- 0 
+# person-class matrix created:
+hudk4 <- as.matrix(hudk3)
+# person-person matrix created: 
+hudk4 <- hudk4 %*% t(hudk4)
+```
 
 Once you have done this, also [look up](http://igraph.org/r/) how to generate the following network metrics:
+```{r}
+g <- graph.adjacency(hudk4, mode="undirected", diag=FALSE)
+plot(g, layout=layout.fruchterman.reingold,
+     vertex.size=4,
+     vertex.label.cex=0.8,
+     vertex.label.color="black",
+     vertex.color="red")
+```
 
-* Betweeness centrality and dregree centrality. **Who is the most central person in the network according to these two metrics? Write a sentence or two that describes your interpretation of these metrics**
+* Betweeness centrality and degree centrality. **Who is the most central person in the network according to these two metrics? Write a sentence or two that describes your interpretation of these metrics**
+```{r}
+sort(degree(g), decreasing=TRUE)
+sort(betweenness(g), decreasin=TRUE)
+# Yifei Zhang is the most central person in the network according to two metrics, since he/she has the highest betweeness centrality and really high degree centrality.
+```
 
 * Color the nodes according to interest. Are there any clusters of interest that correspond to clusters in the network? Write a sentence or two describing your interpetation.
+```{r}
+hudk5 <- hudk
+hudk5 <- slice(hudk5, 3:49)
+hudk5 <- select(hudk5, c(1,2,9))
+hudk5 <- unite(hudk5, "name", Q8, Q9, sep=" ")
+hudk5$name <- str_replace(hudk5$name, "`", "")
+hudk5$name <- str_to_title(hudk5$name)
+colnames(hudk5) <- c("name","interest")
+color <- as.factor(hudk5$interest)
+plot(g, layout=layout.fruchterman.reingold,
+     vertex.size=4,
+     vertex.label.cex=0.8,
+     vertex.label.color="black",
+     vertex.color=color)
+# According to the plot, colors are randomly distributed, then the interests for students are also randomly. There are not any clusters of interest that correspond to clusters in the network.
+```
 
 ### To Submit Your Assignment
 
-Please submit your assignment by first "knitting" your RMarkdown document into an html file and then comit, push and pull request both the RMarkdown file and the html file.
+Please submit your assignment by first "knitting" your RMarkdown document into an html file and then commit, push and pull request both the RMarkdown file and the html file.
