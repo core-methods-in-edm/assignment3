@@ -215,7 +215,7 @@ plot(g, layout          = layout.fruchterman.reingold,
      vertex.label.cex   = 0.8,
      vertex.label.color = "black",
      vertex.color       = "gainsboro")
-# There is no obvious cluster of interest that correspond to clusters in the network. It indicates that students' interests are not related with the class they took because there is no clear pattern.
+# There is no obvious cluster of interest that corresponds to clusters in the network. It indicates that students' interests are not related with the class they took because there is no clear pattern.
 ```
 
 ### To Submit Your Assignment
