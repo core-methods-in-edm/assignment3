@@ -2,6 +2,10 @@
 
 ## Part I
 Start by installing the "igraph" package. Once you have installed igraph, load the package.
+```{r}
+
+library(igraph)
+```
 
 Now upload the data file "comment-data.csv" as a data frame called "D1". Each row represents a comment from one student to another so the first line shows that student "28" commented on the comment of student "21". It also shows the gender of both students and the students' main elective field of study ("major"").
 
@@ -34,11 +38,11 @@ Since our data represnts every time a student makes a comment there are multiple
 
 EDGE <- count(D2, comment.to, comment.from)
 
-names(EDGE) <- c("from", "to", "count")
+names(EDGE) <- c("to", "from", "count")
 
 ```
 
-EDGE is your edge list. Now we need to make the vertex list, a list of all the students and their characteristics in our network. Because there are some students who only recieve comments and do not give any we will need to combine the comment.from and comment.to variables to produce a complete list.
+EDGE is your edge list. Now we need to make the vertex list, a list of all the students and their characteristics in our network. Because there are some students who only receive comments and do not give any we will need to combine the comment.from and comment.to variables to produce a complete list.
 
 ```{r}
 #First we will separate the commenters from our commentees
@@ -58,6 +62,7 @@ VERTEX <- full_join(mutate(V.FROM, id=factor(id, levels=lvls)),
     mutate(V.TO, id=factor(id, levels=lvls)), by = "id")
 
 #Fill in missing gender and major values - ifelse() will convert factors to numerical values so convert to character
+
 VERTEX$gender.from <- ifelse(is.na(VERTEX$gender.from) == TRUE, as.factor(as.character(VERTEX$gender.to)), as.factor(as.character(VERTEX$gender.from)))
 
 VERTEX$major.from <- ifelse(is.na(VERTEX$major.from) == TRUE, as.factor(as.character(VERTEX$major.to)), as.factor(as.character(VERTEX$major.from)))
@@ -96,28 +101,120 @@ plot(g,layout=layout.fruchterman.reingold, vertex.color=VERTEX$gender)
 
 plot(g,layout=layout.fruchterman.reingold, vertex.color=VERTEX$gender, edge.width=EDGE$count)
 
-````
+```
+
 
 ## Part II
 
 In Part II your task is to [look up](http://igraph.org/r/) in the igraph documentation and modify the graph above so that:
 
-* Ensure that sizing allows for an unobstructed view of the network features (For example, the arrow size is smaller)
+Ensure that sizing allows for an unobstructed view of the network features (For example, the arrow size is smaller)
+```{r}
+library(igraph)
+plot(g,edge.arrow.size=.2, vertex.color="gold",vertex.size=11,vertex.frame.color="gray",vertex.label.color="black",vertex.label.cex=0.4, vertex.label.dist=0,edge.curved=0.2,edge.width=0.5,margin=-0.09)
+```
+
+
 * The vertices are colored according to major
-* The vertices are sized according to the number of comments they have recieved
+```{r}
+library(igraph)
+plot(g,edge.arrow.size=.2, vertex.color=VERTEX$major,vertex.size=11,vertex.frame.color="gray",vertex.label.color="black",vertex.label.cex=0.4, vertex.label.dist=0,edge.curved=0.2,edge.width=0.5,margin=-0.09)
+```
+
+
+* The vertices are sized according to the number of comments they have receieved
+
+```{r}
+V.TO.Count <- V.TO %>% group_by(id) %>% count(id)
+as.factor(V.TO.Count$id)
+union(levels(VERTEX$id),levels(V.TO.Count$id))
+V2 <- full_join(VERTEX,V.TO.Count,by = "id")
+V2$n <- ifelse(is.na(V2$n) == TRUE,0,V2$n)
+
+plot(g,edge.arrow.size=.3, vertex.color=VERTEX$major,vertex.size=V2$n,vertex.frame.color="Gray",vertex.label.color="black",vertex.label.cex=0.5, vertex.label.dist=1,edge.curved=0.3,edge.width=0.6,margin=-0.1)
+```
+
+
+
 
 ## Part III
 
 Now practice with data from our class. This data is real class data directly exported from Qualtrics and you will need to wrangle it into shape before you can work with it. Import it into R as a data frame and look at it carefully to identify problems.
+```{r}
+library(tidyr)
+library(dbplyr)
+library(stringr)
+library(igraph)
+DD<-read.csv("hudk4050-classes.csv",stringsAsFactors = FALSE,header = TRUE)
+DD<-DD[-c(1,2),]
+names(DD)<-c("First name","Last name","1","2","3","4","5","6","which is most interesting")
+row.names(DD)<-c(1:46)
+```
+
+
 
 Please create a **person-network** with the data set hudk4050-classes.csv. To create this network you will need to create a person-class matrix using the tidyr functions and then create a person-person matrix using `t()`. You will then need to plot a matrix rather than a to/from data frame using igraph.
 
+```{r}
+
+DD1 <- select(DD,"First name","Last name","1","2","3","4","5","6")
+DD2 <- unite(DD1,"name","First name","Last name",sep = "")
+DD2$name <-str_replace(DD2$name,"`","")
+
+DD2$name <- str_to_title(DD2$name)
+DD2 <- DD2 %>% mutate_at(2:7,list(toupper))
+DD2 <- DD2 %>% mutate_at(2:7, str_replace_all, " ","")
+
+
+DD3<- DD2 %>% gather(label,class,2:7,na.rm = TRUE, convert = FALSE) %>% select(name,class)
+DD3$Count <- 1
+DD3<-filter(DD3,class !="")
+DD3 <- unique(DD3)
+as.numeric(DD3$Count)
+DD3<- spread(DD3,class,Count)
+rownames(DD3)<-DD3$name
+DD3<-select(DD3,-name,-HUDK4050)
+DD3[is.na(DD3)]<-0
+DD4<-as.matrix(DD3)
+DD4<-DD4 %*% t(DD4)
+
+```
+
+
 Once you have done this, also [look up](http://igraph.org/r/) how to generate the following network metrics:
 
-* Betweeness centrality and dregree centrality. **Who is the most central person in the network according to these two metrics? Write a sentence or two that describes your interpretation of these metrics**
+* Betweenness centrality and degree centrality. **Who is the most central person in the network according to these two metrics? Write a sentence or two that describes your interpretation of these metrics**
+```{r}
+g<-graph.adjacency(DD4,mode = "undirected",diag = FALSE)
+
+plot(g,layout = layout.fruchterman.reingold,vertex.size=4,#degree(g)*0.7,
+     vertex.label.cex=0.8,
+     vertex.label.color="blue",
+     vertex.color="gainsboro")
+
+sort(degree(g),decreasing = TRUE)
+
+sort(betweenness(g),decreasing=TRUE)
+```
+
+Answer: Yifei Zhang is the most central person in this network because she has the highest degree of betweenness centrality. 
 
 * Color the nodes according to interest. Are there any clusters of interest that correspond to clusters in the network? Write a sentence or two describing your interpetation.
+```{r}
+A<-DD$`which is most interesting`
+DD$`which is most interesting`<-ifelse(is.na(A)==TRUE,as.factor(as.character(A)),as.factor(A))
+
+DD2$Interest<-DD$`which is most interesting`
+
+plot(g,layout = layout.fruchterman.reingold,vertex.size=8,#degree(g)*0.7,
+     vertex.label.cex=0.8,
+     vertex.label.color="gray",
+     vertex.color=DD2$Interest)
+```
+
+Answer:The interest "Social Network Analysis" (Yellow) corresponds to the clusters in the network. 
+
 
 ### To Submit Your Assignment
 
-Please submit your assignment by first "knitting" your RMarkdown document into an html file and then comit, push and pull request both the RMarkdown file and the html file.
+Please submit your assignment by first "knitting" your RMarkdown document into an html file and then commit, push and pull request both the RMarkdown file and the html file.
