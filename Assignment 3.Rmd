@@ -1,4 +1,20 @@
+---
+title: "Assignment 3"
+author: "Zach Friedman"
+date: "10/21/2020"
+output: 
+  html_document:
+    toc: TRUE
+    toc_float: TRUE
+
+---
+
+
 # Assignment 3 - Social Network Analysis
+
+```{r, include=FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+```
 
 ## Part I
 Start by installing the "igraph" package. Once you have installed igraph, load the package.
@@ -6,6 +22,9 @@ Start by installing the "igraph" package. Once you have installed igraph, load t
 Now upload the data file "comment-data.csv" as a data frame called "D1". Each row represents a comment from one student to another so the first line shows that student "28" commented on the comment of student "21". It also shows the gender of both students and the students' main elective field of study ("major"").
 
 ```{r}
+library(dplyr)
+library(RColorBrewer)
+library(tidyverse)
 D1 <- read.csv("comment-data.csv", header = TRUE)
 ```
 
@@ -16,29 +35,25 @@ D1$comment.to <- as.factor(D1$comment.to)
 D1$comment.from <- as.factor(D1$comment.from)
 ```
 
-igraph requires data to be in a particular structure. There are several structures that it can use but we will be using a combination of an "edge list" and a "vertex list" in this assignment. As you might imagine the edge list contains a list of all the relationships between students and any characteristics of those edges that we might be interested in. There are two essential variables in the edge list a "from" variable and a "to" variable that descibe the relationships between vertices. While the vertex list contains all the characteristics of those vertices, in our case gender and major.
+igraph requires data to be in a particular structure. There are several structures that it can use but we will be using a combination of an "edge list" and a "vertex list" in this assignment. As you might imagine the edge list contains a list of all the relationships between students and any characteristics of those edges that we might be interested in. There are two essential variables in the edge list a "from" variable and a "to" variable that describe the relationships between vertices. While the vertex list contains all the characteristics of those vertices, in our case gender and major.
 
 So let's convert our data into an edge list!
 
 First we will isolate the variables that are of interest: comment.from and comment.to
 
 ```{r}
-library(dplyr)
-
 D2 <- select(D1, comment.to, comment.from) #select() chooses the columns
 ```
 
 Since our data represnts every time a student makes a comment there are multiple rows when the same student comments more than once on another student's video. We want to collapse these into a single row, with a variable that shows how many times a student-student pair appears.
 
 ```{r}
-
 EDGE <- count(D2, comment.to, comment.from)
 
-names(EDGE) <- c("from", "to", "count")
-
+names(EDGE) <- c("to", "from","count")
 ```
 
-EDGE is your edge list. Now we need to make the vertex list, a list of all the students and their characteristics in our network. Because there are some students who only recieve comments and do not give any we will need to combine the comment.from and comment.to variables to produce a complete list.
+EDGE is your edge list. Now we need to make the vertex list, a list of all the students and their characteristics in our network. Because there are some students who only receive comments and do not give any we will need to combine the comment.from and comment.to variables to produce a complete list.
 
 ```{r}
 #First we will separate the commenters from our commentees
@@ -56,7 +71,6 @@ lvls <- sort(union(levels(V.FROM$id), levels(V.TO$id)))
 
 VERTEX <- full_join(mutate(V.FROM, id=factor(id, levels=lvls)),
     mutate(V.TO, id=factor(id, levels=lvls)), by = "id")
-
 #Fill in missing gender and major values - ifelse() will convert factors to numerical values so convert to character
 VERTEX$gender.from <- ifelse(is.na(VERTEX$gender.from) == TRUE, as.factor(as.character(VERTEX$gender.to)), as.factor(as.character(VERTEX$gender.from)))
 
@@ -70,7 +84,6 @@ names(VERTEX) <- c("id", "gender", "major")
 
 #Remove all the repeats so that we just have a list of each student and their characteristics
 VERTEX <- unique(VERTEX)
-
 ```
 
 Now we have both a Vertex and Edge list it is time to plot our graph!
@@ -79,9 +92,7 @@ Now we have both a Vertex and Edge list it is time to plot our graph!
 #Load the igraph package
 
 library(igraph)
-
 #First we will make an object that contains the graph information using our two dataframes EDGE and VERTEX. Notice that we have made "directed = TRUE" - our graph is directed since comments are being given from one student to another.
-
 g <- graph.data.frame(EDGE, directed=TRUE, vertices=VERTEX)
 
 #Now we can plot our graph using the force directed graphing technique - our old friend Fruchertman-Reingold!
@@ -95,16 +106,33 @@ plot(g,layout=layout.fruchterman.reingold, vertex.color=VERTEX$gender)
 #We can change the thickness of the edge according to the number of times a particular student has sent another student a comment.
 
 plot(g,layout=layout.fruchterman.reingold, vertex.color=VERTEX$gender, edge.width=EDGE$count)
+```
 
-````
 
 ## Part II
 
 In Part II your task is to [look up](http://igraph.org/r/) in the igraph documentation and modify the graph above so that:
 
+
 * Ensure that sizing allows for an unobstructed view of the network features (For example, the arrow size is smaller)
 * The vertices are colored according to major
 * The vertices are sized according to the number of comments they have recieved
+
+```{r}
+comments.received <- V.TO %>% count(id) %>% select(id, n)
+VERTEX <- VERTEX %>% left_join(comments.received, by = "id") %>% mutate(comments.received = ifelse(is.na(n),0,n)) %>% select(-n)
+```
+
+```{r}
+pal <- brewer.pal(4,"Accent")
+Group <- as.factor(VERTEX$major)
+vertex.col <- pal[Group]
+plot(g, layout = layout.fruchterman.reingold, vertex.size = 3*(VERTEX$comments.received),vertex.color = vertex.col, edge.arrow.size = .25, vertex.label.color="black",vertex.label.cex=0.75,edge.width=EDGE$count)
+legend("topleft",bty = "n",
+       legend=levels(Group),
+       fill=pal, border=NA)
+```
+
 
 ## Part III
 
@@ -112,12 +140,70 @@ Now practice with data from our class. This data is real class data directly exp
 
 Please create a **person-network** with the data set hudk4050-classes.csv. To create this network you will need to create a person-class matrix using the tidyr functions and then create a person-person matrix using `t()`. You will then need to plot a matrix rather than a to/from data frame using igraph.
 
-Once you have done this, also [look up](http://igraph.org/r/) how to generate the following network metrics:
+```{r}
+edge_list <- read.csv("hudk4050-classes.csv",skip = 1,header = TRUE,strip.white = TRUE)
 
-* Betweeness centrality and dregree centrality. **Who is the most central person in the network according to these two metrics? Write a sentence or two that describes your interpretation of these metrics**
+#remove first row of unwanted data
+edge_list <- edge_list[-1,]
 
-* Color the nodes according to interest. Are there any clusters of interest that correspond to clusters in the network? Write a sentence or two describing your interpetation.
+#make all classes uppercase
+edge_list[3:8] <- map(edge_list[3:8],str_to_upper)
+#remove any spaces in classes
+edge_list[3:8] <- map(edge_list[3:8],str_replace_all," ","")
 
-### To Submit Your Assignment
+#rename the last column to a shorter name, topic
+names(edge_list)[ncol(edge_list)] <- "Topic"
+#Combine first and last name into one column, Full.Name
+edge_list$Full.Name = paste(edge_list$First.Name,edge_list$Last.Name)
+edge_list <- edge_list %>% select(-First.Name,-Last.Name) %>% select(Full.Name,everything())
+#remove topic for matrix processing
+edge_list_no_topic <- edge_list %>% select(-Topic)
 
-Please submit your assignment by first "knitting" your RMarkdown document into an html file and then comit, push and pull request both the RMarkdown file and the html file.
+#create person_course matrix using gather, unique, then spread
+person_course_mat <- gather(edge_list_no_topic,key = "Class", value = "Course",2:7) %>% arrange(Full.Name) %>% filter(Course != "") %>% select(-Class) %>% unique %>% mutate(number = 1) %>% spread(Course,number) %>% mutate(HUDK4050 = 1)
+
+#remove HUDK4050 because everyone listed it as a class, and it makes the graph difficult to read
+person_course_mat <- subset(person_course_mat, select=-HUDK4050)
+
+#replace all NAs with 0's
+person_course_mat[is.na(person_course_mat)] <- 0
+
+#replace rownames with Full.Name column
+rownames(person_course_mat) <- person_course_mat[,1]
+person_course_mat <- person_course_mat[,-1]
+person_course_mat <- as.matrix(person_course_mat)
+
+#create a course_person matrix which is the transpose of the person_course matrix
+course_person_mat <- t(person_course_mat)
+
+#multiple the two matrices to compute the person_person matrix
+person_person_mat <- person_course_mat %*% course_person_mat
+
+g <- graph_from_adjacency_matrix(person_person_mat,weighted = TRUE,diag = FALSE,mode = "undirected")
+
+plot(g,vertex.label = NA,vertex.size = 10)
+```
+
+* Betweenness centrality and degree centrality. 
+
+**Who is the most central person in the network according to these two metrics? Write a sentence or two that describes your interpretation of these metrics**
+
+The most connected person based on betweenness centrality was `r g %>% betweenness %>% sort(decreasing = TRUE) %>% names %>% .[[1]]`. The person with the highest degree was `r g %>% degree %>% sort(decreasing = TRUE) %>% names %>% .[[1]]`
+
+Betweenness centrality identifies how influential people are at connecting other people. Thus, Yifei may be taking one or two courses that only a few other students take who would otherwise not be connected to the central component.
+
+Degree centrality identifies the number of connections each person has. Yifei also happened to have the highest degree which means he also was in a few classes that many other students were taking.
+
+**Color the nodes according to interest. Are there any clusters of interest that correspond to clusters in the network? Write a sentence or two describing your interpetation.**
+
+```{r}
+pal <- brewer.pal(5,"Accent")
+Group <- as.factor(edge_list$Topic)
+vertex.col <- pal[Group]
+plot(g,vertex.label = NA,vertex.size = 10, vertex.color = vertex.col)
+legend("topleft",bty = "n",
+       legend=levels(Group),
+       fill=pal, border=NA)
+```
+
+Once all of the connections from HUDK4050 were removed, interestingly, there were no noticeable patterns in the network based on interest. However, all students interested in data wrangling were part of the large connected component. Data wrangling is a core component of HUDK4050 and thus students may take other data-based classes similar to their peers in the class.
