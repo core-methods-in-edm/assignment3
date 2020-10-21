@@ -105,10 +105,54 @@ plot(g,layout=layout.fruchterman.reingold, vertex.color=VERTEX$gender, edge.widt
 In Part II your task is to [look up](http://igraph.org/r/) in the igraph documentation and modify the graph above so that:
 
 * Ensure that sizing allows for an unobstructed view of the network features (For example, the arrow size is smaller)
-* The vertices are colored according to major
-* The vertices are sized according to the number of comments they have recieved
-
 ```{r}
+tkplot(g,vertex.color=VERTEX$gender,edge.width=EDGE$count)
+
+plot(g,layout=layout.fruchterman.reingold, vertex.color=VERTEX$gender, edge.width=EDGE$count, gsize = 1)
+
+#https://igraph.org/r/doc/layout.deprecated.html
+plot(g,layout=layout.reingold.tilford, vertex.color=VERTEX$gender, gsize = 100, arrow.size=1)
+
+#https://igraph.org/r/doc/plot.common.html
+#circle testing
+plot(g,layout=layout.circle, vertex.color=VERTEX$gender, vertex.size=EDGE$count*10, edge.arrow.size=.5)
+plot(g,layout=layout.circle, vertex.color=VERTEX$gender, vertex.size=EDGE$count*10, edge.arrow.size=.5, edge.color="cyan4")
+plot(g,layout=layout.circle, vertex.color=VERTEX$gender, vertex.size=EDGE$count*10, edge.arrow.size=.5, edge.color="darkorange4")
+plot(g,layout=layout.circle, vertex.color=VERTEX$gender, vertex.size=EDGE$count*10, edge.arrow.size=.5, edge.color="darkslategrey")
+plot(g,layout=layout.circle, vertex.color=VERTEX$gender, vertex.size=EDGE$count*10, edge.arrow.size=.5, edge.color="bisque4")
+
+#layout.sphere
+plot(g,layout=layout.sphere, vertex.color=VERTEX$gender, vertex.size=EDGE$count*10, edge.arrow.size=.5)
+
+#layout.random
+plot(g,layout=layout.random, vertex.color=VERTEX$gender, vertex.size=EDGE$count*10, edge.arrow.size=.5)
+
+#layout.fruchterman.reingold
+plot(g,layout=layout.fruchterman.reingold, vertex.color=VERTEX$gender, vertex.size=EDGE$count*10, edge.arrow.size=.5)
+
+#layout.kawai
+plot(g,layout=layout.fruchterman.reingold, vertex.color=VERTEX$gender, vertex.size=EDGE$count*10,  edge.arrow.size=.5)
+
+
+
+#layout.lgl
+plot(g,layout=layout.lgl, vertex.color=VERTEX$gender, vertex.size=EDGE$count*10, edge.arrow.size=.5)
+
+#
+plot(g,vertex.color=VERTEX$gender, gsize = 10, vvertex.size=EDGE$count*10, edge.arrow.size=.5)
+
+```
+
+* The vertices are colored according to major
+```{r}
+plot(g,layout=layout.fruchterman.reingold, vertex.color=VERTEX$gender, edge.width=EDGE$count)
+
+```
+
+* The vertices are sized according to the number of comments they have recieved
+```{r}
+
+plot(g,layout=layout.fruchterman.reingold, vertex.color=VERTEX$gender, edge.width=EDGE$count)
 
 ```
 
@@ -119,6 +163,13 @@ Now practice with data from our class. This data is real class data directly exp
 Please create a **person-network** with the data set hudk4050-classes.csv. To create this network you will need to create a person-class matrix using the tidyr functions and then create a person-person matrix using `t()`. You will then need to plot a matrix rather than a to/from data frame using igraph.
 
 ```{r}
+
+pn1 <- read.csv("hudk4050-classes.csv", skip = 1, header = TRUE)
+pn2 <- pn1[-c(1), ] 
+
+library(tidyr)
+
+
 
 ```
 
