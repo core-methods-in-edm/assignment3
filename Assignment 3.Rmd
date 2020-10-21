@@ -96,27 +96,120 @@ plot(g,layout=layout.fruchterman.reingold, vertex.color=VERTEX$gender)
 
 plot(g,layout=layout.fruchterman.reingold, vertex.color=VERTEX$gender, edge.width=EDGE$count)
 
-````
+```
 
 ## Part II
 
-In Part II your task is to [look up](http://igraph.org/r/) in the igraph documentation and modify the graph above so that:
+#In Part II your task is to [look up](http://igraph.org/r/) in the igraph #documentation and modify the graph above so that:
 
-* Ensure that sizing allows for an unobstructed view of the network features (For example, the arrow size is smaller)
-* The vertices are colored according to major
-* The vertices are sized according to the number of comments they have recieved
+#* Ensure that sizing allows for an unobstructed view of the network features (For example, the arrow size is smaller)
+#The vertices are colored according to major
+#The vertices are sized according to the number of comments they have #recieved
 
+```{r}
+plot(g,layout=layout.fruchterman.reingold,edge.arrow.size=.2, vertex.color=VERTEX$gender, edge.width=EDGE$count)
+```
+
+```{r}
+
+plot(g,layout=layout.fruchterman.reingold, edge.arrow.size=.2, vertex.color=VERTEX$major, edge.width=EDGE$count)
+```
+
+```{r}
+plot(g,layout=layout.fruchterman.reingold, edge.arrow.size=.2, vertex.color=VERTEX$major, edge.width=EDGE$count, vertex.size= V.TO$count)
+
+```
 ## Part III
 
 Now practice with data from our class. This data is real class data directly exported from Qualtrics and you will need to wrangle it into shape before you can work with it. Import it into R as a data frame and look at it carefully to identify problems.
 
+```{r}
+df1 <- read.csv("hudk4050-classes.csv", header = TRUE)
+library(tidyr)
+library(stringr)
+df2 <- df1[-c(1:2),]
+colnames  (df2)
+
+names(df2)[names(df2) == "Q8"] <- "First-name"
+names(df2)[names(df2) == "Q9"] <- "Last-name"
+names(df2)[names(df2) == "Q1"] <- "Class1"
+names(df2)[names(df2) == "Q3"] <- "Class2"
+names(df2)[names(df2) == "Q4"] <- "Class3"
+names(df2)[names(df2) == "Q5"] <- "Class4"
+names(df2)[names(df2) == "Q6"] <- "Class5"
+names(df2)[names(df2) == "Q7"] <- "Class6"
+names(df2)[names(df2) == "Q18"] <- "Topics"
+
+pdf2 <- unite(df2, "Person", "First-name","Last-name", sep = " ")
+pdf3 <- pdf2[,-8]
+pdf3$Person <- str_replace(pdf3$Person, "`", "")
+
+
+```
+
 Please create a **person-network** with the data set hudk4050-classes.csv. To create this network you will need to create a person-class matrix using the tidyr functions and then create a person-person matrix using `t()`. You will then need to plot a matrix rather than a to/from data frame using igraph.
+```{r}
+library(tidyr)
+library(tidyverse)
+library(dplyr)
+
+C1 <- pdf3 %>% gather(label, class, 2:7, na.rm = TRUE, convert = FALSE) %>%
+  select(Person,class)
+C1$count <- 1
+C1 <- filter(C1, class !="")
+C1 <- unique(C1)
+C1 <- spread(C1, class, count)
+rownames(C1) <- C1$Person
+C1 <- select(C1, -Person)
+C1[is.na(C1)] <- 0
+
+matrix1 <- as.matrix(C1)
+personmatrix <- matrix1 %*% t(matrix1)
+
+g2 <- graph.adjacency(personmatrix, mode = "undirected",diag = FALSE)
+plot(g2, layout=layout.fruchterman.reingold,
+     vertex.size=10,
+     vertex.label.cex=0.8,
+     vertex.label.color="black",
+     vertex.color="gainsboro")
+
+```
+
 
 Once you have done this, also [look up](http://igraph.org/r/) how to generate the following network metrics:
 
 * Betweeness centrality and dregree centrality. **Who is the most central person in the network according to these two metrics? Write a sentence or two that describes your interpretation of these metrics**
+```{r}
+sort(degree(g2), decreasing = TRUE)
+sort(betweenness(g2), decreasing = TRUE)
+```
+## I didn't  get rid of HUDK4050, so my graph looks messy and the results I got for centrality and betweenness are different from what Charles showed in the code workout. It looks like  Shuying Xiong is the link between the groups of the students with a degree of 31 - I'm not sure if  that's how you say it though.             
 
-* Color the nodes according to interest. Are there any clusters of interest that correspond to clusters in the network? Write a sentence or two describing your interpetation.
+* Color the nodes according to interest. Are there any clusters of interest that correspond to clusters in the network? Write a sentence or two describing your interpretation.
+```{r}
+C2 <- pdf2 %>% gather(label, class, 2:7, na.rm = TRUE, convert = FALSE) %>%
+  select(Topics,class)
+
+C2$count <- 1
+C2 <- filter(C2, class !="")
+C2 <- unique(C2)
+C2 <- spread(C2, class, count)
+rownames(C2) <- C2$Topics
+#C2 <- select(C2, -Person)
+C2 <- select (C2, -Topics)
+C2[is.na(C2)] <- 0
+
+matrix2 <- as.matrix(C2)
+topicsmatrix <- matrix2 %*% t(matrix2)
+
+g2 <- graph.adjacency(topicsmatrix, mode = "undirected",diag = FALSE)
+plot(g2, layout=layout.fruchterman.reingold,
+     vertex.size=10,
+     vertex.label.cex=0.8,
+     #vertex.label.color="black",
+     vertex.color=C2$Topics)
+```
+## I really tried to do the laat part of the assignment. I  tried to add the topics or the interest areas back in the new C2 variable and the recreate the matrix and plot it, but it didn't work out!
 
 ### To Submit Your Assignment
 
