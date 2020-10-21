@@ -1,5 +1,7 @@
 # Assignment 3 - Social Network Analysis
 
+#Junhao Zhang
+
 ## Part I
 Start by installing the "igraph" package. Once you have installed igraph, load the package.
 
@@ -96,7 +98,7 @@ plot(g,layout=layout.fruchterman.reingold, vertex.color=VERTEX$gender)
 
 plot(g,layout=layout.fruchterman.reingold, vertex.color=VERTEX$gender, edge.width=EDGE$count)
 
-````
+```
 
 ## Part II
 
@@ -105,18 +107,73 @@ In Part II your task is to [look up](http://igraph.org/r/) in the igraph documen
 * Ensure that sizing allows for an unobstructed view of the network features (For example, the arrow size is smaller)
 * The vertices are colored according to major
 * The vertices are sized according to the number of comments they have recieved
+```{r}
+vtoid=as.numeric(as.character(V.TO$id))
+vertexid=as.numeric(as.character(VERTEX$id))
+num=c()
+for (i in 1:length(vertexid)){
+  new=length(which(vtoid==vertexid[i]))
+  num=c(num,new)
+}
+plot(g,layout=layout.fruchterman.reingold, vertex.color=VERTEX$major, vertex.size=num*2,edge.arrow.size=0.3,margin=-0.1,edge.color='red',vertex.label.color='black')
+```
 
 ## Part III
 
 Now practice with data from our class. This data is real class data directly exported from Qualtrics and you will need to wrangle it into shape before you can work with it. Import it into R as a data frame and look at it carefully to identify problems.
 
 Please create a **person-network** with the data set hudk4050-classes.csv. To create this network you will need to create a person-class matrix using the tidyr functions and then create a person-person matrix using `t()`. You will then need to plot a matrix rather than a to/from data frame using igraph.
+```{r}
+library(readr)
+library(tidyr)
+library(dplyr)
+library(igraph)
+d1 <- read_csv("hudk4050-classes.csv")
+d1$Q18[1]='interest'
+names(d1)=as.character(d1[1,])#use the first row as names
+dnew=d1[-c(1:2),]#delete the first 2 rows
+fullname=paste(dnew$`First Name`,dnew$`Last Name`) #generate a new variable containing students' full names
+dnew=data.frame(cbind(fullname,dnew))
+dnew1=dnew[,-c(2:3)]#deleting the last and first names 
+dn2=dnew1 %>% pivot_longer(Class.1:Class.6,names_to='class',values_to='classname',values_drop_na = TRUE)
+persontoclass=as.matrix(table(dn2$fullname,dn2$classname)) #person-class matrix
+persontoperson=persontoclass%*%t(persontoclass)#person-person matrix
+diag(persontoperson)=0#remove diagonal elements from person-person matrix
+```
 
 Once you have done this, also [look up](http://igraph.org/r/) how to generate the following network metrics:
 
 * Betweeness centrality and dregree centrality. **Who is the most central person in the network according to these two metrics? Write a sentence or two that describes your interpretation of these metrics**
+```{r}
+#person-person matrix
+g2=graph_from_adjacency_matrix(persontoperson,mode = c('undirected'),weighted = T)
+g2between=betweenness(g2)
+g2between[which(g2between==max(g2between))]#the biggest betweenness centrality
+g2degree=degree(g2)
+g2degree[which(g2degree==max(g2degree))]#the biggest degree centrality
+#person-class matrix
+g3=graph_from_incidence_matrix(persontoclass,directed = FALSE)
+g3between=betweenness(g3)
+g3between=g3between[1:length(g2between)]
+g3between[which(g3between==max(g3between))]#the biggest betweenness centrality
+g3degree=degree(g3)
+g3degree=g3degree[1:length(g2degree)]
+g3degree[which(g3degree==max(g3degree))]#the biggest degree centrality
+```
+
+#Answer: In person to person martrix, Shuying Xiong has the biggest betweenness centrality and meanwhile, he or she is also among students who has the biggest degree centrality;in person to class martrix, though JIE YAO has the biggest degree centrality, Shuying Xiong has the biggest betweenness centrality. Therefore, Shuying Xiong is the most central person in the network according to these two metrics.
 
 * Color the nodes according to interest. Are there any clusters of interest that correspond to clusters in the network? Write a sentence or two describing your interpetation.
+```{r}
+dn3=dn2[order(dn2$fullname),]#sort the data frame dn2 by the full names
+int=dn3[!duplicated(dn3$fullname),]$interest#match full names with interests
+V(g2)$color=factor(int)
+V(g3)[1:47]$color=factor(int)
+plot(g2,layout=layout.fruchterman.reingold, edge.width=0.3,vertex.label.cex=0.3)
+plot(g3,layout=layout.fruchterman.reingold, edge.width=0.3,margin=-0.2,vertex.label.cex=0.5)
+```
+
+#Answer: As is seen in these two pictures, the clusters of interets does not correspond to clusters in the network for that the colors according to interests are distributed promiscuously distributed in every clusters.
 
 ### To Submit Your Assignment
 
