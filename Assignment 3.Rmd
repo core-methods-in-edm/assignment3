@@ -1,7 +1,13 @@
 # Assignment 3 - Social Network Analysis
 
 ## Part I
-Start by installing the "igraph" package. Once you have installed igraph, load the package.
+Start by installing the "igraph" package. 
+
+Once you have installed igraph, load the package.
+```{r}
+library(igraph)
+```
+
 
 Now upload the data file "comment-data.csv" as a data frame called "D1". Each row represents a comment from one student to another so the first line shows that student "28" commented on the comment of student "21". It also shows the gender of both students and the students' main elective field of study ("major"").
 
@@ -105,18 +111,88 @@ In Part II your task is to [look up](http://igraph.org/r/) in the igraph documen
 * Ensure that sizing allows for an unobstructed view of the network features (For example, the arrow size is smaller)
 * The vertices are colored according to major
 * The vertices are sized according to the number of comments they have recieved
+```{r}
+plot(g, layout=layout.fruchterman.reingold, vertex.color=VERTEX$major, vertex.size = 5*EDGE$count, edge.arrow.size = 0.5, edge.arrow.width = 0.5, vertex.label.cex = 0.2*EDGE$count)
+```
 
 ## Part III
 
 Now practice with data from our class. This data is real class data directly exported from Qualtrics and you will need to wrangle it into shape before you can work with it. Import it into R as a data frame and look at it carefully to identify problems.
 
 Please create a **person-network** with the data set hudk4050-classes.csv. To create this network you will need to create a person-class matrix using the tidyr functions and then create a person-person matrix using `t()`. You will then need to plot a matrix rather than a to/from data frame using igraph.
+```{r}
+library(igraph)
+library(dplyr)
+library(tidyr)
+library(stringr)
+
+mydf <- read.csv("hudk4050-classes.csv", header = TRUE, stringsAsFactors = FALSE)
+colnames(mydf)<- mydf[1,]
+mydf <- slice(mydf,3:49)
+mydf2 <- select(mydf, 1:8) %>% unite("name","First Name", "Last Name", sep = " ")
+mydf2$name <- str_to_title(mydf2$name)
+mydf2$name <- str_replace(mydf2$name, "`","")
+mydf2 <- mutate_at(mydf2,2:7,list(toupper))
+mydf2<- mutate_at(mydf2,2:7,str_replace_all," ","")
+mydf2[mydf2 == ""] <- NA
+mydf2 <- gather(mydf2, student, class, 2:7, na.rm=TRUE) %>% select("name","class") 
+mydf2$count <- 1
+mydf2 <- unique(mydf2)
+person_class <- spread(mydf2,class,count)
+person_class[is.na(person_class)]<-0
+rownames(person_class)<-person_class$name
+person_class <- select(person_class, -name,-HUDK4050)
+person_class2 <- as.matrix(person_class)
+person_person <- person_class2 %*% t(person_class2)
+
+```
 
 Once you have done this, also [look up](http://igraph.org/r/) how to generate the following network metrics:
 
-* Betweeness centrality and dregree centrality. **Who is the most central person in the network according to these two metrics? Write a sentence or two that describes your interpretation of these metrics**
+```{r}
+g2<-graph.adjacency(person_person, mode = "undirected", diag=FALSE)
+plot(g2,layout=layout.fruchterman.reingold,
+     vertex.size = 3,
+     vertex.label.cex=0.5,
+     vertex.label.color = "black",
+     edge.arrow.size = 0.5, 
+     edge.arrow.width = 0.5
+    )
+```
 
-* Color the nodes according to interest. Are there any clusters of interest that correspond to clusters in the network? Write a sentence or two describing your interpetation.
+
+* Betweenness centrality and degree centrality. **Who is the most central person in the network according to these two metrics? Write a sentence or two that describes your interpretation of these metrics**
+
+```{r}
+sort(betweenness(g2), decreasing = TRUE)
+sort(degree(g2), decreasing = TRUE)
+
+#Betweenness Centrality: Yifei Zhang(260.6143603)
+#According to the rank of betweenness centrality, Yifei Zhang is the most central students in our class, which means Yifei is the node through which the highest number of shortest paths pass.
+
+#Degree Centrality: Guoliang Xu, Hangshi Jin, Jiaao Qi, Jiacong Zhu,Jiahao Shen, Wenqi Gao, Xiyun Zhang, Yingxin Xie (31) 
+#According to the rank of degree centrality, there are 8 students appeared to be the most central in our class. They are connected to 31 students in the network.
+
+
+```
+
+
+* Color the nodes according to interest. Are there any clusters of interest that correspond to clusters in the network? Write a sentence or two describing your interpretation.
+
+```{r}
+colnames(mydf)[9]="Interest"
+mydf$Interest <- as.factor(mydf$Interest)
+plot(g2,layout=layout.fruchterman.reingold,
+     vertex.size = 3,
+     vertex.label.cex=0.5,
+     edge.arrow.size = 0.5, 
+     edge.arrow.width = 0.5,
+     vertex.color = mydf$Interest,
+     vertex.label.color = "black",
+    )
+
+#There are not any clusters of interest that correspond to clusters in the network. Because we cannot see consistency in color among the vertices that formed clusters in the network.
+```
 
 ### To Submit Your Assignment
 
