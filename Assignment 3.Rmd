@@ -201,6 +201,21 @@ sort(betweenness(g), decreasing = TRUE)
 ```
 
 * Color the nodes according to interest. Are there any clusters of interest that correspond to clusters in the network? Write a sentence or two describing your interpetation.
+
+```{r}
+C5 <- C1
+C5 <- slice(C5, 3:49)
+C5 <- select(C5, c(1,2,9))
+C5 <- unite(C5, "name", `Q8`, `Q9`, sep = " ")
+C2$name <- str_replace(C2$name, "`", "")
+C2$name <- str_to_title(C2$name)
+colnames(C5) [2]<- paste("Interest")
+interest <- as.factor(C5$Interest)
+plot(g, layout=layout.fruchterman.reingold, 
+     vertex.size=8, 
+     vertex.label.cex=0.4, 
+     vertex.label.color="black", 
+     vertex.color=interest)
 ```
 
 
