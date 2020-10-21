@@ -34,7 +34,7 @@ Since our data represnts every time a student makes a comment there are multiple
 
 EDGE <- count(D2, comment.to, comment.from)
 
-names(EDGE) <- c("from", "to", "count")
+names(EDGE) <- c("to", "from", "count")
 
 ```
 
@@ -105,19 +105,73 @@ In Part II your task is to [look up](http://igraph.org/r/) in the igraph documen
 * Ensure that sizing allows for an unobstructed view of the network features (For example, the arrow size is smaller)
 * The vertices are colored according to major
 * The vertices are sized according to the number of comments they have recieved
+```{r}
+comment = count(D2, comment.from)
+
+plot(g,layout=layout.fruchterman.reingold, vertex.color=VERTEX$major, vertex.size = 12+comment$n, edge.arrow.size = 0.1, edge.arrow.width = 10)
+
+```
 
 ## Part III
 
 Now practice with data from our class. This data is real class data directly exported from Qualtrics and you will need to wrangle it into shape before you can work with it. Import it into R as a data frame and look at it carefully to identify problems.
 
 Please create a **person-network** with the data set hudk4050-classes.csv. To create this network you will need to create a person-class matrix using the tidyr functions and then create a person-person matrix using `t()`. You will then need to plot a matrix rather than a to/from data frame using igraph.
+```{r}
+library(tidyr)
+library(dplyr)
+library(stringr)
+library(igraph)
+
+class = read.csv("hudk4050-classes.csv", stringsAsFactors = FALSE, header = TRUE)
+class2 = class
+colnames(class2) = class2[1,]
+class2 = slice(class2, 3:49)
+class2 = select(class2, 1:8)
+class2 = unite(class2, "name", `First Name`, `Last Name`, sep = " ")
+class2$name = str_replace(class2$name, "`", "")
+class2$name = str_to_title(class2$name)
+class2 = class2 %>% mutate_at(2:7, list(toupper))
+class2 = class2 %>% mutate_at(2:7, str_replace_all," ","")
+
+class3 = class2 %>% gather(label, class, 2:7, na.rm = TRUE, convert = FALSE) %>% select(name, class)
+class3$count = 1
+class3 = filter(class3, class != "")
+class3 = unique(class3)
+class3 = spread(class3, class, count)
+rownames(class3) = class3$name
+class3 = select(class3, -name, -HUDK4050)
+class3[is.na(class3)] = 0
+class4 = as.matrix(class3)
+class4 = class4 %*% t(class4)
+
+graph = graph.adjacency(class4, mode = "undirected", diag = FALSE)
+
+plot(graph, layout=layout.fruchterman.reingold,
+     vertex.size = 4, 
+     vertex.label.cex=0.8,
+     vertex.label.color = "black",
+     vertex.color = "gainsboro")
+
+
+```
 
 Once you have done this, also [look up](http://igraph.org/r/) how to generate the following network metrics:
 
 * Betweeness centrality and dregree centrality. **Who is the most central person in the network according to these two metrics? Write a sentence or two that describes your interpretation of these metrics**
+```{r}
+sort(degree(graph), decreasing = TRUE)
+sort(betweenness(graph), decreasing = TRUE)
 
+#After remove the course HUDK4050, we focused on the centrality among the students in other courses. Base on the matrics, there are 8 epople who has the same and also the highest betweenness centrality which is 31. Among the degree centrality, Yifei Zhang has the highest. Yifei is the most central person since the person has the most links with the other nodes. 
+
+```
 * Color the nodes according to interest. Are there any clusters of interest that correspond to clusters in the network? Write a sentence or two describing your interpetation.
+```{r}
+plot(graph,layout=layout.fruchterman.reingold, vertex.color=class3$HUDK4011, edge.arrow.size = 11, edge.arrow.witdh=10)
 
+# There is a cluster according to the plot. I randomly choose a course HUDK4011 to be colored and show in the network and it located where the cluster is. It might because most students in HUDK4050 course are in the major of Learning Analytics and therefore, they would more likely to also take course under HUDK.
+```
 ### To Submit Your Assignment
 
 Please submit your assignment by first "knitting" your RMarkdown document into an html file and then comit, push and pull request both the RMarkdown file and the html file.
