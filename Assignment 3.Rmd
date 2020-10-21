@@ -105,6 +105,9 @@ In Part II your task is to [look up](http://igraph.org/r/) in the igraph documen
 * Ensure that sizing allows for an unobstructed view of the network features (For example, the arrow size is smaller)
 * The vertices are colored according to major
 * The vertices are sized according to the number of comments they have recieved
+```{r}
+plot(g,layout=layout.fruchterman.reingold, edge.arrow.size=.3, vertex.size=EDGE$count * 4, vertex.color=VERTEX$major, edge.width=EDGE$count)
+```
 
 ## Part III
 
@@ -113,10 +116,50 @@ Now practice with data from our class. This data is real class data directly exp
 Please create a **person-network** with the data set hudk4050-classes.csv. To create this network you will need to create a person-class matrix using the tidyr functions and then create a person-person matrix using `t()`. You will then need to plot a matrix rather than a to/from data frame using igraph.
 
 Once you have done this, also [look up](http://igraph.org/r/) how to generate the following network metrics:
+```{r}
+library(stringr)
+library (dplyr)
+library (igraph)
+library (tidyr)
+C1 <- read.csv("hudk4050-classes.csv", stringsAsFactors = FALSE, header = TRUE)
+C2 <- C1
+colnames(C2) <- C2[1,]
+C2 <- slice(C2, 3:49)
+C2 <- select (C2, 1:8)
+C2 <- unite(C2, "name", 'First Name', 'Last Name', sep = " ")
+C2$name <- str_replace(C2$name, "`", "")
+C2$name <- str_to_title(C2$name)
+C2 <- C2 %>% mutate_at(2:7, list(toupper))
+C2 <- C2 %>% mutate_at(2:7, str_replace_all, " ", "")
+
+C3 <- C2 %>% gather(label, class, 2:7, na.rm = TRUE, convert = FALSE) %>% select (name, class)
+C3$count <- 1
+C3 <- filter(C3, class != "")
+C3 <- unique (C3)
+C3 <- spread (C3, class, count)
+rownames (C3) <- C3$name
+C3 <- select (C3, -name, -HUDK4050)
+C3[is.na(C3)] <- 0
+
+C4 <- as.matrix(C3)
+C4 <- C4 %*% t(C4)
+g <- graph.adjacency(C4, mode="undirected", diag = FALSE)
+```
 
 * Betweeness centrality and dregree centrality. **Who is the most central person in the network according to these two metrics? Write a sentence or two that describes your interpretation of these metrics**
+```{r}
+dt <- data.frame(Betweeness = betweenness(g), drgree = degree(g))
+dt <- dt[order(dt$Betweeness, decreasing = TRUE), ]
+dt
+#according to the metrics, Yifei Zhang is the most central person in the network.
+```
 
 * Color the nodes according to interest. Are there any clusters of interest that correspond to clusters in the network? Write a sentence or two describing your interpetation.
+```{r}
+V(g)$interest <- factor(as.character(C1[,9]))
+plot(g,layout=layout.fruchterman.reingold, vertex.color = V(g)$interest,
+     vertex.size = 7, vertex.label.color="black", vertex.label.cex=.7)
+```
 
 ### To Submit Your Assignment
 
