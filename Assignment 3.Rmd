@@ -177,10 +177,10 @@ S2$Full_Name <- str_to_title(S2$Full_Name)
 S2 <- S2 %>% mutate_at(2:7, list(toupper))
 #
 S2 <- S2 %>% mutate_at(2:7, str_replace_all, " ", "")
-
+S4 <- S2
 ```
 
-#2) a.Create Person-Class matrix with tidyr; b. create Person-Person matrix with t()
+#a.Create Person-Class matrix with tidyr; b. create Person-Person matrix with t()
 ```{r}
 #a.
 S3 <- gather(S2,2:7,key="counts",value="Class_Name", na.rm = TRUE, convert = FALSE) %>% select(Full_Name,Class_Name,counts)
@@ -211,27 +211,32 @@ plot(GraphedPersonPerson, layout=layout.fruchterman.reingold,
      vertex.label.cex=.7,
      vertex.label.color="black",
      vertex.color="gainsboro")
-
 ```
 
 #Centrality
 ```{r}
-#4) a. Betweeness Centrality
+#a. Betweeness Centrality
 sort(betweenness(GraphedPersonPerson),decreasing=TRUE)
 
-#4) b. Degree Centrality
+#b. Degree Centrality
 sort(degree(GraphedPersonPerson),decreasing=TRUE)
 
 #Who is the most central person in the network according to these two metrics? Write a sentence or two that describes your interpretation of these metrics
-#
+# Yifei Zhang is the posible the most central as she connects groups so her betweenness is high, but because her her degree of centrality is not the highest she is not necessarily the most central. However, as her degree of centrality is rather high compared to the group and her betweenness is the highest, I will say she is the most central. She would be someone who could unite people in the class for a common goal.
 
 ```
 
 #Color nodes by interest
 ```{r}
+S4 <- S4[order(S4$Full_Name),]
+plot(GraphedPersonPerson, layout=layout.fruchterman.reingold,
+     vertex.size = 4,
+     vertex.label.cex=.7,
+     vertex.label.color="black",
+     vertex.color= ifelse(S4$Topic_Interest == "Prediction modelling", c( "pink"), ifelse(S4$Topic_Interest == "Visualization", c("yellow"), ifelse(S4$Topic_Interest == "Social Network Analysis", c( "blue"), ifelse(S4$Topic_Interest == "Facial recognition", c("green"), ifelse(S4$Topic_Interest == "Data Wrangling", c("purple"),c("black")))))))
+
 #Are there any clusters of interest that correspond to clusters in the network? Write a sentence or two describing your interpetation.
-#
-#plot(my_matrix,layout=layout.fruchterman.reingold, vertex.color=my_matrix$Topic_Interest)
+#There does not seem to be any clusters. However, you can see that there are few people who want to learn Visualization. Also a couple people who connect clusters are interested in prediction modelling. I would guess those who were not in many of the same classes, would be interested in something different than the others, but it seems that the interests do not congrigate by classes.
 ```
 
 
