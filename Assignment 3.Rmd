@@ -1,7 +1,12 @@
 # Assignment 3 - Social Network Analysis
+# Yingxin Xie
+# YX2614
 
 ## Part I
 Start by installing the "igraph" package. Once you have installed igraph, load the package.
+```{r}
+library(igraph)
+```
 
 Now upload the data file "comment-data.csv" as a data frame called "D1". Each row represents a comment from one student to another so the first line shows that student "28" commented on the comment of student "21". It also shows the gender of both students and the students' main elective field of study ("major"").
 
@@ -32,7 +37,7 @@ Since our data represnts every time a student makes a comment there are multiple
 
 ```{r}
 
-EDGE <- count(D2, comment.to, comment.from)
+EDGE <- count(D2, comment.from, comment.to)
 
 names(EDGE) <- c("from", "to", "count")
 
@@ -105,18 +110,104 @@ In Part II your task is to [look up](http://igraph.org/r/) in the igraph documen
 * Ensure that sizing allows for an unobstructed view of the network features (For example, the arrow size is smaller)
 * The vertices are colored according to major
 * The vertices are sized according to the number of comments they have recieved
+```{r}
+plot(g,layout=layout.fruchterman.reingold, vertex.color=VERTEX$major, edge.width=EDGE$count, margin=-0.1, edge.arrow.size=0.35, edge.arrow.width=0.7,  vertex.size = (EDGE$count*10), vertex.label.color = "saddlebrown")
+```
 
 ## Part III
 
 Now practice with data from our class. This data is real class data directly exported from Qualtrics and you will need to wrangle it into shape before you can work with it. Import it into R as a data frame and look at it carefully to identify problems.
 
+```{r}
+
+library(tidyr)
+library(dplyr)
+library(stringr)
+library(igraph)
+
+```
+
 Please create a **person-network** with the data set hudk4050-classes.csv. To create this network you will need to create a person-class matrix using the tidyr functions and then create a person-person matrix using `t()`. You will then need to plot a matrix rather than a to/from data frame using igraph.
+
+```{r}
+
+class <- read.csv("hudk4050-classes.csv", stringsAsFactors=F, header=T)
+cls2 <- class
+colnames(cls2) <- cls2[1,]
+cls2 <- slice(cls2, 3:49)
+cls2 <- select(cls2, 1:8)
+cls2 <- unite(cls2, "name", `First Name`, `Last Name`, sep=" ")
+
+cls2$name <- str_replace(cls2$name, "`", "")
+cls2$name <- str_to_title(cls2$name)
+cls2 <- cls2 %>% mutate_at(2:7, list(toupper))
+cls2 <- cls2 %>% mutate_at(2:7, str_replace_all, " ", "")
+
+cls3 <- cls2 %>% gather(label, class, 2:7, na.rm=T, convert=F) %>% select(name, class)
+cls3$count <- 1
+cls3 <- filter(cls3, class != "")
+cls3 <- unique(cls3)
+cls3 <- spread(cls3, class, count)
+rownames(cls3) <- cls3$name
+cls3 <- select(cls3, -name, -HUDK4050)
+cls3[is.na(cls3)] <- 0
+
+# person-class matrix:
+cls4 <- as.matrix(cls3)
+# person-person matrix:
+cls4 <- cls4 %*% t(cls4)
+
+```
 
 Once you have done this, also [look up](http://igraph.org/r/) how to generate the following network metrics:
 
+```{r}
+
+g <- graph.adjacency(cls4, mode="undirected", diag=F)
+
+plot(g, layout=layout.fruchterman.reingold,
+     vertex.size=4, 
+     vertex.label.cex=0.8,
+     vertex.label.color="black",
+     vertex.color="tomato")
+
+```
+
 * Betweeness centrality and dregree centrality. **Who is the most central person in the network according to these two metrics? Write a sentence or two that describes your interpretation of these metrics**
 
+```{r}
+
+sort(degree(g), decreasing=T)
+sort(betweenness(g), decreasing=T)
+
+# Yifei Zhang is the most central person in the network according to these two metrics.
+# Since he/she has highest degree centrality and very high level of betweenness centrality.
+# There are several people has same level of degree centrality as Yifei, but their betweenness centrality are much less than Yifei.
+
+```
+
 * Color the nodes according to interest. Are there any clusters of interest that correspond to clusters in the network? Write a sentence or two describing your interpetation.
+
+```{r}
+
+cls5 <- class
+cls5 <- slice(cls5, 3:49)
+cls5 <- select(cls5, c(1,2,9))
+cls5 <- unite(cls5, "name", Q8, Q9, sep=" ")
+cls5$name <- str_replace(cls5$name, "`", "")
+cls5$name <- str_to_title(cls5$name)
+colnames(cls5) <- c("name", "interest")
+color <- as.factor(cls5$interest)
+plot(g, layout=layout.fruchterman.reingold,
+     vertex.size=4,
+     vertex.label.cex=0.8,
+     vertex.label.color="black",
+     vertex.color=color)
+
+# The plot shows that interest are ramdomly distributed (the colors distribute randomly). So there is no clusters of interest that correspond to clusters in the network.
+
+```
+
 
 ### To Submit Your Assignment
 
