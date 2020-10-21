@@ -34,7 +34,7 @@ Since our data represnts every time a student makes a comment there are multiple
 
 EDGE <- count(D2, comment.to, comment.from)
 
-names(EDGE) <- c("from", "to", "count")
+names(EDGE) <- c("to", "from", "count")
 
 ```
 
@@ -53,12 +53,21 @@ names(V.TO) <- c("id", "gender.to", "major.to")
 
 #Make sure that the id variable in both dataframes has the same number of levels
 lvls <- sort(union(levels(V.FROM$id), levels(V.TO$id)))
-
+  #union is joint for vector
+  #levels():take out the level from()
+  #lvls contains all the levels from the combination of vfromid and vtoid
 VERTEX <- full_join(mutate(V.FROM, id=factor(id, levels=lvls)),
     mutate(V.TO, id=factor(id, levels=lvls)), by = "id")
+ #levels=lvls:insert the lvls to replace levels 
 
-#Fill in missing gender and major values - ifelse() will convert factors to numerical values so convert to character
-VERTEX$gender.from <- ifelse(is.na(VERTEX$gender.from) == TRUE, as.factor(as.character(VERTEX$gender.to)), as.factor(as.character(VERTEX$gender.from)))
+#Fill in missing gender and major values - ifelse() will convert factors to numerical values so convert to character 
+  #use character in gender/major.to replace na in from
+VERTEX$gender.from <- ifelse(is.na(VERTEX$gender.from) == TRUE, 
+  #if VERTEX$gender.from is empty (is na)                         
+as.factor(as.character(VERTEX$gender.to)),
+  #move gender.to to gender.from
+  #ifelse doesn't work good with factor, so we first convert VERTEX$gender.to into character and the convert it back to factor
+as.factor(as.character(VERTEX$gender.from)))
 
 VERTEX$major.from <- ifelse(is.na(VERTEX$major.from) == TRUE, as.factor(as.character(VERTEX$major.to)), as.factor(as.character(VERTEX$major.from)))
 
@@ -70,7 +79,7 @@ names(VERTEX) <- c("id", "gender", "major")
 
 #Remove all the repeats so that we just have a list of each student and their characteristics
 VERTEX <- unique(VERTEX)
-
+#now we have all the students and all the characritics
 ```
 
 Now we have both a Vertex and Edge list it is time to plot our graph!
@@ -91,6 +100,7 @@ plot(g,layout=layout.fruchterman.reingold)
 #There are many ways to change the attributes of the graph to represent different characteristics of the newtork. For example, we can color the nodes according to gender.
 
 plot(g,layout=layout.fruchterman.reingold, vertex.color=VERTEX$gender)
+  #direction may change everytime you run it because layout is random
 
 #We can change the thickness of the edge according to the number of times a particular student has sent another student a comment.
 
@@ -100,23 +110,148 @@ plot(g,layout=layout.fruchterman.reingold, vertex.color=VERTEX$gender, edge.widt
 
 ## Part II
 
-In Part II your task is to [look up](http://igraph.org/r/) in the igraph documentation and modify the graph above so that:
+In Part II your task is to [look up](http://igraph.org/r/) (https://kateto.net/netscix2016.html)in the igraph documentation and modify the graph above so that:
 
 * Ensure that sizing allows for an unobstructed view of the network features (For example, the arrow size is smaller)
 * The vertices are colored according to major
 * The vertices are sized according to the number of comments they have recieved
+```{r}
+colrs=c("purple","tomato","gold","green")
+
+plot(g,layout=layout.fruchterman.reingold, vertex.color=colrs[VERTEX$major], edge.width=EDGE$count,edge.arrow.size=0.5,edge.arrow.width=0.5,edge.width=1+EDGE$count/7,vertex.size=EDGE$count*7,vertex.label.cex=0.5)
+
+```
 
 ## Part III
 
 Now practice with data from our class. This data is real class data directly exported from Qualtrics and you will need to wrangle it into shape before you can work with it. Import it into R as a data frame and look at it carefully to identify problems.
 
 Please create a **person-network** with the data set hudk4050-classes.csv. To create this network you will need to create a person-class matrix using the tidyr functions and then create a person-person matrix using `t()`. You will then need to plot a matrix rather than a to/from data frame using igraph.
+```{r}
+library(tidyr)
+library(igraph)
+library(dplyr)
+library(stringr)
+rc=read.csv("hudk4050-classes.csv", stringsAsFactors=FALSE, header = TRUE)
+
+#make header first row
+colnames(rc)<-rc[1, ]
+#remove unwanted rows
+  #rc=rc[-2,]
+rc=slice(rc,3:49)
+#remove rows with random characters
+  #rc=rc[-1,]
+#remove last column
+rc=select(rc,1:8)
+#Merge name columns
+rc<-unite(rc,"name",`First Name`,`Last Name`,sep=" ")
+
+#remove npredicted characters from names
+  #rc$name<-gsub(" ", "-",rc$name, ignore.case = FALSE, perl = FALSE, fixed = FALSE, useBytes = FALSE)
+  #option 1
+  #rc$name<-gsub("`", "",rc$name, ignore.case = FALSE, perl = FALSE, fixed = FALSE, useBytes = FALSE)
+  #option2
+  rc$name<-str_replace(rc$name,"`","")
+
+#make all names capitalized first letter only
+rc$name<-str_to_title(rc$name)
+
+#make all class letters capitalized 
+rc<-rc%>%mutate_at(2:7,list(toupper))
+
+#remove white space between letters and numbers in class
+rc<-rc%>%mutate_at(2:7, str_replace_all," ","")
+```
+
+#data restructuring
+```{r}
+#create a new dataframe with two variables,student and class
+  #convert=FALSE: dont change the type of the variable
+rc2<-rc%>%gather(label,class,2:7,na.rm=TRUE,convert=FALSE) %>% select(name,class)
+
+#create a new variable containing 1s that will become our counts
+rc2$count<-1
+
+#remove blank classes
+rc2<-filter(rc2,class!="")
+
+#remove duplicates (Danny!)
+rc2 <- unique(rc2)
+
+#spread 1s across classes to create a studentXclass dataframe
+rc2 <-spread(rc2, class, count)
+
+#make row names students names
+rownames(rc2)<-rc2$name
+
+#remove names columb and HUDK4050
+rc2<-select(rc2,-name,-HUDK4050)
+  #shortest:make what are na in rc2 be assigned to 0
+rc2[is.na(rc2)]<-0
+  #cheat way
+
+#create person-person matrix
+
+```
+#matrix operations
+```{r}
+#convert to matrix
+rc3<-as.matrix(rc2)
+#create person-person matrix
+rc3 <- rc3 %*% t(rc3)
+```
 
 Once you have done this, also [look up](http://igraph.org/r/) how to generate the following network metrics:
 
+#graphing
+```{r}
+g<-graph.adjacency(rc3,mode="undirected",diag=FALSE)
+
+plot(g,layout=layout.fruchterman.reingold,
+     vertex.size=10,
+     vertex.label.cex=0.7,
+     vertex.label.color="black",
+     vertex.color="tomato")
+```
+
 * Betweeness centrality and dregree centrality. **Who is the most central person in the network according to these two metrics? Write a sentence or two that describes your interpretation of these metrics**
 
+#centrality
+```{r}
+#calculate the degree centrality of the nodes,showing who has the most connections
+sort(degree(g),decreasing=TRUE)
+#calculate the betweenness centrality,showing how many "shortest paths pass through each node
+sort(betweenness(g),decreasing=TRUE)
+
+# Yifei Zhang is the most central person in the network according to these two metrics since Yifei has the highest betweenness centrality and rank second in degree centrality. Even though Yifei ranks second in degree centrality and got 8 people rank higher then she, they can't compete her in betweenness centrality. 
+```
+
 * Color the nodes according to interest. Are there any clusters of interest that correspond to clusters in the network? Write a sentence or two describing your interpetation.
+```{r}
+rc4=read.csv("hudk4050-classes.csv", stringsAsFactors=FALSE, header = TRUE)
+
+rc4<-slice(rc4,3:49)
+rc4<-select(rc4,c(1,2,9))
+
+rc4<-unite(rc4,"name",`Q8`,`Q9`,sep=" ")
+
+rc4$name<-str_replace(rc4$name,"`","")
+rc4$name<-str_to_title(rc4$name)
+
+rc4<-rc4%>%mutate_at(2,list(toupper))
+
+colnames(rc4)<-c("name","interest")
+
+interest<-as.factor(rc4$interest)
+plot(g,layout=layout.fruchterman.reingold,
+     vertex.size=10,
+     vertex.label.cex=0.7,
+     vertex.label.color="black",
+     vertex.color=interest)
+
+# there is no clusters of interest that correspond to clusters in the network because the colors' distributions are random. This shows the interest is randomly distributed among students.
+
+```
 
 ### To Submit Your Assignment
 
