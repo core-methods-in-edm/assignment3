@@ -135,16 +135,6 @@ C1 <- read.csv("hudk4050-classes.csv", stringsAsFactors = F, header = T)
 #Copy to play with data
 C2 <- C1
 
-  
-#df1 <- read.csv("hudk4050-classes.csv")
-#names(df1) = as.character(df1[1,])
-#names(df1)[9] <- paste("InterestedTopics")
-#df2 <- df1[-c(1,2),]
-#name = paste(df2$'First Name',df2$'Last Name')
-#df2$Name <- name
-#df3 <- df2[,-c(1,2)]
-#df3 <- df3[c(8,1:7)]
-
 
 ```
 #Data Tidying
