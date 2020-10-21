@@ -35,6 +35,19 @@ So let's convert our data into an edge list!
 
 
 
+
+First we will isolate the variables that are of interest: comment.from and comment.to
+```{r}
+D2 <- select(D1, comment.from, comment.to)
+EDGE <- count(D2, comment.from, comment.to)
+attach(EDGE)
+EDGE1 <- EDGE[order(comment.from),]
+names(EDGE1) <- c("from", "to", "count")
+```
+
+Since our data represnts every time a student makes a comment there are multiple rows when the same student comments more than once on another student's video. We want to collapse these into a single row, with a variable that shows how many times a student-student pair appears.
+
+
 First we will isolate the variables that are of interest: comment.from and comment.to
 ```{r}
 D2 <- select(D1, comment.from, comment.to)
@@ -111,7 +124,6 @@ plot(g,layout=layout.fruchterman.reingold,vertex.color=VERTEX$gender, edge.width
 ```
 
 ## Part II
-
 In Part II your task is to [look up](http://igraph.org/r/) in the igraph documentation and modify the graph above so that:
 * Ensure that sizing allows for an unobstructed view of the network features (For example, the arrow size is smaller)
 * The vertices are colored according to major
@@ -122,12 +134,17 @@ EDGE2 <- select(EDGE1, to, count, sumcount)
 
 names(EDGE2) <- c("id", "count_to","totalcommentreceived")
 
+
+EDGE1$sumcount <- with(EDGE1,ave(count, to,FUN = sum))
+EDGE2 <- select(EDGE1, to, count, sumcount)
+
+names(EDGE2) <- c("id", "count","totalcommentreceived")
+
+
 EDGE2 <- left_join(VERTEX,EDGE2,by=c("id"))
 EDGE2$totalcommentreceived[is.na(EDGE2$totalcommentreceived)] <- 0
 
 plot(g,layout=layout.fruchterman.reingold, directed=TRUE, edge.arrow.size=0.4, vertex.size=5+EDGE2$totalcommentreceived, vertex.color=VERTEX$major)
-
-
 ```
 
 
@@ -187,14 +204,15 @@ C4[is.na(C4)] <- 0
 C5 <- as.matrix(C4)
 
 C6 <- C5 %*% t(C5)
+```
+
+
+##graphing
 ```{r}
 g <- graph.adjacency(C6, mode="undirected", diag = FALSE)
 plot(g, layout=layout.fruchterman.reingold, vertex.size=4, vertex.label.cex=0.8, vertext.label.color="blue",vertex.color="gainsboro")
 ```
 
-##graphing
-
-```
 
 ##centrality
 ```{r}
