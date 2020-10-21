@@ -147,7 +147,6 @@ library(tidyr)
 #import data
 C1 <- read.csv("hudk4050-classes.csv", stringsAsFactors=FALSE,header = TRUE)
 C2<-C1
-View(C2)
 ```
 
 #clean the data
@@ -177,7 +176,6 @@ C3[is.na(C3)]<-0
 #convert to matrix
 ```{r}
 C4<-as.matrix(C3)
-View(C4)
 C4<-C4 %*% t(C4)
 ```
 
@@ -198,7 +196,7 @@ Once you have done this, also [look up](http://igraph.org/r/) how to generate th
 sort(betweenness(g),decreasing=TRUE)
 ```
 
-From the output, we can see that Yifei Zhang has the highest betweenness centrality, that means Yifei Zhang has the most shortest paths pass through, which is about 260. It's way more than the second one Si Heng Zhao. This result matches with the network graph above, Yifei Zhang is the connection point of two big clusters in the graph.   
+From the output, we can see that Yifei Zhang has the highest betweenness centrality, that means Yifei Zhang has the most shortest paths pass through, which is about 260. It's way more than the second one Si Heng Zhao. This result matches with the network graph above, Yifei Zhang is the connection point of two big clusters in the graph. If we wanted to connect the two big clusters, Yifei might be the breakthrough point. 
 
 # degree centrality
 ```{r}
@@ -206,7 +204,7 @@ From the output, we can see that Yifei Zhang has the highest betweenness central
 sort(degree(g),decreasing=TRUE)
 ```
 
-From the degree centrality analysis, we don't see one person has much more connections than others. Eight students are connected with 31 students in the class (taking the same course(s)), no one has particularly high degree of centrality, this matches with what we see in the graph as well.
+From the degree centrality analysis, we don't see one person has much more connections than others. Eight students have measure of degree centrality of 31, which means they are connected with 31 students in the class (taking the same course(s)) respectively, no one has particularly high degree of centrality, this matches with what we see in the graph as well. 
 
 In this case, betweenness centrality tell us more information about the network than degree of centrality. If we wanted to connect the two big clusters, Yifei might be the breakthrough point. 
 
@@ -217,7 +215,6 @@ In this case, betweenness centrality tell us more information about the network 
 Ci<-C1
 colnames(Ci) <-Ci[1,]
 Ci<-slice(Ci,3:49)
-View(Ci)
 colnames(Ci)[c(9)] <- c( "interest")
 Ci<- unite(Ci,"name",`First Name`,`Last Name`,sep=" ")
 Ci$name <- str_replace(Ci$name, "`","")
