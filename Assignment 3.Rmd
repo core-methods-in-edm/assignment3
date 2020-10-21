@@ -1,8 +1,8 @@
 # Assignment 3 - Social Network Analysis
 
 ## Part I
-Start by installing the "igraph" package. Once you have installed igraph, load the package.
 
+Start by installing the "igraph" package. Once you have installed igraph, load the package.
 Now upload the data file "comment-data.csv" as a data frame called "D1". Each row represents a comment from one student to another so the first line shows that student "28" commented on the comment of student "21". It also shows the gender of both students and the students' main elective field of study ("major"").
 
 ```{r}
@@ -16,95 +16,117 @@ D1$comment.to <- as.factor(D1$comment.to)
 D1$comment.from <- as.factor(D1$comment.from)
 ```
 
-igraph requires data to be in a particular structure. There are several structures that it can use but we will be using a combination of an "edge list" and a "vertex list" in this assignment. As you might imagine the edge list contains a list of all the relationships between students and any characteristics of those edges that we might be interested in. There are two essential variables in the edge list a "from" variable and a "to" variable that descibe the relationships between vertices. While the vertex list contains all the characteristics of those vertices, in our case gender and major.
+igraph requires data to be in a particular structure. There are several structures that it can use but we will be using a combination of an "edge list" and a "vertex list" in this assignment. As you might imagine the edge list contains a list of all the relationships between students and any characteristics of those edges that we might be interested in. There are two essential variables in the edge list a "from" variable and a "to" variable that describe the relationships between vertices. While the vertex list contains all the characteristics of those vertices, in our case gender and major.
 
 So let's convert our data into an edge list!
 
-First we will isolate the variables that are of interest: comment.from and comment.to
+First we will isolate the variables that are of interest: comment.from and comment.to.
 
 ```{r}
 library(dplyr)
-
-D2 <- select(D1, comment.to, comment.from) #select() chooses the columns
+D2 <- select(D1, comment.to, comment.from)
 ```
 
-Since our data represnts every time a student makes a comment there are multiple rows when the same student comments more than once on another student's video. We want to collapse these into a single row, with a variable that shows how many times a student-student pair appears.
+Since our data represents every time a student makes a comment there are multiple rows when the same student comments more than once on another student's video. We want to collapse these into a single row, with a variable that shows how many times a student-student pair appears.
 
 ```{r}
-
-EDGE <- count(D2, comment.to, comment.from)
-
+EDGE <- count(D2, comment.from, comment.to)
 names(EDGE) <- c("from", "to", "count")
-
 ```
 
-EDGE is your edge list. Now we need to make the vertex list, a list of all the students and their characteristics in our network. Because there are some students who only recieve comments and do not give any we will need to combine the comment.from and comment.to variables to produce a complete list.
+EDGE is your edge list. Now we need to make the vertex list, a list of all the students and their characteristics in our network. Because there are some students who only receive comments and do not give any we will need to combine the comment.from and comment.to variables to produce a complete list.
 
 ```{r}
-#First we will separate the commenters from our commentees
+# First we will separate the commenters from our commentees
+
 V.FROM <- select(D1, comment.from, from.gender, from.major)
 
-#Now we will separate the commentees from our commenters
+# Now we will separate the commentees from our commenters
+
 V.TO <- select(D1, comment.to, to.gender, to.major)
 
-#Make sure that the from and to data frames have the same variables names
+# Make sure that the from and to data frames have the same variables names
+
 names(V.FROM) <- c("id", "gender.from", "major.from")
 names(V.TO) <- c("id", "gender.to", "major.to")
 
-#Make sure that the id variable in both dataframes has the same number of levels
+# Make sure that the id variable in both data frames has the same number of levels
+
 lvls <- sort(union(levels(V.FROM$id), levels(V.TO$id)))
 
 VERTEX <- full_join(mutate(V.FROM, id=factor(id, levels=lvls)),
     mutate(V.TO, id=factor(id, levels=lvls)), by = "id")
 
-#Fill in missing gender and major values - ifelse() will convert factors to numerical values so convert to character
+# Fill in missing gender and major values - ifelse() will convert factors to numerical values so convert to character
+
 VERTEX$gender.from <- ifelse(is.na(VERTEX$gender.from) == TRUE, as.factor(as.character(VERTEX$gender.to)), as.factor(as.character(VERTEX$gender.from)))
 
 VERTEX$major.from <- ifelse(is.na(VERTEX$major.from) == TRUE, as.factor(as.character(VERTEX$major.to)), as.factor(as.character(VERTEX$major.from)))
 
-#Remove redundant gender and major variables
+# Remove redundant gender and major variables
+
 VERTEX <- select(VERTEX, id, gender.from, major.from)
 
-#rename variables
+# Rename variables
+
 names(VERTEX) <- c("id", "gender", "major")
 
-#Remove all the repeats so that we just have a list of each student and their characteristics
-VERTEX <- unique(VERTEX)
+# Remove all the repeats so that we just have a list of each student and their characteristics
 
+VERTEX <- unique(VERTEX)
 ```
 
 Now we have both a Vertex and Edge list it is time to plot our graph!
 
 ```{r}
-#Load the igraph package
+# Load the igraph package
 
 library(igraph)
 
-#First we will make an object that contains the graph information using our two dataframes EDGE and VERTEX. Notice that we have made "directed = TRUE" - our graph is directed since comments are being given from one student to another.
+# First we will make an object that contains the graph information using our two data frames EDGE and VERTEX. Notice that we have made "directed = TRUE" - our graph is directed since comments are being given from one student to another.
 
 g <- graph.data.frame(EDGE, directed=TRUE, vertices=VERTEX)
 
-#Now we can plot our graph using the force directed graphing technique - our old friend Fruchertman-Reingold!
+# Now we can plot our graph using the force directed graphing technique - our old friend Fruchertman-Reingold!
 
 plot(g,layout=layout.fruchterman.reingold)
 
-#There are many ways to change the attributes of the graph to represent different characteristics of the newtork. For example, we can color the nodes according to gender.
+# There are many ways to change the attributes of the graph to represent different characteristics of the network. For example, we can color the nodes according to gender.
 
 plot(g,layout=layout.fruchterman.reingold, vertex.color=VERTEX$gender)
 
-#We can change the thickness of the edge according to the number of times a particular student has sent another student a comment.
+# We can change the thickness of the edge according to the number of times a particular student has sent another student a comment.
 
 plot(g,layout=layout.fruchterman.reingold, vertex.color=VERTEX$gender, edge.width=EDGE$count)
-
-````
+```
 
 ## Part II
 
 In Part II your task is to [look up](http://igraph.org/r/) in the igraph documentation and modify the graph above so that:
 
-* Ensure that sizing allows for an unobstructed view of the network features (For example, the arrow size is smaller)
+* Ensure that sizing allows for an unobstructed view of the network features 
+  (For example, the arrow size is smaller)
 * The vertices are colored according to major
-* The vertices are sized according to the number of comments they have recieved
+* The vertices are sized according to the number of comments they have received
+
+```{r}
+V.To.id   = as.numeric(as.character(V.TO$id))
+VERTEX.id = as.numeric(as.character(VERTEX$id))
+num.comment = rep(15,length(VERTEX.id))
+
+for (i in 1:length(VERTEX.id)){
+  for (j in 1:length(V.To.id)){
+    if (VERTEX.id[i] == V.To.id[j]){
+      num.comment[i] = num.comment[i] + 1}}}
+
+plot(g, layout          = layout.fruchterman.reingold,
+     vertex.color       = VERTEX$major,
+     vertex.size        = num.comment,
+     edge.arrow.size    = 0.2,
+     edge.arrow.width   = 1.2,
+     edge.color         = "black",
+     vertex.label.color = "black")
+```
 
 ## Part III
 
@@ -112,11 +134,89 @@ Now practice with data from our class. This data is real class data directly exp
 
 Please create a **person-network** with the data set hudk4050-classes.csv. To create this network you will need to create a person-class matrix using the tidyr functions and then create a person-person matrix using `t()`. You will then need to plot a matrix rather than a to/from data frame using igraph.
 
+```{r}
+library(tidyr)
+library(readr)
+library(dplyr)
+library(stringr)
+library(igraph)
+
+# Import the data
+Data1 = read.csv("hudk4050-classes.csv", stringsAsFactors = FALSE, header = TRUE)
+# Make a copy to play
+Data2 = Data1
+# Change columns name
+for (i in 1:9){
+  names(Data2)[i] = as.character(paste(Data2[1,i]))
+}
+names(Data2)[9] = as.character(paste("Interest"))
+# Delete rows we don't need
+Data2 = Data2[-c(1,2),]
+# Merge name columns
+Name  = paste(Data2$`First Name`, Data2$`Last Name`)
+Data2 = data.frame(cbind(Name,Data2))
+Data2 = Data2[,-c(2:3)]
+# Make names tidy
+Data2$Name = str_replace(Data2$Name, "`", "")
+Data2$Name = str_to_title(Data2$Name)
+# Make class names more tidy
+Data2 = Data2 %>% mutate_at(2:7, list(toupper))
+Data2 = Data2 %>% mutate_at(2:7, str_replace_all, " ","")
+```
+
+```{r}
+# Convert to person-to-class matrix
+Data3 = Data2 %>% gather(label, Class, 2:7, na.rm = TRUE, convert = FALSE) %>% select(Name, Class)
+Data3$Count = 1
+Data3 = filter(Data3, Class != "")
+Data3 = unique(Data3)
+Data3 = spread(Data3, Class, Count)
+rownames(Data3) = Data3$Name
+Data3 = select(Data3, -Name, -HUDK4050)
+Data3[is.na(Data3)] = 0
+```
+
+```{r}
+# Convert to person-to-person matrix
+Data4 = as.matrix(Data3)
+Data4 = Data4 %*% t(Data4)
+```
+
+```{r}
+# Graphing
+g <- graph.adjacency(Data4, mode = "undirected", diag = FALSE)
+plot(g, layout          = layout.fruchterman.reingold,
+     vertex.size        = 4,
+     vertex.label.cex   = 0.8,
+     vertex.label.color = "black",
+     vertex.color       = "gainsboro")
+```
+
+```{r}
+# Betweeness centrality and degree centrality
+sort(degree(g), decreasing = TRUE)
+sort(betweenness(g), decreasing = TRUE)
+```
+
+
+
 Once you have done this, also [look up](http://igraph.org/r/) how to generate the following network metrics:
 
-* Betweeness centrality and dregree centrality. **Who is the most central person in the network according to these two metrics? Write a sentence or two that describes your interpretation of these metrics**
+* Betweeness centrality and degree centrality. **Who is the most central person in the network according to these two metrics? Write a sentence or two that describes your interpretation of these metrics**
+```{r}
+# Yifei Zhang is the most central person in the network according to these two metrics. Betweenness centrality quantifies the number of times a node acts as a bridge along the shortest path between two other nodes. As Yifei Zhang has the highest betweenness centrality, he/she is the most connected person in the network.
+```
 
-* Color the nodes according to interest. Are there any clusters of interest that correspond to clusters in the network? Write a sentence or two describing your interpetation.
+* Color the nodes according to interest. Are there any clusters of interest that correspond to clusters in the network? Write a sentence or two describing your interpretation.
+```{r}
+plot(g, layout          = layout.fruchterman.reingold,
+     vertex.color       = as.factor(Data2$Interest),
+     vertex.size        = 4,
+     vertex.label.cex   = 0.8,
+     vertex.label.color = "black",
+     vertex.color       = "gainsboro")
+# There is no obvious cluster of interest that correspond to clusters in the network. It indicates that students' interests are not related with the class they took because there is no clear pattern.
+```
 
 ### To Submit Your Assignment
 
