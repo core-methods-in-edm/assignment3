@@ -125,19 +125,14 @@ Please create a **person-network** with the data set hudk4050-classes.csv. To cr
 ```{r}
 library(stringr)
 library(readr)
+library(tidyverse)
 # load the data
 data <- read_csv("hudk4050-classes.csv", skip = 1)
 data <- data[-1,]
 
 # clean up the data first: all upcase and remove all the space
-data$`First Name` <- data$`First Name` %>% str_replace(" ","") %>% str_replace("`","") %>% str_to_upper() %>% as.factor()
-data$`Last Name` <- data$`Last Name` %>% str_replace(" ","")  %>% str_to_upper() %>% as.factor()
-data$`Class 1` <- data$`Class 1` %>% str_replace(" ","")  %>% str_to_upper() 
-data$`Class 2` <- data$`Class 2` %>% str_replace(" ","")  %>% str_to_upper() 
-data$`Class 3` <- data$`Class 3` %>% str_replace(" ","")  %>% str_to_upper() 
-data$`Class 4` <- data$`Class 4` %>% str_replace(" ","")  %>% str_to_upper() 
-data$`Class 5` <- data$`Class 5` %>% str_replace(" ","")  %>% str_to_upper() 
-data$`Class 6` <- data$`Class 6` %>% str_replace(" ","")  %>% str_to_upper() 
+data$`First Name` <- data$`First Name` %>%  str_replace("`","") 
+data <- data %>% mutate_at(2:7,list(toupper)) %>% mutate_at(2:7,str_replace," ","")
 data$ID <- as.factor(1:nrow(data))
 
 class_list <-  unique(c(data$`Class 1`,data$`Class 2`,data$`Class 3`,data$`Class 4`,
@@ -149,10 +144,13 @@ colnames(person_class) <- class_list
 for (i in data$ID){
   for (j in select(data,`Class 1`:`Class 6`)[i,] %>% as.character()){
     if (!is.na(j)){
-      person_class[i,j] = person_class[i,j] + 1
+      person_class[i,j] = min(person_class[i,j],1) + 1
     }
   }
 }
+
+## remove HUDK 4050
+person_class <- person_class[,-1]
 
 ## create a person person matrix
 person_person <- person_class %*% t(person_class)
@@ -184,20 +182,20 @@ plot(g2,layout=layout_with_fr,vertex.size=15,edge.arrow.size=0.5,edge.width=1)
 ```{r}
 sort(betweenness(g),decreasing = T)[1:3]
 sort(betweenness(g2),decreasing = T)[1:3]
-data[27,]
-data[42,]
+data[19,]
+data[21,]
 centr_degree(g)
 which(centr_degree(g)$res == max(centr_degree(g)$res))
 centr_degree(g2)
 which(centr_degree(g2)$res == max(centr_degree(g2)$res))
 ```
 Betweeness is a measure of how closely a node lies between other nodes. It is equal to the number of shortest paths from all nodes to all others that pass through that node.
-Based on the frist graph: Shuying Xiong is the most central student.
-Based on the second graph: Danny Shan should be the most central student. 
+Based on the frist graph: Yifei Zhang is the most central student.
+Based on the second graph: Yuting Zhou should be the most central student. 
 
 Dregree centrality: the number of links incident upon a node.
-Based on the first graph: 17 students have 86 degree, which is all are the highest degree.
-Based on the second graph: Danny Shan is the one with highest degree.
+Based on the first graph:  Yifei Zhang has the highest degree.
+Based on the second graph: there are 8 students have the highest degree.
 
 
 * Color the nodes according to interest. Are there any clusters of interest that correspond to clusters in the network? Write a sentence or two describing your interpetation.
