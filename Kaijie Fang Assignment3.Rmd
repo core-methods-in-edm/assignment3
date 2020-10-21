@@ -1,0 +1,226 @@
+---
+title: "Kaijie Fang Assignment3"
+author: "Kaijie Fang"
+date: "2020/10/19"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+# Assignment 3 - Social Network Analysis
+
+## Part I
+Start by installing the "igraph" package. Once you have installed igraph, load the package.
+
+Now upload the data file "comment-data.csv" as a data frame called "D1". Each row represents a comment from one student to another so the first line shows that student "28" commented on the comment of student "21". It also shows the gender of both students and the students' main elective field of study ("major"").
+
+
+```{r}
+D1 <- read.csv("comment-data.csv", header = TRUE)
+```
+
+Before you proceed, you will need to change the data type of the student id variable. Since it is a number R will automatically think it is an integer and code it as such (look at the list of variables by clicking on the data frame arrow in the Data pane. Here you will see the letters "int"" next to the stid variable, that stands for integer). However, in this case we are treating the variable as a category, there is no numeric meaning in the variable. So we need to change the format to be a category, what R calls a "factor". We can do this with the following code:
+
+```{r}
+D1$comment.to <- as.factor(D1$comment.to)
+D1$comment.from <- as.factor(D1$comment.from)
+```
+
+igraph requires data to be in a particular structure. There are several structures that it can use but we will be using a combination of an "edge list" and a "vertex list" in this assignment. As you might imagine the edge list contains a list of all the relationships between students and any characteristics of those edges that we might be interested in. There are two essential variables in the edge list a "from" variable and a "to" variable that descibe the relationships between vertices. While the vertex list contains all the characteristics of those vertices, in our case gender and major.
+
+So let's convert our data into an edge list!
+
+First we will isolate the variables that are of interest: comment.from and comment.to
+
+```{r}
+library(dplyr)
+
+D2 <- select(D1, comment.to, comment.from) #select() chooses the columns
+```
+
+Since our data represents every time a student makes a comment there are multiple rows when the same student comments more than once on another student's video. We want to collapse these into a single row, with a variable that shows how many times a student-student pair appears.
+
+```{r}
+
+EDGE <- count(D2, comment.to, comment.from)
+
+names(EDGE) <- c("from", "to", "count")
+
+```
+
+EDGE is your edge list. Now we need to make the vertex list, a list of all the students and their characteristics in our network. Because there are some students who only recieve comments and do not give any we will need to combine the comment.from and comment.to variables to produce a complete list.
+
+```{r}
+#First we will separate the commenters from our commentees
+V.FROM <- select(D1, comment.from, from.gender, from.major)
+
+#Now we will separate the commentees from our commenters
+V.TO <- select(D1, comment.to, to.gender, to.major)
+
+#Make sure that the from and to data frames have the same variables names
+names(V.FROM) <- c("id", "gender.from", "major.from")
+names(V.TO) <- c("id", "gender.to", "major.to")
+
+#Make sure that the id variable in both dataframes has the same number of levels
+lvls <- sort(union(levels(V.FROM$id), levels(V.TO$id)))
+
+VERTEX <- full_join(mutate(V.FROM, id=factor(id, levels=lvls)),
+    mutate(V.TO, id=factor(id, levels=lvls)), by = "id")
+
+#Fill in missing gender and major values - ifelse() will convert factors to numerical values so convert to character
+VERTEX$gender.from <- ifelse(is.na(VERTEX$gender.from) == TRUE, as.factor(as.character(VERTEX$gender.to)), as.factor(as.character(VERTEX$gender.from)))
+
+VERTEX$major.from <- ifelse(is.na(VERTEX$major.from) == TRUE, as.factor(as.character(VERTEX$major.to)), as.factor(as.character(VERTEX$major.from)))
+
+#Remove redundant gender and major variables
+VERTEX <- select(VERTEX, id, gender.from, major.from)
+
+#rename variables
+names(VERTEX) <- c("id", "gender", "major")
+
+#Remove all the repeats so that we just have a list of each student and their characteristics
+VERTEX <- unique(VERTEX)
+
+```
+
+Now we have both a Vertex and Edge list it is time to plot our graph!
+
+```{r}
+#Load the igraph package
+
+library(igraph)
+
+#First we will make an object that contains the graph information using our two dataframes EDGE and VERTEX. Notice that we have made "directed = TRUE" - our graph is directed since comments are being given from one student to another.
+
+g <- graph.data.frame(EDGE, directed=TRUE, vertices=VERTEX)
+
+#Now we can plot our graph using the force directed graphing technique - our old friend Fruchertman-Reingold!
+
+plot(g,layout=layout.fruchterman.reingold)
+
+#There are many ways to change the attributes of the graph to represent different characteristics of the newtork. For example, we can color the nodes according to gender.
+
+plot(g,layout=layout.fruchterman.reingold, vertex.color=VERTEX$gender)
+
+#We can change the thickness of the edge according to the number of times a particular student has sent another student a comment.
+
+plot(g,layout=layout.fruchterman.reingold, vertex.color=VERTEX$gender, edge.width=EDGE$count)
+````
+
+## Part II
+```{r}
+
+names(EDGE) <- c("comment.from", "count")
+
+
+plot.igraph(g,  layout=layout.fruchterman.reingold,
+            edge.arrow.size=0.2,
+            vertext.lable.cex=0.01,
+            vertex.label.font=1,
+            vertex.size=20,
+            vertex.label.dist=0.5,
+            Vertex.color= VERTEX$major,
+            vertex.label.color="BLACK",
+            edge.width=1,
+            edge.curved=0.5,
+            )
+```
+
+
+
+
+## Part III
+
+Now practice with data from our class. This data is real class data directly exported from Qualtrics and you will need to wrangle it into shape before you can work with it. Import it into R as a data frame and look at it carefully to identify problems.
+```{r}
+library(stringr)
+library(tidyr)
+DF1 <- read.csv("hudk4050-classes.csv",stringsAsFactors = FALSE, header= TRUE)
+```
+
+
+Please create a **person-network** with the data set hudk4050-classes.csv. To create this network you will need to create a person-class matrix using the tidyr functions and then create a person-person matrix using `t()`. You will then need to plot a matrix rather than a to/from data frame using igraph.
+
+```{r}
+DF2 <- DF1
+
+colnames(DF2)<- DF2[1,]
+
+DF2 <- slice(DF2,3:49)
+
+DF2 <-select(DF2,1:8)
+
+DF2 <- unite(DF2,"Name", "First Name", "Last Name", sep = "")
+
+DF2$Name <- str_replace(DF2$Name, "`", "")
+
+DF2$Name <- str_to_title(DF2$Name)
+
+DF2 <-DF2%>% mutate_at(2:7, list(toupper))
+
+DF2 <- DF2 %>% mutate_at(2:7, str_replace_all, " ", "")
+
+
+```
+
+#Data Restructuring 
+
+```{r}
+DF3 <- DF2 %>% gather(label,class,2:7, na.rm = TRUE, convert = FALSE) %>% select(Name, class)
+
+DF3$count <- 1
+
+DF3 <- filter(DF3, class != "")
+
+DF3 <- unique(DF3)
+
+DF3 <- spread(DF3,class,count)
+
+rownames(DF3) <- DF3$Name
+
+DF3 <- select(DF3, -Name, -HUDK4050)
+
+DF3 <- ifelse(is.na(DF3),0,1)
+
+
+```
+
+#Matrix
+```{r}
+DF4 <- as.matrix(DF3)
+
+DF4 <- DF4 %*% t(DF4)
+```
+
+
+Once you have done this, also [look up](http://igraph.org/r/) how to generate the following network metrics:
+```{r}
+G <- graph.adjacency(DF4,mode="undirected",diag= FALSE)
+
+plot(G, layout=layout.fruchterman.reingold,
+     vertex.size = 4,
+     #degree(g)*0.7,
+     vertex.label.cex=0.8,
+     vertex.label.color="black",
+     vertex.color="gainsboro")
+```
+
+* Betweeness centrality and dregree centrality. **Who is the most central person in the network according to these two metrics? Write a sentence or two that describes your interpretation of these metrics**
+```{r}
+sort(degree(G),decreasing = TRUE)
+
+sort(betweenness(G), decreasing = TRUE)
+```
+
+
+
+* Color the nodes according to interest. Are there any clusters of interest that correspond to clusters in the network? Write a sentence or two describing your interpetation.
+
+### To Submit Your Assignment
+
+Please submit your assignment by first "knitting" your RMarkdown document into an html file and then comit, push and pull request both the RMarkdown file and the html file.
+
