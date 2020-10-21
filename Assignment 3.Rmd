@@ -32,7 +32,7 @@ Since our data represnts every time a student makes a comment there are multiple
 
 ```{r}
 
-EDGE <- count(D2, comment.to, comment.from)
+EDGE <- count(D2, comment.from, comment.to)
 
 names(EDGE) <- c("from", "to", "count")
 
@@ -105,19 +105,153 @@ In Part II your task is to [look up](http://igraph.org/r/) in the igraph documen
 * Ensure that sizing allows for an unobstructed view of the network features (For example, the arrow size is smaller)
 * The vertices are colored according to major
 * The vertices are sized according to the number of comments they have recieved
+```{r}
+V.TO_id = as.numeric(as.character(V.TO$id))
+VERTEX_id = as.numeric(as.character(VERTEX$id))
+n = c()
+for (i in 1:length(VERTEX_id))
+{
+  new = length(which(V.TO_id==VERTEX_id[i]))
+  n = c(n,new)
+}
+finaln = n + 10
+plot(g, layout = layout.fruchterman.reingold, vertex.color = VERTEX$major, edge.width = EDGE$count, edge.arrow.size = 0.5, edge.arrow.width = 0.5, vertex.label.cex = finaln/15, vertex.size = finaln)
+```
 
 ## Part III
 
 Now practice with data from our class. This data is real class data directly exported from Qualtrics and you will need to wrangle it into shape before you can work with it. Import it into R as a data frame and look at it carefully to identify problems.
 
 Please create a **person-network** with the data set hudk4050-classes.csv. To create this network you will need to create a person-class matrix using the tidyr functions and then create a person-person matrix using `t()`. You will then need to plot a matrix rather than a to/from data frame using igraph.
+```{r}
+library(tidyr)
+library(dplyr)
+library(stringr)
+library(igraph)
+
+#Input data
+C1 <- read.csv("hudk4050-classes.csv", stringsAsFactors = F, header = T) 
+
+#Copy to play with data
+C2 <- C1
+
+  
+#df1 <- read.csv("hudk4050-classes.csv")
+#names(df1) = as.character(df1[1,])
+#names(df1)[9] <- paste("InterestedTopics")
+#df2 <- df1[-c(1,2),]
+#name = paste(df2$'First Name',df2$'Last Name')
+#df2$Name <- name
+#df3 <- df2[,-c(1,2)]
+#df3 <- df3[c(8,1:7)]
+
+
+```
+#Data Tidying
+```{r}
+#Make header first row
+colnames(C2) <- C2[1,]
+#Remove unwanted rows
+C2 <- slice(C2, 3:49)
+#Remove last column
+C2 <- select(C2, 1:8)
+#Merge name columns
+C2 <- unite(C2, "name", `First Name`, `Last Name`, sep = " ")
+#Remove unpredictable characters from names
+C2$name <- str_replace(C2$name, "`", "")
+#Make all names capitalized first letters only
+C2$name <- str_to_title(C2$name)
+#Make all class letters capitals
+C2 <- C2 %>% mutate_at(2:7, list(toupper))
+#Remove whitespace between letters and numbers in class
+C2 <- C2 %>% mutate_at(2:7, str_replace_all, " ","")
+
+```
+
+#Data restructing
+```{r}
+#Create a dataframe with 2 variables, student and class
+C3 <- C2 %>% gather(label, class, 2:7, na.rm = T, convert = F) %>% select(name, class)
+
+#Crate a new variable containing is that will become our counts
+C3$count <- 1
+
+#Remove blank classes
+C3 <- filter(C3, class != "")
+
+#Remove duplicates(Danny!)
+C3 <- unique(C3)
+
+#Spread 1s across classes to create a student x class datafrane
+C3 <- spread(C3, class, count)
+
+#Make row names student names
+rownames(C3) <- C3$name
+
+#Remove names columnand hudk 4050
+C3 <- select(C3, -name, -HUDK4050)
+
+#Shortest:
+C3[is.na(C3)] <- 0
+
+
+```
+#Matrix operations
+```{r}
+#Convert to matrix
+C4 <- as.matrix(C3)
+
+#Create person-person matrix
+C4 <- C4 %*% t(C4)
+
+```
+
+#Graphing
+```{r}
+g <- graph.adjacency(C4, mode="undirected", diag = F)
+plot(g, layout=layout.fruchterman.reingold, vertex.size=4, vertex.label.cex=0.8, vertex.label.color="black", vertex.color="gainsboro")
+```
 
 Once you have done this, also [look up](http://igraph.org/r/) how to generate the following network metrics:
 
 * Betweeness centrality and dregree centrality. **Who is the most central person in the network according to these two metrics? Write a sentence or two that describes your interpretation of these metrics**
+```{r}
+sort(degree(g), decreasing = T)
+sort(betweenness(g), decreasing = T)
+```
+```
+Yifei Zhang is the most central person in the network because he/she is the mosted connected person in this network based on betweenness centrality. Betweenness centrality measures the extent to which a node lies between other nodes. Yifei Zhang has the highest betweenness centrality so he/she is on the shortest path between more nodes than any other. Yifei Zhang is in the middle of these path so he/she can connect two big groups.
 
+Degree Centrality measures the number of edges connected to a node. In this network, we can see there are 8 students who have 31 (highest) degree centrality. However, none of them can connect two big groups as Yifei Zhang does.
+
+
+```
 * Color the nodes according to interest. Are there any clusters of interest that correspond to clusters in the network? Write a sentence or two describing your interpetation.
+```{r}
+C5 <- C1
+#Remove unwanted rows
+C5 <- slice(C5, 3:49)
+C5 <- select(C5, c(1,2,9))
+#Merge name columns
+C5 <- unite(C5, "name", `Q8`, `Q9`, sep = " ")
+#Remove unpredictable characters from names
+C2$name <- str_replace(C2$name, "`", "")
+#Make all names capitalized first letters only
+C2$name <- str_to_title(C2$name)
+#Change column name
+colnames(C5) [2]<- paste("InterestedTopics")
+interest <- as.factor(C5$InterestedTopics)
+#Color the nodes according to interest
+plot(g, layout=layout.fruchterman.reingold, 
+     vertex.size=8, 
+     vertex.label.cex=0.5, 
+     vertex.label.color="black", 
+     vertex.color=interest)
 
+```
+```
+No, there is no  clusters of interest that correspond to clusters in the network because the colors are randomly mixed. Students' interestd topics are so random that there is no clear pattern.
+```
 ### To Submit Your Assignment
 
 Please submit your assignment by first "knitting" your RMarkdown document into an html file and then comit, push and pull request both the RMarkdown file and the html file.
