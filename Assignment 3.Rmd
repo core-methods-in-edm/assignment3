@@ -105,12 +105,30 @@ In Part II your task is to [look up](http://igraph.org/r/) in the igraph documen
 * Ensure that sizing allows for an unobstructed view of the network features (For example, the arrow size is smaller)
 * The vertices are colored according to major
 * The vertices are sized according to the number of comments they have recieved
+```{r}
+plot(g, layout=layout.fruchterman.reingold, vertex.color=VERTEX$major, vertex.size = 5*EDGE$count, edge.arrow.size = 0.5, edge.arrow.width = 0.5, vertex.label.cex = 0.2*EDGE$count)
+```
 
 ## Part III
 
 Now practice with data from our class. This data is real class data directly exported from Qualtrics and you will need to wrangle it into shape before you can work with it. Import it into R as a data frame and look at it carefully to identify problems.
 
 Please create a **person-network** with the data set hudk4050-classes.csv. To create this network you will need to create a person-class matrix using the tidyr functions and then create a person-person matrix using `t()`. You will then need to plot a matrix rather than a to/from data frame using igraph.
+```{r}
+library(igraph)
+library(dplyr)
+library(tidyr)
+library(stringr)
+mydf <- read.csv("hudk4050-classes.csv", header = TRUE, stringsAsFactors = FALSE)
+colnames(mydf)<- mydf[1,]
+mydf <- slice(mydf,3:49)
+person_class <- select(mydf, 1:8) %>% unite("name","First Name", "Last Name", sep = " ")
+person_class$name <- str_to_title(person_class$name)
+person_class$name <- str_replace(person_class$name, "`","")
+person_class <- mutate_at(person_class,2:7,list(toupper))
+person_class <- mutate_at(person_class,2:7,str_replace_all," ","")
+person_class[person_class == ""] <- NA
+```
 
 Once you have done this, also [look up](http://igraph.org/r/) how to generate the following network metrics:
 
