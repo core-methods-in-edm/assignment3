@@ -106,11 +106,107 @@ In Part II your task is to [look up](http://igraph.org/r/) in the igraph documen
 * The vertices are colored according to major
 * The vertices are sized according to the number of comments they have recieved
 
+
+ ```{r}
+ vtoid=as.numeric(as.character(V.TO$id))
+ vtexid=as.numeric(as.character(VERTEX$id))
+
+ num=c()
+ for (i in 1:length(vtexid)){
+   new=length(which(vtoid==vtexid[i]))
+   num=c(num,new)}
+
+plot(g, layout=layout.fruchterman.reingold, vertex.color=VERTEX$major, edge.width=EDGE$count, margin=-0.2, edge.arrow.size=0.2, edge.arrow.width = 0.6, vertex.size =(num)*3,vertex.label.color="black")
+
+```
+
+
 ## Part III
 
 Now practice with data from our class. This data is real class data directly exported from Qualtrics and you will need to wrangle it into shape before you can work with it. Import it into R as a data frame and look at it carefully to identify problems.
 
 Please create a **person-network** with the data set hudk4050-classes.csv. To create this network you will need to create a person-class matrix using the tidyr functions and then create a person-person matrix using `t()`. You will then need to plot a matrix rather than a to/from data frame using igraph.
+```{r}
+ library(tidyr)
+ library(dplyr)
+ library(stringr)
+ library(igraph)
+
+ #input data
+ C1 <- read.csv("hudk4050-classes.csv", stringsAsFactors = FALSE, header = TRUE)
+ #Copy to play with data
+ C2 <- C1
+ ```
+ #Data Tidying
+ ```{r}
+ #Make header first
+ colnames(C2) <- C2[1,]
+ #Remove unwanted rows
+ C2 <- slice(C2,3:49)
+ #Remove last column
+ C2 <- select(C2,1:8)
+ #Merge name columns
+ C2 <- unite(C2, "name", 'First Name', 'Last Name', sep = " ")
+ #Remove unpredictable characters from names
+ C2$name <- str_replace(C2$name, "`", "")
+ #Make all names capitalized first letters only
+ C2$name <- str_to_title(C2$name)
+ #Make all class letters capitals
+ C2<- C2 %>% mutate_at(2:7, list(toupper))
+ #Remove whitespace between letters and numbers in class
+ C2 <- C2 %>% mutate_at(2:7, str_replace_all, " ", "") 
+ ```
+
+ #Data Restructuring
+ ```{r}
+ #Create a dataframe with two variables, students and classes
+ C3 <- C2 %>% gather(label, class, 2:7, na.rm = TRUE, convert = FALSE) %>% select(name, class)
+
+ #Create a new variable containing 1s will become our counts
+ C3$count <- 1
+
+ #Remove blank classes
+ C3 <- filter(C3, class !="")
+
+ #Remove duplicates (Danny!)
+ C3 <- unique(C3)
+
+ #Spread 1s acrpss classes to create a student x class dataframe
+ C3 <- spread(C3, class, count)
+
+ #Make row names stuent names
+ rownames(C3) <- C3$name
+
+ #Remove names column AND HUDK4050
+ C3 <- select(C3, -name, -HUDK4050)
+
+ #Shortest
+ C3[is.na(C3)] <- 0
+
+ #cheatway
+ C3 <- ifelse(is.na(C3), 0, 1)
+
+ ```
+
+ #Matrix operations
+ ```{r}
+ #Convert to matrix
+ C4 <- as.matrix(C3)
+
+ #Create person-person matrix
+ C4 <- C4 %*% t(C4)
+ ```
+
+ #Graphing
+ ```{r}
+ g <- graph.adjacency(C4, mode="undirected", diag = FALSE)
+
+ plot(g,layout=layout.fruchterman.reingold,
+      vertex.size = 4,
+       #degree(g)*0.7,
+      vertex.label.cex=0.8,
+      vertex.label.color="black",
+      vertex.color="gainsboro")
 
 Once you have done this, also [look up](http://igraph.org/r/) how to generate the following network metrics:
 
