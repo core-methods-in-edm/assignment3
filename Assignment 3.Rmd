@@ -96,28 +96,121 @@ plot(g,layout=layout.fruchterman.reingold, vertex.color=VERTEX$gender)
 
 plot(g,layout=layout.fruchterman.reingold, vertex.color=VERTEX$gender, edge.width=EDGE$count)
 
-````
+```
 
 ## Part II
 
 In Part II your task is to [look up](http://igraph.org/r/) in the igraph documentation and modify the graph above so that:
 
 * Ensure that sizing allows for an unobstructed view of the network features (For example, the arrow size is smaller)
-* The vertices are colored according to major
-* The vertices are sized according to the number of comments they have recieved
 
+
+```{r}
+plot(g,layout=layout.fruchterman.reingold, 
+     vertex.color=VERTEX$gender, 
+     edge.width=EDGE$count,
+     edge.arrow.size = 0.5,
+     vertex.size=5)
+```
+* The vertices are colored according to major
+```{r}
+plot(g,layout=layout.fruchterman.reingold, vertex.color=VERTEX$major,edge.width=EDGE$count,edge.arrow.size = 0.5)
+```
+* The vertices are sized according to the number of comments they have recieved
+```{r}
+#create a new data frame 
+EDGE<- EDGE%>% group_by(EDGE$to) %>% mutate(received = sum(count))
+plot(g,layout=layout.fruchterman.reingold, 
+     vertex.color=VERTEX$major,
+     edge.width=EDGE$count,
+     edge.arrow.size = 0.5,
+     vertex.size=EDGE$received*3,
+     edge.color="gray",
+     weight.edge.lengths=0.2)
+```
 ## Part III
 
 Now practice with data from our class. This data is real class data directly exported from Qualtrics and you will need to wrangle it into shape before you can work with it. Import it into R as a data frame and look at it carefully to identify problems.
 
 Please create a **person-network** with the data set hudk4050-classes.csv. To create this network you will need to create a person-class matrix using the tidyr functions and then create a person-person matrix using `t()`. You will then need to plot a matrix rather than a to/from data frame using igraph.
+```{r}
+library(stringr)
+library(tidyr)
+#import data
+C1 <- read.csv("hudk4050-classes.csv", stringsAsFactors=FALSE,header = TRUE)
+C2<-C1
+```
+```{r}
+colnames(C2) <-C2[1,]
+C2<-slice(C2,3:49)
+C2<-select (C2,1:8)
+C2<- unite(C2,"name",`First Name`,`Last Name`,sep=" ")
+C2$name <- str_replace(C2$name, "`","")
+C2 <- C2 %>% mutate_at(2:7,list(toupper))
+C2 <- C2 %>% mutate_at(2:7,str_replace_all," ","")
+```
+```{r}
+C3<- C2 %>% gather(label, class,2:7,na.rm=TRUE,convert=FALSE)%>% select (name,class)
+C3$count<-1
+C3<-filter(C3,class!="")
+C3<-unique(C3)
+C3<-spread(C3,class,count)
+rownames(C3)<-C3$name
+C3<-select(C3,-name)
+C3<-select(C3,-HUDK4050)
+C3[is.na(C3)]<-0
+```
+```{r}
+C4<-as.matrix(C3)
+C4<-C4 %*% t(C4)
+```
+```{r}
+g2<-graph.adjacency(C4,mode="undirected",diag=FALSE)
+plot(g2,layout=layout.fruchterman.reingold)
+plot(g2,layout=layout.fruchterman.reingold,vertex.size=4,vertext.label.cex=0.8,vertex.label.color="black",vertex.color="gainsboro")
+```
+
+
 
 Once you have done this, also [look up](http://igraph.org/r/) how to generate the following network metrics:
 
 * Betweeness centrality and dregree centrality. **Who is the most central person in the network according to these two metrics? Write a sentence or two that describes your interpretation of these metrics**
+```{r}
+#betweenness centrality
+
+sort(betweenness(g2),decreasing=TRUE)
+```
+# Degree centrality
+```{r}
+#degree centrality of the nodes
+
+sort(degree(g2),decreasing=TRUE)
+```
+From the degree centrality analysis, we don't see one person has much more connections than others. 8 students have measure of degree centrality of 31, which means they are connected with 31 students in the class (taking the same course(s)) respectively, no one has particularly high degree of centrality, this matches with what we see in the graph as well. 
+In this case, betweenness centrality tell us more information about the network than degree of centrality. If we wanted to find the influential person in the class, we should look at the betweenness centrality.
+
 
 * Color the nodes according to interest. Are there any clusters of interest that correspond to clusters in the network? Write a sentence or two describing your interpetation.
+```{r}
+#Clean the data with the interest column
+Ci<-C1
+colnames(Ci) <-Ci[1,]
+Ci<-slice(Ci,3:49)
+colnames(Ci)[c(9)] <- c( "interest")
+Ci<- unite(Ci,"name",`First Name`,`Last Name`,sep=" ")
+Ci$name <- str_replace(Ci$name, "`","")
+Ci <- Ci %>% mutate_at(2:7,list(toupper))
+Ci <- Ci %>% mutate_at(2:7,str_replace_all," ","")
+Ci <- unique(Ci)
+color <- as.factor(Ci$interest)
+g3<-graph.adjacency(C4,mode="undirected",diag=FALSE)
+plot(g3,layout=layout.fruchterman.reingold,
+     vertext.label.cex=0.01,
+     vertex.label.color="black",
+     vertex.color=color)
+```
 
+Based on the graph above, it doesn't seem like there's a pattern of interest and group cluster, it doesn't seem like the interest correspond to the cluster in our class.
 ### To Submit Your Assignment
 
 Please submit your assignment by first "knitting" your RMarkdown document into an html file and then comit, push and pull request both the RMarkdown file and the html file.
