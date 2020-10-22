@@ -2,11 +2,18 @@
 
 ## Part I
 Start by installing the "igraph" package. Once you have installed igraph, load the package.
+```{r}
+library(igraph)
+library(tidyverse)
+```
+
 
 Now upload the data file "comment-data.csv" as a data frame called "D1". Each row represents a comment from one student to another so the first line shows that student "28" commented on the comment of student "21". It also shows the gender of both students and the students' main elective field of study ("major"").
 
 ```{r}
 D1 <- read.csv("comment-data.csv", header = TRUE)
+#see the content of D1 and the variable type
+D1
 ```
 
 Before you proceed, you will need to change the data type of the student id variable. Since it is a number R will automatically think it is an integer and code it as such (look at the list of variables by clicking on the data frame arrow in the Data pane. Here you will see the letters "int"" next to the stid variable, that stands for integer). However, in this case we are treating the variable as a category, there is no numeric meaning in the variable. So we need to change the format to be a category, what R calls a "factor". We can do this with the following code:
@@ -34,7 +41,7 @@ Since our data represnts every time a student makes a comment there are multiple
 
 EDGE <- count(D2, comment.to, comment.from)
 
-names(EDGE) <- c("from", "to", "count")
+names(EDGE) <- c("to", "from", "count")
 
 ```
 
@@ -96,7 +103,9 @@ plot(g,layout=layout.fruchterman.reingold, vertex.color=VERTEX$gender)
 
 plot(g,layout=layout.fruchterman.reingold, vertex.color=VERTEX$gender, edge.width=EDGE$count)
 
-````
+
+
+```
 
 ## Part II
 
@@ -104,20 +113,97 @@ In Part II your task is to [look up](http://igraph.org/r/) in the igraph documen
 
 * Ensure that sizing allows for an unobstructed view of the network features (For example, the arrow size is smaller)
 * The vertices are colored according to major
-* The vertices are sized according to the number of comments they have recieved
+* The vertices are sized according to the number of comments they have received
+
+```{r}
+#Vertex size to be sized according to the number of comments a user has received
+vs <- EDGE %>% group_by(to) %>% summarise(n=sum(count))
+#changed the graph to allow for an unobstructed view of network featrues
+plot(g,layout=layout.fruchterman.reingold, edge.arrow.size=0,vertex.size=2*(vs$n), vertex.color=VERTEX$major, vertex.width=15, label.cex=.0625, vertex.label.dist=0, edge.curved=0.25, vertex.frame.color="gray",vertex.lable.color="gray", main="Comment Network")
+```
+
 
 ## Part III
 
+
 Now practice with data from our class. This data is real class data directly exported from Qualtrics and you will need to wrangle it into shape before you can work with it. Import it into R as a data frame and look at it carefully to identify problems.
+```{r}
+#Installed to clean names and create the table
+library(janitor)
+#read the file, remove rows, and set the header
+CD <- read.csv("hudk4050-classes.csv",skip = 1, stringsAsFactors = FALSE, header = TRUE) %>% slice(-1)
+#Clean names and remove empty rows and headers
+CD2 <- CD %>% clean_names() %>% remove_empty(c("rows","cols")) %>% mutate_at(3:9, str_replace_all," ","") %>% mutate_at(3:9,list(toupper))
+#Remove first row, interest column, and create name column
+CD2 <- CD2 %>%slice(-1) %>%select(-9) %>%unite("name",1:2,remove = TRUE)
+#Remove possible conflicting characters from the name column
+#CD2$name <- CD2 %>% str_replace(CD2$name,"`","")
+#Remove duplicates
+CD2 <- CD2 %>% distinct()
+
+```
+
 
 Please create a **person-network** with the data set hudk4050-classes.csv. To create this network you will need to create a person-class matrix using the tidyr functions and then create a person-person matrix using `t()`. You will then need to plot a matrix rather than a to/from data frame using igraph.
+```{r}
+#switching to long file
+CD3 <- as_tibble(CD2) %>%pivot_longer(2:7,names_to="QN",values_to="Class") %>% filter(Class!="") %>% unique
+#creating the person to class matrix using tabyl to save me some lines and force  "" to "emptystring_"  in case I left any NAs or empty 
+personclass <- CD3 %>% tabyl(name,Class)
+#Make names column the row names
+rownames(personclass) <- personclass$name
+#remove name column
+personclass <- personclass %>% select(-name,-HUDK4050)
+#make person to class a matrix
+personclass <- as.matrix(personclass)
+  #creating the person to person matrix
+persontoperson = personclass %*% t(personclass)
+
+```
+
 
 Once you have done this, also [look up](http://igraph.org/r/) how to generate the following network metrics:
 
 * Betweeness centrality and dregree centrality. **Who is the most central person in the network according to these two metrics? Write a sentence or two that describes your interpretation of these metrics**
 
-* Color the nodes according to interest. Are there any clusters of interest that correspond to clusters in the network? Write a sentence or two describing your interpetation.
+
+
+#Using iGraph to find the most central person
+```{r}
+g <- graph.adjacency(persontoperson, mode="undirected",diag = FALSE)
+
+DC <- sort(degree(g),decreasing = TRUE)
+BC <-sort(betweenness(g),decreasing = TRUE)
+
+DC
+BC
+
+#I believe that Yifei_Zhang is the most central person in the network. While Yifei does not has the highest number of connection,but the second highest, Yifei has the shortest path to most people in the class making Yifei the individual that could connect with most of the class the fastest.
+
+```
+
+
+* Color the nodes according to interest. Are there any clusters of interest that correspond to clusters in the network? Write a sentence or two describing your interpretation.
+
+
+
+```{r}
+#creating a variable for the number of classes so I can use it as the vertex size
+nc <- CD3 %>% count(name)
+#loading Colorbrewer so we can have a graph with 
+library(RColorBrewer)
+#redoing the table because I was to lazy to rename the original table. I have learned my lesson
+DI <- CD %>% clean_names() %>% remove_empty(c("rows","cols")) %>% mutate_at(3:9, str_replace_all," ","") %>% mutate_at(3:9,list(toupper)) %>%unite("name",1:2,remove = TRUE) %>%  select(1,8)
+#using RColorBrewer to set my color palette
+pal <- brewer.pal(DI$which_of_these_topics_is_most_interesting_to_you,"Pastel2")
+#creating a plot that shows clusters. I removed the vertex label since that is no interest for the questions posed
+plot(g,layout=layout.fruchterman.reingold, vertex.size=1.5*(nc$n), vertex.label.cex=.50, vertex.label=NA, vertex.frame.color="grey44",vertex.color=pal, edge.color="gray", main="Class Network by Course")
+
+#I think common interest has to do with a person's major and it is likely that students in the same major have the same classes. I believe that is what we see in the clusters with the blue nodes. 
+
+```
+
 
 ### To Submit Your Assignment
 
-Please submit your assignment by first "knitting" your RMarkdown document into an html file and then comit, push and pull request both the RMarkdown file and the html file.
+Please submit your assignment by first "knitting" your RMarkdown document into an html file and then commit, push and pull request both the RMarkdown file and the html file.
