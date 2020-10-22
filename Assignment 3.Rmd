@@ -106,40 +106,43 @@ In Part II your task is to [look up](http://igraph.org/r/) in the igraph documen
 
 * Ensure that sizing allows for an unobstructed view of the network features (For example, the arrow size is smaller)
 ```{r}
+
+#this section is a small dumpster fire... i kept trying to experiment with variations of the graphs to see the effects... a sort of trial and error approach to learning... after a few hours, i learned some... and was greatful for that   
+
+
 tkplot(g,vertex.color=VERTEX$gender,edge.width=EDGE$count)
 
-plot(g,layout=layout.fruchterman.reingold, vertex.color=VERTEX$gender, edge.width=EDGE$count, gsize = 1)
+plot(g,layout=layout.fruchterman.reingold, vertex.color=VERTEX$gender, edge.width=EDGE$count,vertex.size=EDGE$count*7, edge.arrow.size=.5)
 
 #https://igraph.org/r/doc/layout.deprecated.html
-plot(g,layout=layout.reingold.tilford, vertex.color=VERTEX$gender, gsize = 100, arrow.size=1)
+plot(g,layout=layout.reingold.tilford, vertex.color=VERTEX$gender, edge.arrow.size=.5)
 
 #https://igraph.org/r/doc/plot.common.html
 #circle testing
-plot(g,layout=layout.circle, vertex.color=VERTEX$gender, vertex.size=EDGE$count*10, edge.arrow.size=.5)
-plot(g,layout=layout.circle, vertex.color=VERTEX$gender, vertex.size=EDGE$count*10, edge.arrow.size=.5, edge.color="cyan4")
-plot(g,layout=layout.circle, vertex.color=VERTEX$gender, vertex.size=EDGE$count*10, edge.arrow.size=.5, edge.color="darkorange4")
-plot(g,layout=layout.circle, vertex.color=VERTEX$gender, vertex.size=EDGE$count*10, edge.arrow.size=.5, edge.color="darkslategrey")
-plot(g,layout=layout.circle, vertex.color=VERTEX$gender, vertex.size=EDGE$count*10, edge.arrow.size=.5, edge.color="bisque4")
+plot(g,layout=layout.circle, vertex.color=VERTEX$gender, vertex.size=EDGE$count*7, edge.arrow.size=.5)
+plot(g,layout=layout.circle, vertex.color=VERTEX$gender, vertex.size=EDGE$count*7, edge.arrow.size=.5, edge.color="darkorange4")
+plot(g,layout=layout.circle, vertex.color=VERTEX$gender, vertex.size=EDGE$count*7, edge.arrow.size=.5, edge.color="darkslategrey")
+plot(g,layout=layout.circle, vertex.color=VERTEX$gender, vertex.size=EDGE$count*7, edge.arrow.size=.5, edge.color="bisque4")
 
 #layout.sphere
-plot(g,layout=layout.sphere, vertex.color=VERTEX$gender, vertex.size=EDGE$count*10, edge.arrow.size=.5)
+plot(g,layout=layout.sphere, vertex.color=VERTEX$gender, vertex.size=EDGE$count*7, edge.arrow.size=.5)
 
 #layout.random
-plot(g,layout=layout.random, vertex.color=VERTEX$gender, vertex.size=EDGE$count*10, edge.arrow.size=.5)
+plot(g,layout=layout.random, vertex.color=VERTEX$gender, vertex.size=EDGE$count*7, edge.arrow.size=.5)
 
 #layout.fruchterman.reingold
-plot(g,layout=layout.fruchterman.reingold, vertex.color=VERTEX$gender, vertex.size=EDGE$count*10, edge.arrow.size=.5)
+plot(g,layout=layout.fruchterman.reingold, vertex.color=VERTEX$gender, vertex.size=EDGE$count*7, edge.arrow.size=.5)
 
 #layout.kawai
-plot(g,layout=layout.fruchterman.reingold, vertex.color=VERTEX$gender, vertex.size=EDGE$count*10,  edge.arrow.size=.5)
+plot(g,layout=layout.fruchterman.reingold, vertex.color=VERTEX$gender, vertex.size=EDGE$count*7, edge.arrow.size=.5)
 
 
 
 #layout.lgl
-plot(g,layout=layout.lgl, vertex.color=VERTEX$gender, vertex.size=EDGE$count*10, edge.arrow.size=.5)
+plot(g,layout=layout.lgl, vertex.color=VERTEX$gender, vertex.size=EDGE$count*7, edge.arrow.size=.5)
 
 #
-plot(g,vertex.color=VERTEX$gender, gsize = 10, vvertex.size=EDGE$count*10, edge.arrow.size=.5)
+plot(g,vertex.color=VERTEX$gender, gsize = 10, vertex.size=EDGE$count*7, edge.arrow.size=.5)
 
 ```
 
@@ -164,11 +167,110 @@ Please create a **person-network** with the data set hudk4050-classes.csv. To cr
 
 ```{r}
 
-pn1 <- read.csv("hudk4050-classes.csv", skip = 1, header = TRUE)
-pn2 <- pn1[-c(1), ] 
+#questions
+#how can i count the number of instances an issue exists in the data? e.g. double space?
+#is there a way to have r give feedback on the number of changes it makes with each command?
+#is there an easy way to undo a command? (https://stackoverflow.com/questions/3076526/undo-command-in-r)
+#
+
+
+#without the code workout... there is a strong possibly that this section would have taken me until president biden's second term. i'm grateful for the opportunity for 'guided learning' by watching you do it... i'm pretty sure the only credit i deserve here is that i am reasonably adept at copying your work.
+
 
 library(tidyr)
+library(dplyr)
+library(stringr)
+library(igraph)
 
+#examine the 'person network' (pn) dataset for certain Centrality Measures 
+
+#spare import of the data
+x_pn <- read.csv("hudk4050-classes.csv")
+
+#import the data, assign headers, and remove the first record, and, alla Dr Lang... leave everything that looks like a string as a string  
+pn1 <- read.csv("hudk4050-classes.csv", 
+                skip = 1, 
+                header = TRUE, 
+                stringsAsFactors = FALSE)
+
+#remove the first record
+pn1 <- pn1[-c(1), ] 
+
+
+#remove the last column
+pn1 <- pn1[c(1:8)] 
+
+#merge the name column
+pn2 <- unite(pn1, "Full.Name", `First.Name`, `Last.Name`, sep = " ")
+
+#clean up Full.Name
+#remove ``
+pn2$Full.Name <- str_replace(pn2$Full.Name, "`","")
+#remove double spaces
+pn2$Full.Name <- str_replace(pn2$Full.Name, "  "," ")
+#remove leading and ending spaces
+pn2$Full.Name <- trimws(pn2$Full.Name, which = c("both"))
+#make Title Case 
+pn2$Full.Name <- str_to_title(pn2$Full.Name)
+
+#copy 
+pn3 <- pn2
+
+#clean up classes columns
+#remove spaces 
+#https://stackoverflow.com/questions/48953295/replace-a-specific-strings-from-multiple-columns-in-a-dataframe
+pn3[,2:7] <- apply(pn3[,2:7],2,function(x) gsub(" ",'',x))
+
+#remove leading and ending spaces
+#busted
+#pn3[,2:7] <- trimws(pn3[,2:7], which = c("both"))
+#make UPPER Case 
+#busted
+#pn3 <- str_to_upper(pn3[,2:7])
+
+#make UPPER Case per Dr. Lang
+pn3 <- pn3 %>% mutate_at(2:7, list(toupper))
+
+```
+
+```{r}
+# Data Restructuring
+
+#create a dataframe with two variables, student and class
+pn4 <- pn3 %>% gather(label, class, 2:7, na.rm = TRUE, convert = FALSE) %>% select(Full.Name,class)
+
+#create a new variable containing 1s that will become our counts
+pn4$count <- 1
+
+#remove blank classes
+pn4 <- filter(pn4, class !="")
+
+#remove duplicates
+pn4 <- unique(pn4)
+
+#spread 1s across classes to createa  student x class dataframe
+pn4 <- spread(pn4, class, count)
+
+#make row names student names
+rownames(pn4) <- pn4$Full.Name
+
+#remove names column and HUDK4050
+pn4 <- select(pn4, -Full.Name, -HUDK4050)
+
+#replace blanks with zeros
+pn4[is.na(pn4)] <- 0
+
+
+```
+
+# Matrix operations
+```{r}
+
+#convert to matrix
+pn5 <-as.matrix(pn4)
+
+#create person-person matrix
+pn5 <- pn5 %*% t(pn5)
 
 
 ```
@@ -179,11 +281,28 @@ Once you have done this, also [look up](http://igraph.org/r/) how to generate th
 
 ```{r}
 
+g <- graph.adjacency(pn5, mode="undirected", diag = FALSE)
+
+plot(g,layout=layout.fruchterman.reingold,
+     vertex.size = 4,
+     #degree(g)*.7,
+     vertex.label.cex=0.8,
+     vertex.label.color="black",
+     vertex.color="gainsboro")
+
 ```
 
 * Color the nodes according to interest. Are there any clusters of interest that correspond to clusters in the network? Write a sentence or two describing your interpetation.
 
 ```{r}
+
+#Calculate the degree centrality of the nodes, showing who has the most connections
+sort(degree(g), decreasing = TRUE)
+
+
+#Calculate the betweenness centrality, showing how many 'shortest paths' pass through each node
+sort(betweenness(g), decreasing = TRUE)
+
 
 ```
 
