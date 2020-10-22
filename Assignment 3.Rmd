@@ -122,57 +122,83 @@ Now practice with data from our class. This data is real class data directly exp
 ```{r}
 library(tidyverse)
 library(dbplyr)
+library(tidyr)
+library(stringr)
+library(igraph)
 class_df <- read_csv("hudk4050-classes.csv", skip = 1)
 class_df
 class_df <- class_df[-1,]
-class_df
+names(class_df) = c("FirstName","LastName","Class1","Class2","Class3","Class4","Class5","Class6","Interest")
+class_df = unite(class_df, "Name", `FirstName`, `LastName`, sep = " ")
+class_df$Name = str_replace(class_df$Name, "`", "")
+class_df$Name = str_to_title(class_df$Name)
+class_df = class_df %>% mutate_at(2:7, str_replace_all, " ", "")
+class_df1 = select(class_df, 1:7)
+class_df1
 ```
 
 
 Please create a **person-network** with the data set hudk4050-classes.csv. To create this network you will need to create a person-class matrix using the tidyr functions and then create a person-person matrix using `t()`. You will then need to plot a matrix rather than a to/from data frame using igraph.
 
 ```{r}
-library(tidyr)
-names(class_df) = c("FirstName","LastName","Class1","Class2","Class3","Class4","Class5","Class6","Interest")
-class_df$Name = paste(class_df$FirstName,class_df$LastName)
-class_df1 <- class_df %>% gather(label, Class, 2:7, na.rm = TRUE, convert = FALSE ) %>% select(Name,Class)
+library(tidyverse)
+class_df2 <- class_df1 %>% gather(label, Class, 2:7, na.rm = TRUE, convert = FALSE ) %>% select(Name,Class)
+class_df2$Count <- 1
+class_df2 <- filter(class_df2, Class != "")
+class_df2 <- unique(class_df2)
+class_df2 <- spread(class_df2,Class,Count)
+class_df2 <- class_df2 %>% column_to_rownames(var="Name")
+class_df2 <- select(class_df2,-HUDK4050)
+class_df2 [is.na(class_df2)]<- 0
+class_df2
 ```
 
 ```{r}
-
-class_df1$Count <- 1
-class_df1 <- filter(class_df1, Class != "")
-class_df1 <- unique(class_df1)
-class_df1 <- spread(class_df1,Class,Count)
-class_df1 <- select(class_df1,-Name,-HUDK4050)
-class_df1 [is.na(class_df1)]<- 0
+class_df3 = as.matrix(class_df2)
+class_df3
+connection_matrix <- class_df3 %*% t(class_df3)
 ```
 ```{r}
-class_df1
-connection_matrix <- as.matrix(class_df1) %*% t(as.matrix(class_df1))
+g <- graph.adjacency(connection_matrix, mode="undirected", diag = FALSE)
+plot(g, layout=layout.fruchterman.reingold,
+     vertex.size= 4,
+     vertex.label.cex=0.8,
+     vertex.label.color="black",
+     vertex.color="gainsboro")
 ```
 
 Once you have done this, also [look up](http://igraph.org/r/) how to generate the following network metrics:
 
 ```{r}
-pt <- graph_from_adjacency_matrix(connection_matrix, mode="undirected", diag = FALSE)
-plot(pt, layout=layout.fruchterman.reingold,
-     vertex.size= 2,
-     vertex.label.cex=0.8,
-     vertex.label.color="blue",
-     vertex.color="black")
+
 ```
 
 
 * Betweeness centrality and dregree centrality. **Who is the most central person in the network according to these two metrics? Write a sentence or two that describes your interpretation of these metrics**
 
 ```{r}
-sort(degree(pt),decreasing = TRUE)
-sort(betweenness(pt),decreasing = TRUE)
+sort(degree(g),decreasing = TRUE)
+sort(betweenness(g),decreasing = TRUE)
 ```
-
+The most connected person based on betweenness centrality was Yifei Zhang. The person with highest-degree is Guoliang Xu.
+This means that Guoliang Xu knew the most students and Yifei Zhang was the most influential person when connecting with other students. 
 
 * Color the nodes according to interest. Are there any clusters of interest that correspond to clusters in the network? Write a sentence or two describing your interpetation.
+
+```{r}
+library(RColorBrewer)
+Interest <- as.factor(class_df$Interest)
+Interest
+plot(g, layout=layout.fruchterman.reingold,
+     vertex.size= 4,
+     vertex.label.cex=0.8,
+     vertex.label.color="black",
+     vertex.color=Interest)
+legend("topleft",bty = "n",
+       legend=levels(Interest),
+       border=NA, fill=brewer.pal(5,"Accent"))
+```
+Not identifiable pattern in this group. Seems like Data Wrangling is common among all the students.
 
 ### To Submit Your Assignment
 
