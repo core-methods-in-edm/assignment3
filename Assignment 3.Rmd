@@ -1,4 +1,11 @@
+---
+output: html_document
+---
 # Assignment 3 - Social Network Analysis
+
+### HUDK4050
+### jingshu Zhang
+### 10/20/2020
 
 ## Part I
 Start by installing the "igraph" package. Once you have installed igraph, load the package.
@@ -34,7 +41,7 @@ Since our data represnts every time a student makes a comment there are multiple
 
 EDGE <- count(D2, comment.to, comment.from)
 
-names(EDGE) <- c("from", "to", "count")
+names(EDGE) <- c("to", "from", "count")
 
 ```
 
@@ -90,7 +97,7 @@ plot(g,layout=layout.fruchterman.reingold)
 
 #There are many ways to change the attributes of the graph to represent different characteristics of the newtork. For example, we can color the nodes according to gender.
 
-plot(g,layout=layout.fruchterman.reingold, vertex.color=VERTEX$gender)
+plot(g,layout=layout_as_tree, vertex.color=VERTEX$gender)
 
 #We can change the thickness of the edge according to the number of times a particular student has sent another student a comment.
 
@@ -105,19 +112,99 @@ In Part II your task is to [look up](http://igraph.org/r/) in the igraph documen
 * Ensure that sizing allows for an unobstructed view of the network features (For example, the arrow size is smaller)
 * The vertices are colored according to major
 * The vertices are sized according to the number of comments they have recieved
+```{r}
+library(igraph)
 
+plot(g,layout=layout_nicely, vertex.color=VERTEX$major, vertex.lable.cex=1, VERTEX.size=EDGE$count*10,margin=-0.1,edge.arrow.size=0.5, edge.arrow.width=0.5, edge.color="grey",vertex.label.color="black")
+
+````
 ## Part III
 
 Now practice with data from our class. This data is real class data directly exported from Qualtrics and you will need to wrangle it into shape before you can work with it. Import it into R as a data frame and look at it carefully to identify problems.
 
-Please create a **person-network** with the data set hudk4050-classes.csv. To create this network you will need to create a person-class matrix using the tidyr functions and then create a person-person matrix using `t()`. You will then need to plot a matrix rather than a to/from data frame using igraph.
+```{r}
+library(dplyr)
+library(tidyr)
+library(stringr)
+library(igraph)
 
+C1<-read.csv("hudk4050-classes.csv", stringsAsFactors = FALSE, header = TRUE)
+C2<-C1
+```
+
+Please create a **person-network** with the data set hudk4050-classes.csv. To create this network you will need to create a person-class matrix using the tidyr functions and then create a person-person matrix using `t()`. You will then need to plot a matrix rather than a to/from data frame using igraph.
+```{r}
+```
+#Data Tidying
+```{r}
+colnames(C2) <-C2[1,]
+C2<-slice(C2,3:49)
+C2<-select (C2,1:8)
+C2<- unite(C2,"name",`First Name`,`Last Name`,sep=" ")
+C2$name <- str_replace(C2$name, "`","")
+C2 <- C2 %>% mutate_at(2:7,list(toupper))
+C2 <- C2 %>% mutate_at(2:7,str_replace_all," ","")
+```
+# Data Restructuring
+```{r}
+C3<- C2 %>% gather(label, class,2:7,na.rm=TRUE,convert=FALSE)%>% select (name,class)
+C3$count<-1
+C3<-filter(C3,class!="")
+C3<-unique(C3)
+C3<-spread(C3,class,count)
+rownames(C3)<-C3$name
+C3<-select(C3,-name)
+C3<-select(C3,-HUDK4050)
+C3[is.na(C3)]<-0
+```
+# Matrix Operations
+```{r}
+C4<-as.matrix(C3)
+C4<-C4 %*% t(C4)
+```
+# Graphing
+```{r}
+g1<-graph.adjacency(C4,mode="undirected",diag=FALSE)
+
+plot(g1, layout=layout.fruchterman.reingold, 
+     vertex.size=4, 
+     #degree(g)*0.9, 
+     vertex.label.cex=0.8,vertex.label.color="black",vertex.color="red" )
+```
 Once you have done this, also [look up](http://igraph.org/r/) how to generate the following network metrics:
 
 * Betweeness centrality and dregree centrality. **Who is the most central person in the network according to these two metrics? Write a sentence or two that describes your interpretation of these metrics**
+```{r}
+#degree centrality of the nodes
+sort(degree(g1), decreasing = TRUE)
+
+# Betweenness centrality 
+sort(betweenness(g1), decreasing = TRUE)
+
+# In the above two parts, I have the same problem as my classmates in the WeChat group. I follow the steps in our class to fix data, but the numbers I get are exactly the same. I cannot observe the degree centrality and Betweenness. At first I used my own method. After I found wrong,  I changed my coding to the format shown in coding workout, but the result is still wrong and unobserved. 
+
+# Fixed it!!
+#Based on the data, we found that Yifei Zhang is the most central person in the network.She links two groups. She is the best person to help students link to each other and create community
+
+```
 
 * Color the nodes according to interest. Are there any clusters of interest that correspond to clusters in the network? Write a sentence or two describing your interpetation.
+
+```{r}
+
+# I know I may need to ceate a new data set which include name and interest. I try my best to write the code but it always something wrong. (LOL...)
+```
+
 
 ### To Submit Your Assignment
 
 Please submit your assignment by first "knitting" your RMarkdown document into an html file and then comit, push and pull request both the RMarkdown file and the html file.
+
+```{r}
+
+```
+
+
+
+
+
