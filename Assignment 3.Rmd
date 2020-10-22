@@ -34,7 +34,7 @@ Since our data represnts every time a student makes a comment there are multiple
 
 EDGE <- count(D2, comment.to, comment.from)
 
-names(EDGE) <- c("from", "to", "count")
+names(EDGE) <- c("to", "from", "count")
 
 ```
 
@@ -96,7 +96,7 @@ plot(g,layout=layout.fruchterman.reingold, vertex.color=VERTEX$gender)
 
 plot(g,layout=layout.fruchterman.reingold, vertex.color=VERTEX$gender, edge.width=EDGE$count)
 
-````
+```
 
 ## Part II
 
@@ -104,6 +104,18 @@ In Part II your task is to [look up](http://igraph.org/r/) in the igraph documen
 
 * Ensure that sizing allows for an unobstructed view of the network features (For example, the arrow size is smaller)
 * The vertices are colored according to major
+
+```{r}
+
+Num <- count(D2, comment.to)
+names(Num) <- c("id", "count")
+Num <- left_join(VERTEX,Num,by=c("id"))
+Num$count[is.na(Num$count)] <- 0
+
+plot(g,layout=layout.fruchterman.reingold, edge.arrow.size=0.5,vertex.color=VERTEX$major, edge.width=EDGE$count, vertex.size=15+Num$count )
+
+```
+
 * The vertices are sized according to the number of comments they have recieved
 
 ## Part III
@@ -112,9 +124,51 @@ Now practice with data from our class. This data is real class data directly exp
 
 Please create a **person-network** with the data set hudk4050-classes.csv. To create this network you will need to create a person-class matrix using the tidyr functions and then create a person-person matrix using `t()`. You will then need to plot a matrix rather than a to/from data frame using igraph.
 
+```{r}
+library(stringr)
+library(tidyr)
+
+#TidyData
+PN <- read.csv("hudk4050-classes.csv",stringsAsFactors = FALSE, header = TRUE)
+names(PN) = c("FirstName","LastName","Class1","Class2","Class3","Class4","Class5","Class6","Interest")
+PN$Name = paste(PN$FirstName,PN$LastName)
+PN <- select(PN,1:7)
+
+
+PN <- PN %>% mutate_at(2:7,list(toupper))
+PN <- PN %>% mutate_at(2:7,str_replace_all," ","")
+PN <- tidyr::unite(PN, "Name", FirstName, LastName, remove=TRUE)
+
+PN1 <- PN %>% gather(label, Class, 2:6, na.rm = TRUE, convert = FALSE ) %>% select(Name,Class)
+
+PN1$Count <- 1
+PN1 <- filter(PN1, Class != "")
+PN1 <- unique(PN1)
+PN1 <- spread(PN1,Class,Count)
+rownames(PN1) <- PN1$Name
+PN1 <- select(PN1,-Name,-HUDK4050)
+PN1[is.na(PN1)]<- 0
+
+PC <- as.matrix(PN1)
+
+PP <- PC %*% t(PC)
+
+```
+
+```{r}
+PPlot <- graph.adjacency(PP, mode="undirected", diag = FALSE)
+plot(PPlot, layout=layout.fruchterman.reingold,vertex.size=4,vertex.label.cex=0.5,vertex.label.color="red",vertex.color="gainsboro")
+```
+
+
 Once you have done this, also [look up](http://igraph.org/r/) how to generate the following network metrics:
 
 * Betweeness centrality and dregree centrality. **Who is the most central person in the network according to these two metrics? Write a sentence or two that describes your interpretation of these metrics**
+
+```{r}
+sort(degree(PPlot),decreasing=TRUE)
+sort(betweenness(PPlot),decreasing=TRUE)
+```
 
 * Color the nodes according to interest. Are there any clusters of interest that correspond to clusters in the network? Write a sentence or two describing your interpetation.
 
