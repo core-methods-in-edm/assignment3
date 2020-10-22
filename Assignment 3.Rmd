@@ -7,6 +7,7 @@ Now upload the data file "comment-data.csv" as a data frame called "D1". Each ro
 
 ```{r}
 D1 <- read.csv("comment-data.csv", header = TRUE)
+library(igraph)
 ```
 
 Before you proceed, you will need to change the data type of the student id variable. Since it is a number R will automatically think it is an integer and code it as such (look at the list of variables by clicking on the data frame arrow in the Data pane. Here you will see the letters "int"" next to the stid variable, that stands for integer). However, in this case we are treating the variable as a category, there is no numeric meaning in the variable. So we need to change the format to be a category, what R calls a "factor". We can do this with the following code:
@@ -28,13 +29,13 @@ library(dplyr)
 D2 <- select(D1, comment.to, comment.from) #select() chooses the columns
 ```
 
-Since our data represnts every time a student makes a comment there are multiple rows when the same student comments more than once on another student's video. We want to collapse these into a single row, with a variable that shows how many times a student-student pair appears.
+Since our data represents every time a student makes a comment there are multiple rows when the same student comments more than once on another student's video. We want to collapse these into a single row, with a variable that shows how many times a student-student pair appears.
 
 ```{r}
 
 EDGE <- count(D2, comment.to, comment.from)
 
-names(EDGE) <- c("from", "to", "count")
+names(EDGE) <- c("to", "from", "count")
 
 ```
 
@@ -105,6 +106,14 @@ In Part II your task is to [look up](http://igraph.org/r/) in the igraph documen
 * Ensure that sizing allows for an unobstructed view of the network features (For example, the arrow size is smaller)
 * The vertices are colored according to major
 * The vertices are sized according to the number of comments they have recieved
+```{r}
+comnum <- count(D2, comment.to)
+names(comnum)<- c('id', 'comreceived')
+
+comnum <- right_join(comnum,VERTEX, by=c('id'))
+comnum$comreceived[is.na(comnum$comreceived)]<- 0
+plot(g,layout=layout.fruchterman.reingold, vertex.color = VERTEX$major, edge.with=EDGE$count, vertex.size=20+comnum$comreceived, edge.arrow.size = 0.5)
+```
 
 ## Part III
 
@@ -117,7 +126,66 @@ Once you have done this, also [look up](http://igraph.org/r/) how to generate th
 * Betweeness centrality and dregree centrality. **Who is the most central person in the network according to these two metrics? Write a sentence or two that describes your interpretation of these metrics**
 
 * Color the nodes according to interest. Are there any clusters of interest that correspond to clusters in the network? Write a sentence or two describing your interpetation.
+```{r}
+library(igraph)
+library(tidyr)
+library(dbplyr)
+library(stringr)
+cd <- read.csv("hudk4050-classes.csv", stringsAsFactors=FALSE,header=TRUE)
+colnames(cd)<- cd[1,]
+cd <- unite(cd,'name',`First Name`,`Last Name`,sep = " ")
+cd1 <- slice(cd,3:49)
+cd1 <- select(cd1,1:8)
+cd1$name <- str_replace(cd1$name, '`','')
+cd1$name <- str_to_title(cd1$name)
+cd1 <- cd1 %>% mutate_at(2:7, list(toupper))
+cd1 <- cd1 %>% mutate_at(2:7, str_replace_all, " ", "")
 
+cd2 <- cd1 %>% gather(label, class, 2:7, na.rm = TRUE, convert = FALSE) %>% select(class, name)
+cd2$count <- 1
+cd2 <- filter(cd2, class !=" ")
+cd2 <- unique(cd2)
+cd2 <- spread (cd2, class, count)
+rownames(cd2) <- cd2$name
+cd2 <- select(cd2, -name, -HUDK4050)
+cd2[is.na(cd2)]<- 0
+cd2 <- select (cd2, 2:52)
+
+cd3 <- as.matrix(cd2)
+cd3 <- cd3 %*% t(cd3)
+#person-class
+g1 <- graph_from_incidence_matrix(cd2, directed = FALSE)
+#person-person
+g2 <- graph.adjacency(cd3, mode = "undirected", diag = FALSE)
+plot(g1, layout=layout.fruchterman.reingold, 
+     vertex.size = 4, 
+       #degree(g1)*0.7,
+     vertex.label.cex = 0.8,
+     vertex.label.color = "black",
+     vertex.color = "gainsboro")
+plot(g2, layout=layout.fruchterman.reingold, 
+     vertex.size = 4, 
+       #degree(g1)*0.7,
+     vertex.label.cex = 0.8,
+     vertex.label.color = "black",
+     vertex.color = "gainsboro")
+
+sort(degree(g1), decreasing = TRUE)
+sort(betweenness(g1),decreasing = TRUE)
+sort(degree(g2), decreasing = TRUE)
+sort(betweenness(g2),decreasing = TRUE)
+
+
+#Guoliang Xu has the highest degree centrality, Yifei Zhang has the most betweenness centrality
+
+cd4 <- select(cd1,name, `Which of these topics is most interesting to you?`)
+names(cd4) <- c("name", "interest")
+cd4$interest <- as.factor(cd4$interest)
+plot(g1,layout=layout.fruchterman.reingold, vertex.color=cd4$interest, vertex.label.cex = 0.3, vertex.size = 30)
+plot(g2,layout=layout.fruchterman.reingold, vertex.color=cd4$interest, vertex.label.cex = 0.3, vertex.size = 30, edge.width = 0.5)
+#both two cluster of interests correspond to the cluster of network
+```
 ### To Submit Your Assignment
 
 Please submit your assignment by first "knitting" your RMarkdown document into an html file and then comit, push and pull request both the RMarkdown file and the html file.
+
