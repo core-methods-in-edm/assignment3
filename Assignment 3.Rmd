@@ -228,9 +228,6 @@ Evidently, the leading factor influencing the centrality and betweenness of pers
 
 * Color the nodes according to interest. Are there any clusters of interest that correspond to clusters in the network? Write a sentence or two describing your interpetation.
 ```{r}
-table1 <- sort(betweenness(g), decreasing = TRUE)
-t <- data.frame(table1)
-
 C5 <- C1
 colnames(C5) <- C5[1,]
 C5 <- slice(C5, 3:49)
@@ -238,7 +235,13 @@ C5 <- select (C5, 1,2,9)
 C5 <- unite(C5, "name", `First Name`, `Last Name`, sep = " ")
 C5$name <- str_replace(C5$name, "`", "")
 C5$name <- str_to_title(C5$name)
-C6 <- data.frame(t$table1, C5$name, C5$`Which of these topics is most interesting to you?`)
+C6 <- C5[order(C5$name),]
+colnames(C6) <- C6["Name", "Interest"]
+ plot(g, layout=layout.fruchterman.reingold,
+      vertex.size = 10,
+      vertex.label.cex=.5,
+      vertex.label.color="black",
+      vertex.color = C6$V2)
 ```
 
 
