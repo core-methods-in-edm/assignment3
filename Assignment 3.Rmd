@@ -103,8 +103,25 @@ plot(g,layout=layout.fruchterman.reingold, vertex.color=VERTEX$gender, edge.widt
 In Part II your task is to [look up](http://igraph.org/r/) in the igraph documentation and modify the graph above so that:
 
 * Ensure that sizing allows for an unobstructed view of the network features (For example, the arrow size is smaller)
+```{r}
+
+plot(g,layout=layout.kamada.kawai, vertex.color=VERTEX$major, margin=-0.2, edge.arrow.size = 0.5, edge.arrow.size = 0.5)
+
+```
+
 * The vertices are colored according to major
+```{r}
+plot(g,layout=layout.fruchterman.reingold, vertex.color=VERTEX$major)
+
+```
+
 * The vertices are sized according to the number of comments they have recieved
+```{r}
+EDGE2 <- count(D2, comment.from, comment.to)
+names(EDGE2) <- c("from1", "to1","count1")
+plot(g,layout=layout.fruchterman.reingold, vertex.color=VERTEX$major, edge.width=EDGE2$count1)
+```
+
 
 ## Part III
 
@@ -115,8 +132,98 @@ Please create a **person-network** with the data set hudk4050-classes.csv. To cr
 Once you have done this, also [look up](http://igraph.org/r/) how to generate the following network metrics:
 
 * Betweeness centrality and dregree centrality. **Who is the most central person in the network according to these two metrics? Write a sentence or two that describes your interpretation of these metrics**
+```{r}
+library(tidyr)
+library(dplyr)
+library(stringr)
+library(igraph)
+
+#Input data
+C1 <- read.csv("hudk4050-classes.csv", stringsAsFactors = FALSE, header = TRUE)
+
+#copy to play with the data
+C2 <- C1
+View(C2)
+
+```
+
+#Clean the data
+```{r}
+#Make header first row
+colnames(C2) <- C2[1,]
+#Remove unwanted rows
+C2 <- slice(C2,3:49)
+#Remove last column
+C2 <- select(C2, 1:8)
+#Merge name columns
+C2 <- unite(C2, "name", 'First Name', 'Last Name', sep = " ")
+#Remove unpredictable characters from names
+C2$name <- str_replace(C2$name,"'", " ")
+#Make all names capitalized first letters only
+C2$name <- str_to_title(C2$name)
+#Make all class letters capitals
+C2 <- C2 %>% mutate_at(2:7, list(toupper))
+#Remove whitespace between letters and number in class
+C2 <- C2 %>% mutate_at(2:7, str_replace_all," ", "")
+```
+
+#Data Restructing
+
+```{r}
+C3 <- C2 %>% gather(label, class, 2:7, na.rm = TRUE, convert = FALSE) %>% select(name, class)
+
+#Create a new variable containing 1s that will become our counts
+C3$count <- 1
+
+#Remove blank classes
+C3 <- filter(C3, class != "")
+
+#Remove duplicates
+C3 <- unique(C3)
+
+#Spread 1s across classes to create a student x class dataframe
+
+C3 <- spread(C3, class, count)
+
+rownames(C3) <- C3$names
+
+C3 <- select(C3, -name, -HUDK4050)
+
+C3[is.na(C3)] <- 0
+
+
+```
+#Matrix Operations
+```{r}
+
+C4 <- as.matrix(C3)
+View(C4)
+
+C4 <- C4 %*% t(C4)
+
+#Graphing
+g <- graph.adjacency(C4, mode = "undirected", diag = FALSE)
+plot(g, layout = layout.fruchterman.reingold,
+     vertex.size = 4,
+      #degree(g)*0.7,
+     vertex.label.cex = 0.8,
+     vertex.label.color = "black",
+     vertex.color = "gainsboro")
+
+```
+
 
 * Color the nodes according to interest. Are there any clusters of interest that correspond to clusters in the network? Write a sentence or two describing your interpetation.
+
+#Centrality
+```{r}
+#Calculate the degree centrality of the nodes, showing who has the most connections
+sort(degree(g), decreasing = TRUE)
+
+#Calculate the betweeness centrality, showing how many"shortest paths" pass through each node.
+sort(betweenness(g), decreasing = TRUE)
+```
+
 
 ### To Submit Your Assignment
 
