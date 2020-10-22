@@ -184,7 +184,7 @@ betweenness(g1,v = V(g1), directed = FALSE)
 ```
 ```{r}
 centr_degree(g1, mode = "all")
-# From the betweenness, person 36, Xiaojia Liu, is the most central person in this network.
+# From the betweenness, person 36, Xiaojia Liu, is the most central person in this network. But the degree centrality gives 4 people including 36 are the most central people.
 ```
 ```{r}
 plot(g1, layout=layout.fruchterman.reingold, vertex.color=VERTEX1$Interest, edge.width=EDGE1$n)
