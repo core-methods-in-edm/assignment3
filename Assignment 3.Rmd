@@ -189,8 +189,6 @@ DF3$interest <- as.factor(DF3$interest)
 #person-to-person graph
 plot(graph_pp,layout=layout.fruchterman.reingold,vertex.label.cex=0.2,vertex.color=DF3$interest)
 
-#person-to-class graph
-plot(graph_pc,layout=layout.fruchterman.reingold,edge.width=0.3,vertex.label.cex=0.3,vertex.color=DF3$interest)
 
 #No, there are no clusters of interest that correspond to clusters in the network. The graphs show not pattern of clusters and indicate a random distribution of interest.
 ```
