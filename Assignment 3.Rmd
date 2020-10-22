@@ -136,7 +136,8 @@ DF1 <- DF1[-(1:2),]
 DF1$name <- paste(DF1$first.name,DF1$last.name)
 DF1 <- DF1[,-(1:2)]
 DF2 <- DF1 %>% pivot_longer(class.1:class.6,names_to='class',values_to='classname',values_drop_na = TRUE)
-#standardize classname format & ignore NA/empty/HUDK4050 classes
+
+#Clean data
 DF2$classname <- gsub('\\s+', '', DF2$classname)
 DF2$classname <- toupper(DF2$classname)
 DF2 <- DF2[-which(DF2$classname == ""), ]
@@ -156,7 +157,7 @@ person_person <- person_class%*%t(person_class)
 diag(person_person) <- 0
 
 #Graph
-graph_pp <- graph_from_adjacency_matrix(person_person, mode = c("undirected"), weighted = T,
+graph <- graph_from_adjacency_matrix(person_person, mode = c("undirected"), weighted = T,
   diag = FALSE)
 ```
 
@@ -167,15 +168,15 @@ Once you have done this, also [look up](http://igraph.org/r/) how to generate th
 * Betweeness centrality and dregree centrality. **Who is the most central person in the network according to these two metrics? Write a sentence or two that describes your interpretation of these metrics**
 
 ```{r}
-graph_pp <- graph_from_adjacency_matrix(person_person, mode = c("undirected"), weighted = T,
+p <- graph_from_adjacency_matrix(person_person, mode = c("undirected"), weighted = T,
   diag = FALSE)
 #highest betweenness centrality
-pp_betweeness <- betweenness(graph_pp)
-pp_betweeness[which.max(pp_betweeness)]
+b <- betweenness(p)
+b[which.max(b)]
 
 #highest degree centrality
-pp_degree <- degree(graph_pp)
-pp_degree[which(pp_degree==max(pp_degree))]
+d <- degree(p)
+d[which(d==max(d))]
 
 #Yifei Zhang has the highest betweeness centrality and degree centraliy, therefore she shares the most connections/knobs within the class network and is likely to connect people in the class. 
 ```
@@ -187,10 +188,8 @@ DF3 <- select(DF1,name,interest)
 DF3$interest <- as.factor(DF3$interest)
 
 #person-to-person graph
-plot(graph_pp,layout=layout.fruchterman.reingold,vertex.label.cex=0.2,vertex.color=DF3$interest)
+plot(p,layout=layout.fruchterman.reingold,vertex.label.cex=0.2,vertex.color=DF3$interest)
 
-#person-to-class graph
-plot(graph_pc,layout=layout.fruchterman.reingold,edge.width=0.3,vertex.label.cex=0.3,vertex.color=DF3$interest)
 
 #No, there are no clusters of interest that correspond to clusters in the network. The graphs show not pattern of clusters and indicate a random distribution of interest.
 ```
