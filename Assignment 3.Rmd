@@ -107,11 +107,12 @@ In Part II your task is to [look up](http://igraph.org/r/) in the igraph documen
 * The vertices are sized according to the number of comments they have recieved
 
 ```{r}
-plot(g,layout=layout.fruchterman.reingold)
+V.TO.count <- select(V.TO, id)
+V.TO.count <- count(V.TO.count, id)
 
-plot(g,layout=layout.fruchterman.reingold, vertex.color=VERTEX$gender)
-
-plot(g,layout=layout.fruchterman.reingold, vertex.color=VERTEX$gender, edge.width=EDGE$count)
+plot(g, layout=layout.fruchterman.reingold,
+     vertex.color = VERTEX$major, vertex.lable.cex = 0.6, vertex.size = (V.TO.count$n*5),
+     edge.arrow.size = 0.6, edge.arrow.width = 0.6)
 ```
 
 
