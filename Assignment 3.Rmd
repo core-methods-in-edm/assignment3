@@ -106,17 +106,105 @@ In Part II your task is to [look up](http://igraph.org/r/) in the igraph documen
 * The vertices are colored according to major
 * The vertices are sized according to the number of comments they have recieved
 
+
+```{r}
+EDGE = EDGE %>% group_by(to) %>% mutate(recieved = sum(count))
+
+plot(g,layout=layout.fruchterman.reingold, vertex.color=VERTEX$major, vertix.size= EDGE$recieved, edge.arrow.size= .5, edge.width = 2)
+```
+
 ## Part III
 
 Now practice with data from our class. This data is real class data directly exported from Qualtrics and you will need to wrangle it into shape before you can work with it. Import it into R as a data frame and look at it carefully to identify problems.
+```{r}
+library(tidyr)
+library(dplyr)
+library(stringr)
+library(igraph)
+df <- read.csv("hudk4050-classes.csv", stringsAsFactors = F, header = T)
+```
+
 
 Please create a **person-network** with the data set hudk4050-classes.csv. To create this network you will need to create a person-class matrix using the tidyr functions and then create a person-person matrix using `t()`. You will then need to plot a matrix rather than a to/from data frame using igraph.
 
-Once you have done this, also [look up](http://igraph.org/r/) how to generate the following network metrics:
+```{r}
+# Naming the columns
+colnames(df) <- df[1,]
+# Removing unnecessary rows  
+df <- df[-c(1,2),-9]
+# Creating one column for the name
+df$Name <- paste(df$`First Name`,df$`Last Name`)
+# Removing First and Last Names 
+df <- df[,-c(1,2)]
+# Making Class letter all capital: 
+df <- df %>% mutate_at(1:6, list(toupper))
+# Remove white space between letters in Calss 
+df <- df %>% mutate_at(1:6, str_replace_all, " ", "")
+```
 
+
+```{r}
+# Creating a data frame with two variables
+df <- df %>% gather(label, Class,1:6, na.rm = T, convert = F) %>% select(Name,Class)
+# Creating a count variable
+df$Count <- 1
+# Removing blank classes
+df <- filter(df, Class != "")
+# Removing duplicates
+df <- unique(df)
+# Spreading
+df <- spread(df, Class, Count)
+# Making row names student Names
+rownames(df) <- df$Name
+# Removing Name and HUDK4050
+df <- select(df, -Name, -HUDK4050)
+# Zero to NA
+df[is.na(df)] <- 0 
+```
+
+```{r}
+# Convert to matrix
+df2 <- as.matrix(df)
+df2 <- df2 %*% t(df2)
+```
+
+Once you have done this, also [look up](http://igraph.org/r/) how to generate the following network metrics:
+```{r}
+g <- graph.adjacency(df2, mode = "undirected", diag = F)
+
+plot(g, layout= layout.fruchterman.reingold,vertex.size = 4,
+     vertex.lable.cex = 0.8, vertex.lable.color = "Red", vertex.color = "Blue")
+```
+ 
 * Betweeness centrality and dregree centrality. **Who is the most central person in the network according to these two metrics? Write a sentence or two that describes your interpretation of these metrics**
+```{r}
+# Betweeness centrality
+sort(betweenness(g), decreasing = T)
+```
+According to betweeness centrality Yifei Zhang has the highest score. The network is showing that Yifei Zhang is connecting between two large groups. 
+
+```{r}
+# degree centrality
+sort(degree(g), decreasing = T)
+```
+According to degree centrality multiple students has a high score of 31 and those studnets share a lot of classes wiht other students.  
 
 * Color the nodes according to interest. Are there any clusters of interest that correspond to clusters in the network? Write a sentence or two describing your interpetation.
+
+```{r}
+df2 <- read.csv("hudk4050-classes.csv", stringsAsFactors = F, header = T)
+# Naming the columns
+colnames(df2) <- df2[1,]
+# Removing unnecessary rows  
+df2 <- df2[-c(1,2),] 
+interest <- as.factor(df2$`Which of these topics is most interesting to you?`)
+
+plot(g, layout= layout.fruchterman.reingold,vertex.size = 8, vertex.color = interest,
+     edge.arrow.size= .5, edge.width = 2)
+```
+
+
+There seems to be no pattern or clustering for interest 
 
 ### To Submit Your Assignment
 
