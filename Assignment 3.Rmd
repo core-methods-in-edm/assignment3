@@ -16,7 +16,14 @@ D1$comment.to <- as.factor(D1$comment.to)
 D1$comment.from <- as.factor(D1$comment.from)
 ```
 
-igraph requires data to be in a particular structure. There are several structures that it can use but we will be using a combination of an "edge list" and a "vertex list" in this assignment. As you might imagine the edge list contains a list of all the relationships between students and any characteristics of those edges that we might be interested in. There are two essential variables in the edge list a "from" variable and a "to" variable that descibe the relationships between vertices. While the vertex list contains all the characteristics of those vertices, in our case gender and major.
+```{r}
+D1$from.gender <- as.factor(D1$from.gender)
+D1$to.gender <- as.factor(D1$to.gender)
+D1$from.major <- as.factor(D1$from.major)
+D1$to.major <- as.factor(D1$to.major)
+```
+
+igraph requires data to be in a particular structure. There are several structures that it can use but we will be using a combination of an "edge list" and a "vertex list" in this assignment. As you might imagine the edge list contains a list of all the relationships between students and any characteristics of those edges that we might be interested in. There are two essential variables in the edge list a "from" variable and a "to" variable that describe the relationships between vertices. While the vertex list contains all the characteristics of those vertices, in our case gender and major.
 
 So let's convert our data into an edge list!
 
@@ -24,18 +31,16 @@ First we will isolate the variables that are of interest: comment.from and comme
 
 ```{r}
 library(dplyr)
-
 D2 <- select(D1, comment.to, comment.from) #select() chooses the columns
 ```
 
-Since our data represnts every time a student makes a comment there are multiple rows when the same student comments more than once on another student's video. We want to collapse these into a single row, with a variable that shows how many times a student-student pair appears.
+Since our data represents every time a student makes a comment there are multiple rows when the same student comments more than once on another student's video. We want to collapse these into a single row, with a variable that shows how many times a student-student pair appears.
 
 ```{r}
 
 EDGE <- count(D2, comment.to, comment.from)
 
-names(EDGE) <- c("from", "to", "count")
-
+names(EDGE) <- c("to", "from", "count")
 ```
 
 EDGE is your edge list. Now we need to make the vertex list, a list of all the students and their characteristics in our network. Because there are some students who only recieve comments and do not give any we will need to combine the comment.from and comment.to variables to produce a complete list.
@@ -46,22 +51,41 @@ V.FROM <- select(D1, comment.from, from.gender, from.major)
 
 #Now we will separate the commentees from our commenters
 V.TO <- select(D1, comment.to, to.gender, to.major)
+```
+
+```{r}
 
 #Make sure that the from and to data frames have the same variables names
 names(V.FROM) <- c("id", "gender.from", "major.from")
 names(V.TO) <- c("id", "gender.to", "major.to")
+```
 
+```{r}
 #Make sure that the id variable in both dataframes has the same number of levels
 lvls <- sort(union(levels(V.FROM$id), levels(V.TO$id)))
+```
 
+```{r}
 VERTEX <- full_join(mutate(V.FROM, id=factor(id, levels=lvls)),
     mutate(V.TO, id=factor(id, levels=lvls)), by = "id")
+```
 
+```{r}
 #Fill in missing gender and major values - ifelse() will convert factors to numerical values so convert to character
-VERTEX$gender.from <- ifelse(is.na(VERTEX$gender.from) == TRUE, as.factor(as.character(VERTEX$gender.to)), as.factor(as.character(VERTEX$gender.from)))
+VERTEX$gender.from <- ifelse(is.na(VERTEX$gender.from) == TRUE, as.character(as.factor(VERTEX$gender.to)), as.character(as.factor(VERTEX$gender.from)))
+```
 
-VERTEX$major.from <- ifelse(is.na(VERTEX$major.from) == TRUE, as.factor(as.character(VERTEX$major.to)), as.factor(as.character(VERTEX$major.from)))
 
+```{r}
+VERTEX$major.from <- ifelse(is.na(VERTEX$major.from) == TRUE, as.character(as.factor(VERTEX$major.to)), as.character(as.factor(VERTEX$major.from)))
+```
+
+```{r}
+VERTEX$major.from <- as.factor(VERTEX$major.from)
+VERTEX$gender.from <- as.factor(VERTEX$gender.from)
+```
+
+```{r}
 #Remove redundant gender and major variables
 VERTEX <- select(VERTEX, id, gender.from, major.from)
 
@@ -99,24 +123,124 @@ plot(g,layout=layout.fruchterman.reingold, vertex.color=VERTEX$gender, edge.widt
 ````
 
 ## Part II
+#In Part II your task is to [look up](http://igraph.org/r/) in the igraph documentation and modify the graph above so that:
 
-In Part II your task is to [look up](http://igraph.org/r/) in the igraph documentation and modify the graph above so that:
 
-* Ensure that sizing allows for an unobstructed view of the network features (For example, the arrow size is smaller)
+###plot(g4, edge.arrow.size=.5, vertex.label.color="black", vertex.label.dist=1.5,vertex.color=c( "pink", "skyblue")[1+(V(g4)$gender=="male")] ) 
+
+#Ensure that sizing allows for an unobstructed view of the network features (For example, the arrow size is smaller)
+
+```{r}
+library(igraph)
+net <- graph.data.frame(EDGE, directed=TRUE, vertices=VERTEX)
+plot(net,layout=layout.fruchterman.reingold, vertex.color=VERTEX$gender, edge.width=EDGE$count,  edge.arrow.size = 0.5, vertex.size = 15, vertex.label.size = 4)
+```
 * The vertices are colored according to major
-* The vertices are sized according to the number of comments they have recieved
+```{r}
+two <- graph.data.frame(EDGE, directed=TRUE, vertices=VERTEX)
+plot(two,layout=layout.fruchterman.reingold, vertex.color=VERTEX$major, edge.arrow.size = 0.5, vertex.size = 15, vertex.label.size = 5)
 
+```
+* The vertices are sized according to the number of comments they have recieved
+```{r}
+three <- graph.data.frame(EDGE, directed=TRUE, vertices=VERTEX)
+plot(three,layout=layout.fruchterman.reingold, vertex.color=VERTEX$major, edge.arrow.size = 0.5, vertex.size = EDGE$count*5, vertex.label.size = 1, vertex.label.distance = .10)
+```
 ## Part III
 
 Now practice with data from our class. This data is real class data directly exported from Qualtrics and you will need to wrangle it into shape before you can work with it. Import it into R as a data frame and look at it carefully to identify problems.
 
+```{r}
+library(tidyr)
+library(dplyr)
+library(stringr)
+library(igraph)
+
+C1 <- read.csv("hudk4050-classes.csv", stringsAsFactors = FALSE, header = TRUE) 
+
+C2 <- C1
+```
+
+
+```{r}
+colnames(C2) <- C2[1,]
+C2 <- slice(C2, 3:49)
+C2 <- select (C2, 1:8)
+C2 <- unite(C2, "name", `First Name`, `Last Name`, sep = " ")
+C2$name <- str_replace(C2$name, "`", "")
+C2$name <- str_to_title(C2$name)
+C2 <- C2 %>% mutate_at(2:7, list(toupper))
+C2 <- C2 %>% mutate_at(2:7, str_replace_all, " ", "")
+```
 Please create a **person-network** with the data set hudk4050-classes.csv. To create this network you will need to create a person-class matrix using the tidyr functions and then create a person-person matrix using `t()`. You will then need to plot a matrix rather than a to/from data frame using igraph.
 
 Once you have done this, also [look up](http://igraph.org/r/) how to generate the following network metrics:
+```{r}
+C3 <- C2 %>% gather(label, class, 2:7, na.rm = TRUE, convert = FALSE) %>% select(name, class)
 
-* Betweeness centrality and dregree centrality. **Who is the most central person in the network according to these two metrics? Write a sentence or two that describes your interpretation of these metrics**
+
+
+
+C3$count <- 1
+C3 <- filter(C3, class != "")
+C3 <- unique(C3)
+
+C3 <- spread (C3, class, count)
+```
+
+```{r}
+rownames(C3) <- C3$name
+C3 <- select(C3,-name, -HUDK4050)
+C3[is.na(C3)] <- 0
+
+```
+
+```{r}
+C4 <- as.matrix(C3)
+
+C4 <- C4 %*% t(C4)
+
+```
+
+```{r}
+#graphing
+g <- graph.adjacency(C4, mode="undirected", diag = FALSE)
+
+plot(g,layout=layout.fruchterman.reingold,
+     vertex.size = 4, 
+     vertex.label.cex = 0.8, 
+     vertex.label.color="black",
+     vertex.color="gainsboro")
+```
+#centrality
+```{R}
+
+sort(degree(g), decreasing = TRUE)
+
+```
+
+```{r}
+sort(betweenness(g), decreasing = TRUE)
+```
+#Interpretation:
+Evidently, the leading factor influencing the centrality and betweenness of persons is the number of classes - A person taking more classes holds connections to various subject groups of students in the class. The person who is most between is Yifei Zhang, which would imply that she would have most easy access to the greatest number of students represented in the network as a single point of contact. Additionally it is noted that the students taking only HUDK 4050 appear in individual vertices, unconnected due to the removal of 'HUDK 4050' as a commonality, which would mean that their only points of contact with the rest of their university student network would arise from the HUDK 4050 course network.
+
 
 * Color the nodes according to interest. Are there any clusters of interest that correspond to clusters in the network? Write a sentence or two describing your interpetation.
+```{r}
+table1 <- sort(betweenness(g), decreasing = TRUE)
+t <- data.frame(table1)
+
+C5 <- C1
+colnames(C5) <- C5[1,]
+C5 <- slice(C5, 3:49)
+C5 <- select (C5, 1,2,9)
+C5 <- unite(C5, "name", `First Name`, `Last Name`, sep = " ")
+C5$name <- str_replace(C5$name, "`", "")
+C5$name <- str_to_title(C5$name)
+C6 <- data.frame(t$table1, C5$name, C5$`Which of these topics is most interesting to you?`)
+```
+
 
 ### To Submit Your Assignment
 
