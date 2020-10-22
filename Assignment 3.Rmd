@@ -34,11 +34,11 @@ Since our data represnts every time a student makes a comment there are multiple
 
 EDGE <- count(D2, comment.to, comment.from)
 
-names(EDGE) <- c("from", "to", "count")
+names(EDGE) <- c("to", "from", "count")
 
 ```
 
-EDGE is your edge list. Now we need to make the vertex list, a list of all the students and their characteristics in our network. Because there are some students who only recieve comments and do not give any we will need to combine the comment.from and comment.to variables to produce a complete list.
+EDGE is your edge list. Now we need to make the vertex list, a list of all the students and their characteristics in our network. Because there are some students who only receive comments and do not give any we will need to combine the comment.from and comment.to variables to produce a complete list.
 
 ```{r}
 #First we will separate the commenters from our commentees
@@ -101,22 +101,100 @@ plot(g,layout=layout.fruchterman.reingold, vertex.color=VERTEX$gender, edge.widt
 ## Part II
 
 In Part II your task is to [look up](http://igraph.org/r/) in the igraph documentation and modify the graph above so that:
+install.packages("igraph")
+library(igraph)
+
 
 * Ensure that sizing allows for an unobstructed view of the network features (For example, the arrow size is smaller)
 * The vertices are colored according to major
-* The vertices are sized according to the number of comments they have recieved
+* The vertices are sized according to the number of comments they have received
+```{r}
+V.TO.count <- select(V.TO, id)
+V.TO.count <- count(V.TO.count, id)
+
+plot(g,layout=layout.fruchterman.reingold, 
+     vertex.color=VERTEX$major, vertex.label.cex = 0.5, vertex.size=(V.TO.count$n*4),
+     edge.arrow.size = 0.1, edge.arrow.width = 0.1)
+```
+
+
 
 ## Part III
 
 Now practice with data from our class. This data is real class data directly exported from Qualtrics and you will need to wrangle it into shape before you can work with it. Import it into R as a data frame and look at it carefully to identify problems.
 
+```{r}
+#import libraries
+library(dplyr)
+library(igraph) 
+library(tidyr)
+library(readr)
+
+DF1<-read.csv("hudk4050-classes.csv")
+names(DF1)<- c("first.name", "last.name", "class.1", "class.2", "class.3", "class.4", "class.5", "class.6", "interest")
+DF1 <- DF1[-(1:2),]
+DF1$name <- paste(DF1$first.name,DF1$last.name)
+DF1 <- DF1[,-(1:2)]
+DF2 <- DF1 %>% pivot_longer(class.1:class.6,names_to='class',values_to='classname',values_drop_na = TRUE)
+#standardize classname format & ignore NA/empty/HUDK4050 classes
+DF2$classname <- gsub('\\s+', '', DF2$classname)
+DF2$classname <- toupper(DF2$classname)
+DF2 <- DF2[-which(DF2$classname == ""), ]
+DF2 <- DF2[-which(DF2$classname == "HUDK4050"), ]
+
+```
+
+
 Please create a **person-network** with the data set hudk4050-classes.csv. To create this network you will need to create a person-class matrix using the tidyr functions and then create a person-person matrix using `t()`. You will then need to plot a matrix rather than a to/from data frame using igraph.
+
+```{r}
+#person-class matrix
+person_class <- as.matrix(table(DF2$name,DF2$classname))
+
+#person-person matrix
+person_person <- person_class%*%t(person_class)
+diag(person_person) <- 0
+
+#Graph
+graph_pp <- graph_from_adjacency_matrix(person_person, mode = c("undirected"), weighted = T,
+  diag = FALSE)
+```
+
+
 
 Once you have done this, also [look up](http://igraph.org/r/) how to generate the following network metrics:
 
 * Betweeness centrality and dregree centrality. **Who is the most central person in the network according to these two metrics? Write a sentence or two that describes your interpretation of these metrics**
 
+```{r}
+graph_pp <- graph_from_adjacency_matrix(person_person, mode = c("undirected"), weighted = T,
+  diag = FALSE)
+#highest betweenness centrality
+pp_betweeness <- betweenness(graph_pp)
+pp_betweeness[which.max(pp_betweeness)]
+
+#highest degree centrality
+pp_degree <- degree(graph_pp)
+pp_degree[which(pp_degree==max(pp_degree))]
+
+#Yifei Zhang has the highest betweeness centrality and degree centraliy, therefore she shares the most connections/knobs within the class network and is likely to connect people in the class. 
+```
 * Color the nodes according to interest. Are there any clusters of interest that correspond to clusters in the network? Write a sentence or two describing your interpetation.
+
+```{r}
+#with interest
+DF3 <- select(DF1,name,interest)
+DF3$interest <- as.factor(DF3$interest)
+
+#person-to-person graph
+plot(graph_pp,layout=layout.fruchterman.reingold,vertex.label.cex=0.2,vertex.color=DF3$interest)
+
+#person-to-class graph
+plot(graph_pc,layout=layout.fruchterman.reingold,edge.width=0.3,vertex.label.cex=0.3,vertex.color=DF3$interest)
+
+#No, there are no clusters of interest that correspond to clusters in the network. The graphs show not pattern of clusters and indicate a random distribution of interest.
+```
+
 
 ### To Submit Your Assignment
 
