@@ -107,7 +107,7 @@ In Part II your task is to [look up](http://igraph.org/r/) in the igraph documen
 * Ensure that sizing allows for an unobstructed view of the network features (For example, the arrow size is smaller)
 ```{r}
 
-#this section is a small dumpster fire... i kept trying to experiment with variations of the graphs to see the effects... a sort of trial and error approach to learning... after a few hours, i learned some... and was greatful for that   
+#this section is a small dumpster fire... i kept trying to experiment with variations of the graphs to see the effects... a sort of trial and error approach to learning... after a few hours, i learned some... and was grateful for that   
 
 
 tkplot(g,vertex.color=VERTEX$gender,edge.width=EDGE$count)
