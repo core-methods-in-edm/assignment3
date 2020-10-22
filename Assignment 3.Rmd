@@ -6,14 +6,20 @@ Start by installing the "igraph" package. Once you have installed igraph, load t
 Now upload the data file "comment-data.csv" as a data frame called "D1". Each row represents a comment from one student to another so the first line shows that student "28" commented on the comment of student "21". It also shows the gender of both students and the students' main elective field of study ("major"").
 
 ```{r}
+#read the csv file
 D1 <- read.csv("comment-data.csv", header = TRUE)
 ```
 
 Before you proceed, you will need to change the data type of the student id variable. Since it is a number R will automatically think it is an integer and code it as such (look at the list of variables by clicking on the data frame arrow in the Data pane. Here you will see the letters "int"" next to the stid variable, that stands for integer). However, in this case we are treating the variable as a category, there is no numeric meaning in the variable. So we need to change the format to be a category, what R calls a "factor". We can do this with the following code:
 
 ```{r}
-D1$comment.to <- as.factor(D1$comment.to)
+#Change the data type to factor
 D1$comment.from <- as.factor(D1$comment.from)
+D1$comment.to <- as.factor(D1$comment.to)
+D1$from.gender<- as.factor(D1$from.gender)
+D1$from.major<- as.factor(D1$from.major)
+D1$to.gender<- as.factor(D1$to.gender)
+D1$to.major<- as.factor(D1$to.major)
 ```
 
 igraph requires data to be in a particular structure. There are several structures that it can use but we will be using a combination of an "edge list" and a "vertex list" in this assignment. As you might imagine the edge list contains a list of all the relationships between students and any characteristics of those edges that we might be interested in. There are two essential variables in the edge list a "from" variable and a "to" variable that descibe the relationships between vertices. While the vertex list contains all the characteristics of those vertices, in our case gender and major.
@@ -25,16 +31,18 @@ First we will isolate the variables that are of interest: comment.from and comme
 ```{r}
 library(dplyr)
 
-D2 <- select(D1, comment.to, comment.from) #select() chooses the columns
+D2 <- select(D1, comment.to, comment.from) #select() to chooses the columns
 ```
 
 Since our data represnts every time a student makes a comment there are multiple rows when the same student comments more than once on another student's video. We want to collapse these into a single row, with a variable that shows how many times a student-student pair appears.
 
 ```{r}
-
+#calculate the sum and calculate the edge
 EDGE <- count(D2, comment.to, comment.from)
 
-names(EDGE) <- c("from", "to", "count")
+# Rename the columns
+names(EDGE) <- c("to", "from", "count")
+
 
 ```
 
@@ -42,22 +50,27 @@ EDGE is your edge list. Now we need to make the vertex list, a list of all the s
 
 ```{r}
 #First we will separate the commenters from our commentees
-V.FROM <- select(D1, comment.from, from.gender, from.major)
+#collect all the froms together
+T.FROM <- select(D1, comment.from, from.gender, from.major)
 
 #Now we will separate the commentees from our commenters
-V.TO <- select(D1, comment.to, to.gender, to.major)
+T.TO <- select(D1, comment.to, to.gender, to.major)
 
 #Make sure that the from and to data frames have the same variables names
-names(V.FROM) <- c("id", "gender.from", "major.from")
-names(V.TO) <- c("id", "gender.to", "major.to")
+#change the names in each data frame
+names(T.FROM) <- c("id","gender.from", "major.from")
+names(T.TO) <- c("id", "gender.to", "major.to")
 
 #Make sure that the id variable in both dataframes has the same number of levels
-lvls <- sort(union(levels(V.FROM$id), levels(V.TO$id)))
+lvls <- sort(union(levels(T.FROM$id), levels(T.TO$id)))
 
-VERTEX <- full_join(mutate(V.FROM, id=factor(id, levels=lvls)),
-    mutate(V.TO, id=factor(id, levels=lvls)), by = "id")
+#How to use full join-->join_type(firstTable, secondTable, by=columnTojoinOn)
+
+VERTEX <- full_join(mutate(T.FROM, id=factor(id, levels=lvls)),
+    mutate(T.TO, id=factor(id, levels=lvls)), by = "id")
 
 #Fill in missing gender and major values - ifelse() will convert factors to numerical values so convert to character
+
 VERTEX$gender.from <- ifelse(is.na(VERTEX$gender.from) == TRUE, as.factor(as.character(VERTEX$gender.to)), as.factor(as.character(VERTEX$gender.from)))
 
 VERTEX$major.from <- ifelse(is.na(VERTEX$major.from) == TRUE, as.factor(as.character(VERTEX$major.to)), as.factor(as.character(VERTEX$major.from)))
@@ -77,7 +90,6 @@ Now we have both a Vertex and Edge list it is time to plot our graph!
 
 ```{r}
 #Load the igraph package
-
 library(igraph)
 
 #First we will make an object that contains the graph information using our two dataframes EDGE and VERTEX. Notice that we have made "directed = TRUE" - our graph is directed since comments are being given from one student to another.
@@ -102,9 +114,51 @@ plot(g,layout=layout.fruchterman.reingold, vertex.color=VERTEX$gender, edge.widt
 
 In Part II your task is to [look up](http://igraph.org/r/) in the igraph documentation and modify the graph above so that:
 
-* Ensure that sizing allows for an unobstructed view of the network features (For example, the arrow size is smaller)
-* The vertices are colored according to major
+* Ensure that sizing allows for an unobstructed view of the network features (For example, the arrow size is smaller), the size of the nodes
+```{r}
+#change the size of arrow-->edge.arrow.size=.5
+plot(g,layout=layout.fruchterman.reingold,
+     vertex.size = 20,
+     vertex_label_size=.3,
+     edge.arrow.size=.4, 
+     edge.color = "gray",
+     vertex.color=VERTEX$gender, 
+     edge.width=EDGE$count)
+```
+
+* The vertices are colored according to major and gender
+```{r}
+
+plot(g,layout=layout.fruchterman.reingold,
+     vertex.size = 23,
+     vertex.label.cex=.8,
+     edge.arrow.size=.4, 
+     edge.color = "gray",
+     vertex.color=VERTEX$major*VERTEX$gender, 
+     edge.width=EDGE$count)
+
+```
+
 * The vertices are sized according to the number of comments they have recieved
+```{r}
+library(dplyr)
+library(igraph)
+
+EDGENEW <- EDGE %>% 
+  group_by(to) %>% 
+  mutate(received.sum = sum(count))
+
+g1 <- graph.data.frame(EDGENEW, directed=TRUE, vertices=VERTEX)
+
+plot(g1,layout=layout.fruchterman.reingold,
+     vertex.size = EDGENEW$received.sum*4,
+     vertex.label.cex= 0.7,
+     edge.arrow.size=.3, 
+     edge.color = "black",
+     vertex.color = VERTEX$major, 
+     vertex.frame.color="#ff000033",
+     edge.width = 1)
+```
 
 ## Part III
 
@@ -113,10 +167,117 @@ Now practice with data from our class. This data is real class data directly exp
 Please create a **person-network** with the data set hudk4050-classes.csv. To create this network you will need to create a person-class matrix using the tidyr functions and then create a person-person matrix using `t()`. You will then need to plot a matrix rather than a to/from data frame using igraph.
 
 Once you have done this, also [look up](http://igraph.org/r/) how to generate the following network metrics:
+```{r}
+library(tidyr)
+library(dplyr)
+library(tidyverse)
+C1 <- read.csv("hudk4050-classes.csv",stringsAsFactors = FALSE, header = TRUE)
+
+#Copy the C1 data frame
+C2 <- C1
+
+#copy the first column name
+colnames(C2) <- C2[1,]
+
+#Remove the unwanted rows (keep the rows from 3 to 49)
+C2 <- slice(C2, 3:49)
+
+#Remove the last column
+C2 <- select(C2, 1:8)
+
+#Merge first name and last name
+C2 <- unite(C2, "Name", `First Name`, `Last Name`, sep = " ")
+
+#Remove strange symbols in the name column
+C2$Name <- str_replace(C2$Name, "`", "")
+
+#Capitalized all the first letters
+C2$Name <- str_to_title(C2$Name)
+
+#Capitalized all class letters (column 2 to column 7)
+C2 <- C2 %>% mutate_at(2:7, list(toupper))
+
+#Remove the white space between letters in class columns
+C2 <- C2 %>% mutate_at(2:7, str_replace_all, " ", "")
+```
+
+After clean data, we start to reconstruct the data
+```{r}
+# need student and class variable
+#Change the wide table to long table-->use gather function
+#Remove rows from output where the value column is NA-->na.rm = TRUE
+
+C3 <- C2 %>% gather(label,class, 2:7, na.rm = TRUE, convert = FALSE)
+C3 <- select(C3, Name, class)
+
+C3$count <- 1
+
+#remove blank classes--> use filter
+C3 <- filter(C3, class != "")
+C3 <- arrange(C3, Name)
+
+#Remove duplicates--->use unique function
+C3 <- unique(C3)
+
+#make wide table again by spreading count and class
+C3 <- spread(C3, class, count)
+
+#add row names for the data frame and remove the name column
+row.names(C3) <- C3$Name
+C3<- select(C3, -Name, -HUDK4050)
+
+#Replace the NA with 0
+C3[is.na(C3)] <- 0
+```
+
 
 * Betweeness centrality and dregree centrality. **Who is the most central person in the network according to these two metrics? Write a sentence or two that describes your interpretation of these metrics**
 
-* Color the nodes according to interest. Are there any clusters of interest that correspond to clusters in the network? Write a sentence or two describing your interpetation.
+Convert to matrix-->use as.matrix 
+
+```{r}
+C4 <- as.matrix(C3)
+C4 <- C4 %*% t(C4)
+
+```
+
+Make a graph
+
+```{r}
+g2 <- graph.adjacency(C4, mode = "undirected", diag = FALSE)
+
+plot(g2, layout = layout.fruchterman.reingold,
+     vertex.size = 15,
+     vertex.label.cex = 0.5,
+     vertex.lable.color = "black",
+     vertex.color= "skyblue",
+     vertex.frame.color="black")
+```
+**Centrality
+```{r}
+#Calculate the degree centrality of the nodes
+sort(degree(g2), decreasing = TRUE)
+```
+
+**Betweenness
+```{r}
+sort(betweenness(g2), decreasing = TRUE)
+```
+
+* Color the nodes according to interest. Are there any clusters of interest that correspond to clusters in the network? Write a sentence or two describing your interpretation.
+
+-->I colored the nodes based on the class students take. I choose class 1 and found that people with close network also took similar course.
+```{r}
+col <- as.factor(C2$`Class 1`)
+g2 <- graph.adjacency(C4, mode = "undirected", diag = FALSE)
+plot(g2, layout = layout.fruchterman.reingold,
+     vertex.size = 15,
+     vertex.label.cex = 0.5,
+     vertex.label.color = "black",
+     vertex.color = col,
+     vertex.frame.color="black")
+```
+
 
 ### To Submit Your Assignment
 
