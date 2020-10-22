@@ -192,10 +192,19 @@ According to degree centrality multiple students has a high score of 31 and thos
 * Color the nodes according to interest. Are there any clusters of interest that correspond to clusters in the network? Write a sentence or two describing your interpetation.
 
 ```{r}
+df2 <- read.csv("hudk4050-classes.csv", stringsAsFactors = F, header = T)
+# Naming the columns
+colnames(df2) <- df2[1,]
+# Removing unnecessary rows  
+df2 <- df2[-c(1,2),] 
+interest <- as.factor(df2$`Which of these topics is most interesting to you?`)
 
+plot(g, layout= layout.fruchterman.reingold,vertex.size = 8, vertex.color = interest,
+     edge.arrow.size= .5, edge.width = 2)
 ```
 
 
+There seems to be no pattern or clustering for interest 
 
 ### To Submit Your Assignment
 
