@@ -9,6 +9,7 @@ The instructions to Assignment 3 are in the Assignment 3.Rmd file. Assignments a
 
 **Please complete as much as you can by midnight EDT, 10/21/20**
 
+
 Once you have finished, commit, push and pull your assignment back to the main branch. Include the .Rmd file and the .html file generated from your .Rmd file.
 
 Good luck!
