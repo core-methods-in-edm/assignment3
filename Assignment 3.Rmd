@@ -1,4 +1,11 @@
-# Assignment 3 - Social Network Analysis
+
+---
+title: "Assignment 3 - Social Network Analysis"
+author: "Xing Yixie"
+date: "2020/10/10"
+output: html_document
+---
+
 
 ## Part I
 Start by installing the "igraph" package. Once you have installed igraph, load the package.
@@ -22,7 +29,7 @@ So let's convert our data into an edge list!
 
 First we will isolate the variables that are of interest: comment.from and comment.to
 
-```{r}
+```{r message=FALSE, warning=FALSE}
 library(dplyr)
 
 D2 <- select(D1, comment.to, comment.from) #select() chooses the columns
@@ -75,7 +82,7 @@ VERTEX <- unique(VERTEX)
 
 Now we have both a Vertex and Edge list it is time to plot our graph!
 
-```{r}
+```{r message=FALSE, warning=FALSE}
 #Load the igraph package
 
 library(igraph)
@@ -96,7 +103,7 @@ plot(g,layout=layout.fruchterman.reingold, vertex.color=VERTEX$gender)
 
 plot(g,layout=layout.fruchterman.reingold, vertex.color=VERTEX$gender, edge.width=EDGE$count)
 
-````
+```
 
 ## Part II
 
@@ -105,6 +112,48 @@ In Part II your task is to [look up](http://igraph.org/r/) in the igraph documen
 * Ensure that sizing allows for an unobstructed view of the network features (For example, the arrow size is smaller)
 * The vertices are colored according to major
 * The vertices are sized according to the number of comments they have recieved
+
+
+```{r message=FALSE, warning=FALSE}
+#Load the igraph package
+library(igraph)
+g <- graph.data.frame(EDGE, directed=TRUE, vertices=VERTEX)
+class(g)
+vertex.attributes(g)
+edge.attributes(g)
+summary(g)
+g1 <- igraph::graph_from_data_frame(d= EDGE,vertices = VERTEX, directed = T)
+plot(g1)
+
+# isolated nodes
+detach(package:igraph)
+library(statnet)
+library(intergraph)
+g2 <- asNetwork(g1)
+length(isolates(g2))
+plot(g2)
+plot(g,edge.width=0.1)
+plot(g,vertex.color=VERTEX$major,edge.size=0.01)
+plot(g,edge.size=0.1,vertex.color=VERTEX$major,vertex.size=EDGE$count)
+g %>%
+  plot()
+g1 %>%
+  plot()
+plot(g2)
+degree(g2)
+closeness(g2)
+# Betweenness centrality
+# B(ni) = ΣG(jk)(ni)/G(jk)
+# where G(jk) is the geodesic between nodes j and k.  
+# G(jk)(ni) is the number of geodesics between nodes j and k that contain node i.
+betweenness(g2)
+
+####Model
+Network_model <- ergm(g2 ~ edges + 
+                                nodefactor("gender")+
+                                nodefactor("major"))
+summary(Network_model)
+```
 
 ## Part III
 
@@ -117,6 +166,109 @@ Once you have done this, also [look up](http://igraph.org/r/) how to generate th
 * Betweeness centrality and dregree centrality. **Who is the most central person in the network according to these two metrics? Write a sentence or two that describes your interpretation of these metrics**
 
 * Color the nodes according to interest. Are there any clusters of interest that correspond to clusters in the network? Write a sentence or two describing your interpetation.
+```{r message=FALSE, warning=FALSE}
+dd1 <- read.csv("hudk4050-classes.csv", stringsAsFactors = FALSE, header= TRUE)
+D1 <- dd1
+dd1 <- dd1[-1,-2,]
+colnames(D1) <- D1[1,]
+```
+#Data cleaning
+#transform into long data
+
+```{r message=FALSE, warning=FALSE}
+library(tidyr)
+library(dplyr)
+library(stringr)
+library(janitor)
+D1 <- slice(D1,3:49)
+#Remove last column
+D1 <- select(D1,1:8)
+#Merge name columns
+D1 <- unite(D1,"name",`First Name`, `Last Name`, sep="")
+#Remove unpredictable characters from names
+D1$name <- str_replace(D1$name, "`", "")
+#Make all name captalized first letters only
+D1$name <- str_to_title(D1$name)
+#Make all class letters capitals
+D1 <- D1 %>% mutate_at(2:7, list(toupper))
+#Remove whitespace between letters and numbers in class
+D1 <- D1 %>% mutate_at(2:7, str_replace_all, " ", "")
+```
+
+# Data restructuring
+```{r}
+# Create a dataframe with two variables, student and class
+D2 <- D1 %>%gather(labe, class, 2:7, na.rm = TRUE, convert = FALSE) %>% select(name, class)
+#Create a new variable containing 1s that will become our counts
+D3 <- D2 %>% tabyl(name,class)
+rownames(D3) <- D3$name
+D3 <- select(D3, -name, -HUDK4050)
+```
+
+#Matrix operations
+```{r}
+#Convert to matrix
+D3 <- as.matrix(D3)
+#Create person-person matrix
+D3 <- D3 %*% t(D3)
+```
+
+#Graphing
+```{r}
+library(igraph)
+g <- graph.adjacency(D3, mode="undirected", diag = FALSE)
+plot(g,layout=layout.fruchterman.reingold,
+     vertex.size = 4,
+     vertex.label.cex =0.8,
+     vertex.label.color="black",
+     vertex.color="yellow")
+
+Network <- g %>% 
+                 simplify(remove.multiple = TRUE,remove.loops = TRUE) %>% 
+                 delete.vertices(.,which(degree(.)==0)) %>% 
+                 intergraph::asNetwork() 
+
+plot(Network)
+```
+
+
+```{r}
+# degree centrality
+degree(g)
+# Closeness centrality
+# The inverse of the sum of all the distances between node i and all the other nodes in the network.
+closeness(g)
+
+# Betweenness centrality
+# B(ni) = ΣG(jk)(ni)/G(jk)
+# where G(jk) is the geodesic between nodes j and k.  
+# G(jk)(ni) is the number of geodesics between nodes j and k that contain node i.
+betweenness(g)  
+df.prom <- data.frame(
+           deg = degree(g),
+           cls = closeness(g),
+           btw = betweenness(g))
+plot(df.prom$deg,df.prom$btw)
+which(df.prom$deg>500)
+summary(df.prom)
+which(df.prom$btw>40)
+df.prom[45,]
+df.prom <- df.prom[-45,]
+summary(df.prom)
+which(df.prom$btw>10)
+df.prom[17,]
+
+```
+
+### Answer: I think Jia Shengyu is the most central person in the network. She has the second highest betweenness, which is very important.
+
+```{r}
+#creating a variable for the number of classes so I can use it as the vertex size
+plot(g,vertex.color=factor(dd1$Q18), vertex.label=NA,main="PERSON-NETWORK")
+```
+
+#I think common interest has to do with a person's major and it is likely that students in the same major have the same classes.
+
 
 ### To Submit Your Assignment
 
